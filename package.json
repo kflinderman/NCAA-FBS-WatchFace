@@ -272,7 +272,7 @@
                 },
                 {
                     "file": "images/FIU.png",
-                    "name": "FUI",
+                    "name": "FIU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -594,12 +594,6 @@
                     "file": "images/Liberty.png",
                     "name": "LIBERTY",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/LSU.png",
-                    "name": "LSU",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -1153,6 +1147,12 @@
                     "file": "images/American.png",
                     "name": "AMERICAN",
                     "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/LSU.png",
+                    "name": "LSU",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }

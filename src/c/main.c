@@ -4,6 +4,7 @@
 
 // Persistent storage key
 #define SETTINGS_KEY 1
+#define NUM_TEAMS 154
 
 /***********************************/
 /* NCAA FBS Watchface              */
@@ -161,10 +162,16 @@ static uint16_t beat_spot;
 
 // Define our settings struct
 typedef struct ClaySettings {
-  GColor BackgroundColor;
-  GColor TextColor;
-  bool TemperatureUnit; // false = Celsius, true = Fahrenheit
-  bool ShowDate;
+  uint16_t DisconnectVibration;
+  uint16_t ReconnectVibration;
+  uint16_t LowBatteryPercent;
+  uint16_t LowBatteryVibration;
+  uint16_t EmptyBatteryPercent;
+  uint16_t EmptyBatteryVibration;
+  uint16_t DisplayTeam;
+  uint16_t FavoriteTeam;
+  uint16_t BeatTeam;
+  uint16_t Version;
 } ClaySettings;
 
 // An instance of the struct
@@ -172,10 +179,16 @@ static ClaySettings settings;
 
 // Set default settings
 static void prv_default_settings() {
-  settings.BackgroundColor = GColorBlack;
-  settings.TextColor = GColorWhite;
-  settings.TemperatureUnit = false; // Celsius
-  settings.ShowDate = true;
+  settings.DisconnectVibration = 3;
+  settings.ReconnectVibration = 1;
+  settings.LowBatteryPercent = 30;
+  settings.LowBatteryVibration = 1;
+  settings.EmptyBatteryPercent = 10;
+  settings.EmptyBatteryVibration = 2;
+  settings.DisplayTeam = 0;
+  settings.FavoriteTeam = 108; 
+  settings.BeatTeam = 26;
+  settings.Version = 500;
 }
 
 // Save settings to persistent storage
@@ -185,10 +198,16 @@ static void prv_save_settings() {
 
 // Read settings from persistent storage
 static void prv_load_settings() {
-  // Set defaults first
   prv_default_settings();
-  // Then override with any saved values
-  persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+  // Only load if the saved struct matches current size
+  // (protects against corrupt data or struct layout changes)
+  if (persist_exists(SETTINGS_KEY) && 
+      persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
+    persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
+  }
+  // Bounds-check team indices before they're used to index TEAMS[]
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
 }
 
 // Apply settings to UI elements
@@ -268,49 +287,75 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
     snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s %s", temperature_buffer, conditions_buffer);
   }
+  */
 
   // Check for Clay settings data
   
-  Tuple *bg_color_t = dict_find(iterator, MESSAGE_KEY_BackgroundColor);
-  if (bg_color_t) {
-    settings.BackgroundColor = GColorFromHEX(bg_color_t->value->int32);
+  Tuple *dc_vibe_t = dict_find(iterator, MESSAGE_KEY_DisconnectVibration);
+  if (dc_vibe_t) {
+    settings.DisconnectVibration = dc_vibe_t->value->int32;
   }
 
-  Tuple *text_color_t = dict_find(iterator, MESSAGE_KEY_TextColor);
-  if (text_color_t) {
-    settings.TextColor = GColorFromHEX(text_color_t->value->int32);
+  Tuple *rc_vibe_t = dict_find(iterator, MESSAGE_KEY_ReconnectVibration);
+  if (rc_vibe_t) {
+    settings.ReconnectVibration = rc_vibe_t->value->int32;
   }
 
-  Tuple *temp_unit_t = dict_find(iterator, MESSAGE_KEY_TemperatureUnit);
-  if (temp_unit_t) {
-    settings.TemperatureUnit = temp_unit_t->value->int32 == 1;
+  Tuple *lb_pct_t = dict_find(iterator, MESSAGE_KEY_LowBatteryPercent);
+  if (lb_pct_t) {
+    settings.LowBatteryPercent = lb_pct_t->value->int32;
   }
 
-  Tuple *show_date_t = dict_find(iterator, MESSAGE_KEY_ShowDate);
-  if (show_date_t) {
-    settings.ShowDate = show_date_t->value->int32 == 1;
+  Tuple *lb_vibe_t = dict_find(iterator, MESSAGE_KEY_LowBatteryVibration);
+  if (lb_vibe_t) {
+    settings.LowBatteryVibration = lb_vibe_t->value->int32;
   }
-  
-  
-  Tuple *bg_color_t;
-  Tuple *text_color_t;
-  Tuple *temp_unit_t;
-  Tuple *show_date_t;
+
+  Tuple *eb_pct_t = dict_find(iterator, MESSAGE_KEY_EmptyBatteryPercent);
+  if (eb_pct_t) {
+    settings.EmptyBatteryPercent = eb_pct_t->value->int32;
+  }
+
+  Tuple *eb_vibe_t = dict_find(iterator, MESSAGE_KEY_EmptyBatteryVibration);
+  if (eb_vibe_t) {
+    settings.EmptyBatteryVibration = eb_vibe_t->value->int32;
+  }
+
+  Tuple *dp_team_t = dict_find(iterator, MESSAGE_KEY_DisplayTeam);
+  if (dp_team_t) {
+    settings.DisplayTeam = (uint16_t)strtol(dp_team_t->value->cstring, NULL, 10);
+  }
+
+  Tuple *fv_team_t = dict_find(iterator, MESSAGE_KEY_FavoriteTeam);
+  if (fv_team_t) {
+    settings.FavoriteTeam = fv_team_t->value->int32;
+  }
+
+  Tuple *bt_team_t = dict_find(iterator, MESSAGE_KEY_BeatTeam);
+  if (bt_team_t) {
+    settings.BeatTeam = bt_team_t->value->int32;
+  }
+
+  Tuple *ver_t = dict_find(iterator, MESSAGE_KEY_Version);
+  if (ver_t) {
+    settings.Version = (uint16_t)strtol(ver_t->value->cstring, NULL, 10);
+  }
   
   // Save and apply if any settings were changed
-  if (bg_color_t || text_color_t || temp_unit_t || show_date_t) {
+  if (dc_vibe_t || rc_vibe_t || lb_pct_t || lb_vibe_t || eb_pct_t || eb_vibe_t || dp_team_t || fv_team_t || bt_team_t || ver_t) {
     prv_save_settings();
     prv_update_display();
 
     // Refetch weather if the temperature unit changed so the display updates
+    /*
     if (temp_unit_t) {
       DictionaryIterator *iter;
       app_message_outbox_begin(&iter);
       dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
       app_message_outbox_send();
     }
+    */
   }
-*/
 }
 
 static void inbox_dropped_callback(AppMessageResult reason, void *context) {
@@ -587,19 +632,19 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
 
   // Set the window background to Red
-  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[0].color}); // Set to first team's color
+  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
 
   // Create GBitmap from resource
-  s_logo_bitmap = gbitmap_create_with_resource(TEAMS[0].logo_res_id);
+  s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
   s_logo_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
 
   // Create beat_team_layer with per-layer color data
   beat_team_layer = layer_create_with_data(GRect(-bounds.size.w, 0, bounds.size.w + 10, bounds.size.h / 2 + 50), sizeof(RoundRectData));
   RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
-  beat_data->fill_color = (GColor){.argb = TEAMS[1].color}; // Set to second team's color
+  beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
   layer_set_update_proc(beat_team_layer, round_rect_update_proc);
   layer_add_child(window_layer, beat_team_layer);
-  s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[1].logo_res_id);
+  s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
   s_beat_team_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_beat_team_bitmap, beat_team_layer);
 
   #ifdef PBL_RECT
@@ -634,16 +679,16 @@ static void main_window_load(Window *window) {
   
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date
-    s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 24, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+    s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
   
     vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, window_layer);
   #else
 	#ifdef PBL_PLATFORM_GABBRO
 	  // Create the TextLayer for the time and date
-      s_date_layer = text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 44, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      s_date_layer = text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #else
       // Create the TextLayer for the time and date
-      s_date_layer = text_set(bounds.size.w / 2 - 20, bounds.size.h * date_h, 40, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      s_date_layer = text_set(bounds.size.w / 2 - 20, bounds.size.h * date_h, 42, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #endif
   #endif
   horizontal_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_2, bounds.size.w  * hor_2, bounds.size.h * vert_2, window_layer);
