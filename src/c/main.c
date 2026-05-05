@@ -162,16 +162,16 @@ static uint16_t beat_spot;
 
 // Define our settings struct
 typedef struct ClaySettings {
-  uint16_t DisconnectVibration;
-  uint16_t ReconnectVibration;
-  uint16_t LowBatteryPercent;
-  uint16_t LowBatteryVibration;
-  uint16_t EmptyBatteryPercent;
-  uint16_t EmptyBatteryVibration;
-  uint16_t DisplayTeam;
-  uint16_t FavoriteTeam;
-  uint16_t BeatTeam;
-  uint16_t Version;
+  int32_t DisconnectVibration;
+  int32_t ReconnectVibration;
+  int32_t LowBatteryPercent;
+  int32_t LowBatteryVibration;
+  int32_t EmptyBatteryPercent;
+  int32_t EmptyBatteryVibration;
+  int32_t DisplayTeam;
+  int32_t FavoriteTeam;
+  int32_t BeatTeam;
+  int32_t Version;
 } ClaySettings;
 
 // An instance of the struct
@@ -212,6 +212,44 @@ static void prv_load_settings() {
 
 // Apply settings to UI elements
 static void prv_update_display() {
+  // Bounds check team indices
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
+  
+  // Only update if window exists
+  if (!s_main_window) return;
+  
+  // Update window background color to favorite team's color
+  //window_set_background_color(s_main_window, TEAMS[settings.FavoriteTeam].color);
+  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
+  
+  // Update favorite team logo
+  if (s_logo_bitmap) {
+    gbitmap_destroy(s_logo_bitmap);
+  }
+  s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+  if (s_logo_layer) {
+    bitmap_layer_set_bitmap(s_logo_layer, s_logo_bitmap);
+  }
+  
+  // Update beat team layer color
+  if (beat_team_layer) {
+    RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+    if (beat_data) {
+      //beat_data->fill_color = TEAMS[settings.BeatTeam].color;
+      beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
+      layer_mark_dirty(beat_team_layer);
+    }
+  }
+  
+  // Update beat team bitmap
+  if (s_beat_team_bitmap) {
+    gbitmap_destroy(s_beat_team_bitmap);
+  }
+  s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+  if (s_beat_team_layer) {
+    bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
+  }
 }
 
 /************/
@@ -291,58 +329,51 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
 
   // Check for Clay settings data
   
-  Tuple *dc_vibe_t = dict_find(iterator, MESSAGE_KEY_DisconnectVibration);
-  if (dc_vibe_t) {
-    settings.DisconnectVibration = dc_vibe_t->value->int32;
-  }
+  uint32_t claysettings_id[] = {
+    MESSAGE_KEY_DisconnectVibration,
+    MESSAGE_KEY_ReconnectVibration,
+    MESSAGE_KEY_LowBatteryPercent,
+    MESSAGE_KEY_LowBatteryVibration,
+    MESSAGE_KEY_EmptyBatteryPercent,
+    MESSAGE_KEY_EmptyBatteryVibration,
+    MESSAGE_KEY_DisplayTeam,
+    MESSAGE_KEY_FavoriteTeam,
+    MESSAGE_KEY_BeatTeam,
+    MESSAGE_KEY_Version
+  };
+  
+  static int32_t *settings_pointers[] = {
+    &settings.DisconnectVibration,
+    &settings.ReconnectVibration,
+    &settings.LowBatteryPercent,
+    &settings.LowBatteryVibration,
+    &settings.EmptyBatteryPercent,
+    &settings.EmptyBatteryVibration,
+    &settings.DisplayTeam,
+    &settings.FavoriteTeam,
+    &settings.BeatTeam,
+    &settings.Version
+  };
 
-  Tuple *rc_vibe_t = dict_find(iterator, MESSAGE_KEY_ReconnectVibration);
-  if (rc_vibe_t) {
-    settings.ReconnectVibration = rc_vibe_t->value->int32;
-  }
-
-  Tuple *lb_pct_t = dict_find(iterator, MESSAGE_KEY_LowBatteryPercent);
-  if (lb_pct_t) {
-    settings.LowBatteryPercent = lb_pct_t->value->int32;
-  }
-
-  Tuple *lb_vibe_t = dict_find(iterator, MESSAGE_KEY_LowBatteryVibration);
-  if (lb_vibe_t) {
-    settings.LowBatteryVibration = lb_vibe_t->value->int32;
-  }
-
-  Tuple *eb_pct_t = dict_find(iterator, MESSAGE_KEY_EmptyBatteryPercent);
-  if (eb_pct_t) {
-    settings.EmptyBatteryPercent = eb_pct_t->value->int32;
-  }
-
-  Tuple *eb_vibe_t = dict_find(iterator, MESSAGE_KEY_EmptyBatteryVibration);
-  if (eb_vibe_t) {
-    settings.EmptyBatteryVibration = eb_vibe_t->value->int32;
-  }
-
-  Tuple *dp_team_t = dict_find(iterator, MESSAGE_KEY_DisplayTeam);
-  if (dp_team_t) {
-    settings.DisplayTeam = (uint16_t)strtol(dp_team_t->value->cstring, NULL, 10);
-  }
-
-  Tuple *fv_team_t = dict_find(iterator, MESSAGE_KEY_FavoriteTeam);
-  if (fv_team_t) {
-    settings.FavoriteTeam = fv_team_t->value->int32;
-  }
-
-  Tuple *bt_team_t = dict_find(iterator, MESSAGE_KEY_BeatTeam);
-  if (bt_team_t) {
-    settings.BeatTeam = bt_team_t->value->int32;
-  }
-
-  Tuple *ver_t = dict_find(iterator, MESSAGE_KEY_Version);
-  if (ver_t) {
-    settings.Version = (uint16_t)strtol(ver_t->value->cstring, NULL, 10);
+  // 3. The simplified loop
+  bool settings_changed = false;
+  
+  for (uint16_t x = 0; x < 10; x++){
+    Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
+    if (temp_t) {
+      if (temp_t->type == TUPLE_CSTRING) {
+        *settings_pointers[x] = (int32_t)strtol(temp_t->value->cstring, NULL, 10);
+      } else {
+        *settings_pointers[x] = temp_t->value->int32;
+      }
+      settings_changed = true;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "%d: %u %d", x, *settings_pointers[x], temp_t->type);
+    }
   }
   
   // Save and apply if any settings were changed
-  if (dc_vibe_t || rc_vibe_t || lb_pct_t || lb_vibe_t || eb_pct_t || eb_vibe_t || dp_team_t || fv_team_t || bt_team_t || ver_t) {
+  if(settings_changed){
+  //if (dc_vibe_t || rc_vibe_t || lb_pct_t || lb_vibe_t || eb_pct_t || eb_vibe_t || dp_team_t || fv_team_t || bt_team_t || ver_t) {
     prv_save_settings();
     prv_update_display();
 
@@ -632,6 +663,7 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
 
   // Set the window background to Red
+  //window_set_background_color(s_main_window, TEAMS[settings.FavoriteTeam].color);
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
 
   // Create GBitmap from resource
@@ -641,6 +673,7 @@ static void main_window_load(Window *window) {
   // Create beat_team_layer with per-layer color data
   beat_team_layer = layer_create_with_data(GRect(-bounds.size.w, 0, bounds.size.w + 10, bounds.size.h / 2 + 50), sizeof(RoundRectData));
   RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+  //beat_data->fill_color = TEAMS[settings.BeatTeam].color; // Set to second team's color
   beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
   layer_set_update_proc(beat_team_layer, round_rect_update_proc);
   layer_add_child(window_layer, beat_team_layer);
@@ -753,6 +786,9 @@ static void main_window_unload(Window *window) {
   gbitmap_destroy(s_batt_empty_bitmap);
   gbitmap_destroy(s_batt_low_bitmap);
   
+  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+    fonts_unload_custom_font(s_font);
+  #endif
 
   // Destroy BitmapLayer
   bitmap_layer_destroy(s_logo_layer);

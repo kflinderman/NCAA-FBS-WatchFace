@@ -6,6 +6,7 @@
 // Struct to represent a team
 typedef struct {
   uint32_t logo_res_id;
+  //GColor color;
   uint8_t color;
   const char *name;
 } Team;
