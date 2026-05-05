@@ -361,13 +361,53 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   for (uint16_t x = 0; x < 10; x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
+      
+      int32_t value = 0;
+      
       if (temp_t->type == TUPLE_CSTRING) {
-        *settings_pointers[x] = (int32_t)strtol(temp_t->value->cstring, NULL, 10);
+        // Use a safer string-to-int conversion
+        const char *str = temp_t->value->cstring;
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING value: '%s'", str);
+        
+        // Manual parsing instead of strtol
+        value = 0;
+        for (int i = 0; str[i] != '\0'; i++) {
+          if (str[i] >= '0' && str[i] <= '9') {
+            value = value * 10 + (str[i] - '0');
+          }
+        }
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "Converted to: %ld", (long)value);
+      } else if (temp_t->type == TUPLE_INT) {
+        value = temp_t->value->int32;
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "INT32 value: %ld", (long)value);
+      }
+      
+      // Directly assign to settings struct
+      switch(x) {
+        case 0: settings.DisconnectVibration = value; break;
+        case 1: settings.ReconnectVibration = value; break;
+        case 2: settings.LowBatteryPercent = value; break;
+        case 3: settings.LowBatteryVibration = value; break;
+        case 4: settings.EmptyBatteryPercent = value; break;
+        case 5: settings.EmptyBatteryVibration = value; break;
+        case 6: settings.DisplayTeam = value; break;
+        case 7: settings.FavoriteTeam = value; break;
+        case 8: settings.BeatTeam = value; break;
+        case 9: settings.Version = value; break;
+      }
+      
+      /*
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting %d: type=%d", x, temp_t->type);
+      
+      if (temp_t->type == TUPLE_CSTRING) {
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING value before strtol: '%s'", temp_t->value->cstring);
+        int32_t converted = (int32_t)strtol(temp_t->value->cstring, NULL, 10);
+        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING converted to: %ld", (long)converted);
+        *settings_pointers[x] = converted;
       } else {
         *settings_pointers[x] = temp_t->value->int32;
-      }
+      }*/
       settings_changed = true;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "%d: %u %d", x, *settings_pointers[x], temp_t->type);
     }
   }
   
@@ -590,16 +630,19 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
 
 static void connection_handler(bool connected) {
   s_bt_connected = connected;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Bluetooth: %d History: %d", s_bt_connected, s_bt_history);
   
   layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), connected);
   
   // optional: give feedback when connection state changes
   if (connected && !s_bt_history) {
     // connected: short pulse
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Connected Transition");
     vibes_short_pulse();
     s_bt_history = true;
   } else if (!connected && s_bt_history) {
     // disconnected: double pulse
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Disconnected Transition");
     vibes_double_pulse();
     s_bt_history = false;
   }
@@ -615,6 +658,8 @@ static bool is_bt_connected() {
 
 static void battery_handler(BatteryChargeState state) {
   s_battery_state = state;
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
+  
   
   // optional: vibrate on low battery threshold or update UI
   if (!state.is_charging && state.charge_percent <= 30 && state.charge_percent > 10 ) {
@@ -840,12 +885,20 @@ static void init() {
   accel_data_service_subscribe(1, accel_data_handler);
   
   // Subscribe to bluetooth connection updates and set initial state
-  s_bt_connected = bluetooth_connection_service_peek();
-  bluetooth_connection_service_subscribe(connection_handler);
-
+  connection_service_subscribe((ConnectionHandlers) {
+    .pebble_app_connection_handler = connection_handler
+  });
+  
+  //s_bt_connected = bluetooth_connection_service_peek();
+  //APP_LOG(APP_LOG_LEVEL_DEBUG, "BT Start");
+  //bluetooth_connection_service_subscribe(connection_handler);
+  connection_handler(connection_service_peek_pebble_app_connection());
+  
   // Subscribe to battery state changes and initialize
-  s_battery_state = battery_state_service_peek();
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Batt Start");
   battery_state_service_subscribe(battery_handler);
+  //s_battery_state = battery_state_service_peek();
+  battery_handler(battery_state_service_peek());
 
   animate_beat_team_layer();
 
