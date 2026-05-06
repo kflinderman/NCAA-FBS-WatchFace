@@ -26,10 +26,8 @@
 /***********************************/
 
 /*
-test
 Task List:
--Configuratoin Settings
-  - Code
+-Teams.c Color update
 ---Release---
 -Keizelpay
   - Code
@@ -219,6 +217,14 @@ static void prv_update_display() {
   // Only update if window exists
   if (!s_main_window) return;
   
+  // Update beat_primary if DisplayTeam changed
+  beat_primary = settings.DisplayTeam;
+  
+  // Update beat team layer position
+  if (rect_beat_layer) {
+    GRect new_frame = GRect(beat_spot, -10 - beat_primary, 44, 40);
+    layer_set_frame(rect_beat_layer, new_frame);
+  }
   
   // Update favorite team logo
   if (s_logo_bitmap) {
@@ -267,6 +273,8 @@ static void prv_update_display() {
   if (s_beat_team_layer) {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
+  
+  animate_beat_team_layer();
   
 }
 
