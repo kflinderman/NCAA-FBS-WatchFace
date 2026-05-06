@@ -160,7 +160,7 @@ module.exports = [
 		      },
 		      { 
 		        "label": "Team You Want to Beat", 
-		        "value": "1"
+		        "value": "30"
 		      }
 		    ]
 	    },
@@ -484,27 +484,6 @@ module.exports = [
 		      { "label": "Western Kentucky", "value": 150 },
 		      { "label": "West Virginia", "value": 151 },
 		      { "label": "Wyoming", "value": 152 }
-		    ]
-	    }
-    ]
-  },
-  {
-    "type": "section",
-    "items": [
-      {
-        "type": "heading",
-        "defaultValue": "Developer"
-      },
-  	  {
-  	    "type": "radiogroup",
-  	    "messageKey": "Version",
-  	    "label": "Version",
-  		  "defaultValue": "500",
-  	    "options": [
-  	  	  { 
-  		      "label": "5.00", 
-  		      "value": "500"
-  		    }
 		    ]
 	    }
     ]

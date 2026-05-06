@@ -95,6 +95,7 @@ static void animate_beat_team_layer();
 // Watch Sensor Variables
 static int16_t s_prev_y = 0;
 static bool s_bt_connected = false;
+static bool s_animation = false;
 static BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 bool s_batt_history = false;
@@ -104,6 +105,7 @@ bool s_batt_history = false;
 
 // Different Watch Positions
 static uint16_t beat_spot;
+static uint16_t beat_primary;
 #ifdef PBL_ROUND
   static float rect_h = 0.66;
   static float date_h = 0.84;
@@ -115,13 +117,13 @@ static uint16_t beat_spot;
     static float time_h = 0.62;
     static uint16_t time_x = 150;
     static uint16_t time_y = 70;
-  static uint16_t icon_bump = 10;
+    static uint16_t icon_bump = 10;
   #else
     static uint16_t time_w = 60;
     static float time_h = 0.62;
     static uint16_t time_x = 120;
     static uint16_t time_y = 50;
-  static uint16_t icon_bump = 8;
+    static uint16_t icon_bump = 8;
   #endif
 #else
   static float rect_h = 0.72;
@@ -171,7 +173,6 @@ typedef struct ClaySettings {
   int32_t DisplayTeam;
   int32_t FavoriteTeam;
   int32_t BeatTeam;
-  int32_t Version;
 } ClaySettings;
 
 // An instance of the struct
@@ -188,7 +189,6 @@ static void prv_default_settings() {
   settings.DisplayTeam = 0;
   settings.FavoriteTeam = 108; 
   settings.BeatTeam = 26;
-  settings.Version = 500;
 }
 
 // Save settings to persistent storage
@@ -219,37 +219,55 @@ static void prv_update_display() {
   // Only update if window exists
   if (!s_main_window) return;
   
-  // Update window background color to favorite team's color
-  //window_set_background_color(s_main_window, TEAMS[settings.FavoriteTeam].color);
-  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
   
   // Update favorite team logo
   if (s_logo_bitmap) {
     gbitmap_destroy(s_logo_bitmap);
   }
-  s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-  if (s_logo_layer) {
-    bitmap_layer_set_bitmap(s_logo_layer, s_logo_bitmap);
-  }
-  
-  // Update beat team layer color
-  if (beat_team_layer) {
-    RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
-    if (beat_data) {
-      //beat_data->fill_color = TEAMS[settings.BeatTeam].color;
-      beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
-      layer_mark_dirty(beat_team_layer);
-    }
-  }
-  
-  // Update beat team bitmap
   if (s_beat_team_bitmap) {
     gbitmap_destroy(s_beat_team_bitmap);
   }
-  s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+  
+  if(settings.DisplayTeam > 1){
+    // Update window background color to favorite team's color
+    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color});
+    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+  
+  
+    // Update beat team layer color
+    if (beat_team_layer) {
+      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+      if (beat_data) {
+        beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color};
+        layer_mark_dirty(beat_team_layer);
+      }
+    }
+  }
+  else{
+    // Update window background color to favorite team's color
+    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
+    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+  
+  
+    // Update beat team layer color
+    if (beat_team_layer) {
+      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+      if (beat_data) {
+        beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
+        layer_mark_dirty(beat_team_layer);
+      }
+    }
+  }
+  
+  if (s_logo_layer) {
+    bitmap_layer_set_bitmap(s_logo_layer, s_logo_bitmap);
+  }
   if (s_beat_team_layer) {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
+  
 }
 
 /************/
@@ -339,26 +357,12 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     MESSAGE_KEY_DisplayTeam,
     MESSAGE_KEY_FavoriteTeam,
     MESSAGE_KEY_BeatTeam,
-    MESSAGE_KEY_Version
-  };
-  
-  static int32_t *settings_pointers[] = {
-    &settings.DisconnectVibration,
-    &settings.ReconnectVibration,
-    &settings.LowBatteryPercent,
-    &settings.LowBatteryVibration,
-    &settings.EmptyBatteryPercent,
-    &settings.EmptyBatteryVibration,
-    &settings.DisplayTeam,
-    &settings.FavoriteTeam,
-    &settings.BeatTeam,
-    &settings.Version
   };
 
   // 3. The simplified loop
   bool settings_changed = false;
   
-  for (uint16_t x = 0; x < 10; x++){
+  for (uint16_t x = 0; x < 9; x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
       
@@ -367,7 +371,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
       if (temp_t->type == TUPLE_CSTRING) {
         // Use a safer string-to-int conversion
         const char *str = temp_t->value->cstring;
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING value: '%s'", str);
         
         // Manual parsing instead of strtol
         value = 0;
@@ -376,10 +379,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
             value = value * 10 + (str[i] - '0');
           }
         }
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "Converted to: %ld", (long)value);
       } else if (temp_t->type == TUPLE_INT) {
         value = temp_t->value->int32;
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "INT32 value: %ld", (long)value);
       }
       
       // Directly assign to settings struct
@@ -393,20 +394,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         case 6: settings.DisplayTeam = value; break;
         case 7: settings.FavoriteTeam = value; break;
         case 8: settings.BeatTeam = value; break;
-        case 9: settings.Version = value; break;
       }
       
-      /*
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Setting %d: type=%d", x, temp_t->type);
-      
-      if (temp_t->type == TUPLE_CSTRING) {
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING value before strtol: '%s'", temp_t->value->cstring);
-        int32_t converted = (int32_t)strtol(temp_t->value->cstring, NULL, 10);
-        APP_LOG(APP_LOG_LEVEL_DEBUG, "CSTRING converted to: %ld", (long)converted);
-        *settings_pointers[x] = converted;
-      } else {
-        *settings_pointers[x] = temp_t->value->int32;
-      }*/
       settings_changed = true;
     }
   }
@@ -517,6 +506,7 @@ static void beat_team_animation_stopped(Animation *animation, bool finished, voi
     app_timer_register(1000, (AppTimerCallback)animate_beat_team_layer, layer);
   } else {
     returning = false; // Reset for next cycle
+    s_animation = false;
   }
 }
 
@@ -530,14 +520,14 @@ static void animate_beat_team_layer() {
     beat_from = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
     beat_to   = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
 
-    rect_from = GRect(beat_spot, -40, 44, 40);
-    rect_to   = GRect(beat_spot, -10, 44, 40);
+    rect_from = GRect(beat_spot, -40 + beat_primary, 44, 40);
+    rect_to   = GRect(beat_spot, -10 - beat_primary, 44, 40);
   } else {
     beat_from = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
     beat_to   = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
 
-    rect_from = GRect(beat_spot, -10, 44, 40);
-    rect_to   = GRect(beat_spot, -40, 44, 40);
+    rect_from = GRect(beat_spot, -10 - beat_primary, 44, 40);
+    rect_to   = GRect(beat_spot, -40 + beat_primary, 44, 40);
   }
 
   // Animate beat_team_layer
@@ -617,8 +607,9 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
   
-  if (abs(delta) > ACCEL_Y_THRESHOLD) {
+  if (abs(delta) > ACCEL_Y_THRESHOLD && !s_animation) {
     // Detected sudden Y movement and play animation
+    s_animation = true;
     animate_beat_team_layer();
   }
   s_prev_y = curr_y;
@@ -636,14 +627,23 @@ static void connection_handler(bool connected) {
   
   // optional: give feedback when connection state changes
   if (connected && !s_bt_history) {
-    // connected: short pulse
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Connected Transition");
-    vibes_short_pulse();
+    // connected
+    switch(settings.ReconnectVibration) {
+      case 0: break;
+      case 1: vibes_short_pulse(); break;
+      case 2: vibes_long_pulse(); break;
+      case 3: vibes_double_pulse(); break;
+    }
+    
     s_bt_history = true;
   } else if (!connected && s_bt_history) {
-    // disconnected: double pulse
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Disconnected Transition");
-    vibes_double_pulse();
+    // disconnected
+    switch(settings.DisconnectVibration) {
+      case 0: break;
+      case 1: vibes_short_pulse(); break;
+      case 2: vibes_long_pulse(); break;
+      case 3: vibes_double_pulse(); break;
+    }
     s_bt_history = false;
   }
 }
@@ -662,16 +662,27 @@ static void battery_handler(BatteryChargeState state) {
   
   
   // optional: vibrate on low battery threshold or update UI
-  if (!state.is_charging && state.charge_percent <= 30 && state.charge_percent > 10 ) {
+  if (!state.is_charging && state.charge_percent <= settings.LowBatteryPercent && state.charge_percent > settings.EmptyBatteryPercent ) {
     // warn briefly
     if(!s_batt_history){
-      vibes_short_pulse();
+    switch(settings.LowBatteryVibration) {
+      case 0: break;
+      case 1: vibes_short_pulse(); break;
+      case 2: vibes_long_pulse(); break;
+      case 3: vibes_double_pulse(); break;
+    }
       s_batt_history = true;
     }
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_low_bitmap);
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
   }
-  else if(!state.is_charging && state.charge_percent <= 10){
+  else if(!state.is_charging && state.charge_percent <= settings.EmptyBatteryPercent){
+    switch(settings.EmptyBatteryVibration) {
+      case 0: break;
+      case 1: vibes_short_pulse(); break;
+      case 2: vibes_long_pulse(); break;
+      case 3: vibes_double_pulse(); break;
+    }
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_empty_bitmap);  
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
     s_batt_history = false;
@@ -707,22 +718,34 @@ static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
-  // Set the window background to Red
-  //window_set_background_color(s_main_window, TEAMS[settings.FavoriteTeam].color);
-  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
-
-  // Create GBitmap from resource
-  s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+  //Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
+  beat_team_layer = layer_create_with_data(GRect(-bounds.size.w, 0, bounds.size.w + 10, bounds.size.h / 2 + 60), sizeof(RoundRectData));
+  RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+    
+  if(settings.DisplayTeam > 1){
+    // Set the team Colors
+    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color}); // Set to first team's color
+    beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color}; // Set to second team's color
+  
+    // Create GBitmap from resource
+    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+  }
+  else{
+    // Set the team Colors
+    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
+    beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
+  
+    // Create GBitmap from resource
+    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+  }
+  
   s_logo_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
 
   // Create beat_team_layer with per-layer color data
-  beat_team_layer = layer_create_with_data(GRect(-bounds.size.w, 0, bounds.size.w + 10, bounds.size.h / 2 + 50), sizeof(RoundRectData));
-  RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
-  //beat_data->fill_color = TEAMS[settings.BeatTeam].color; // Set to second team's color
-  beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
   layer_set_update_proc(beat_team_layer, round_rect_update_proc);
   layer_add_child(window_layer, beat_team_layer);
-  s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
   s_beat_team_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_beat_team_bitmap, beat_team_layer);
 
   #ifdef PBL_RECT
@@ -730,9 +753,10 @@ static void main_window_load(Window *window) {
   #else
 	  beat_spot = bounds.size.w / 2 - 22;
   #endif
-
+  beat_primary = settings.DisplayTeam;
+  
   // rect_beat_layer with its own color
-  rect_beat_layer = layer_create_with_data(GRect(beat_spot, -40, 45, 40), sizeof(RoundRectData));
+  rect_beat_layer = layer_create_with_data(GRect(beat_spot, -40 + beat_primary, 45, 40), sizeof(RoundRectData));
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(rect_beat_layer);
   rect_beat_data->fill_color = GColorWhite; // default
   layer_set_update_proc(rect_beat_layer, round_rect_update_proc);
@@ -888,16 +912,11 @@ static void init() {
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = connection_handler
   });
-  
-  //s_bt_connected = bluetooth_connection_service_peek();
-  //APP_LOG(APP_LOG_LEVEL_DEBUG, "BT Start");
-  //bluetooth_connection_service_subscribe(connection_handler);
   connection_handler(connection_service_peek_pebble_app_connection());
   
   // Subscribe to battery state changes and initialize
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Batt Start");
   battery_state_service_subscribe(battery_handler);
-  //s_battery_state = battery_state_service_peek();
   battery_handler(battery_state_service_peek());
 
   animate_beat_team_layer();
