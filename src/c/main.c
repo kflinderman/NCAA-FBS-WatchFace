@@ -27,7 +27,6 @@
 
 /*
 Task List:
--Teams.c Color update
 ---Release---
 -Keizelpay
   - Code
@@ -927,7 +926,7 @@ static void init() {
   battery_state_service_subscribe(battery_handler);
   battery_handler(battery_state_service_peek());
 
-  animate_beat_team_layer();
+  //animate_beat_team_layer();
 
   
   // Register AppMessage callbacks
