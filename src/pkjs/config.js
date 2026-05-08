@@ -105,16 +105,16 @@ module.exports = [
     		  }
     		]
       },
-	  {
-	    "type": "slider",
-	    "messageKey": "EmptyBatteryPercent",
-	    "defaultValue": 10,
-	    "label": "Very Low Battery Percentage",
-	    "description": "Set indicator for very low battery. Set 0 to turn off",
-	    "min": 0,
-	    "max": 100,
-	    "step": 1
-	  },
+  	  {
+  	    "type": "slider",
+  	    "messageKey": "EmptyBatteryPercent",
+  	    "defaultValue": 10,
+  	    "label": "Very Low Battery Percentage",
+  	    "description": "Set indicator for very low battery. Set 0 to turn off",
+  	    "min": 0,
+  	    "max": 100,
+  	    "step": 1
+  	  },
       {
         "type": "select",
         "messageKey": "EmptyBatteryVibration",
@@ -486,6 +486,39 @@ module.exports = [
 		      { "label": "Wyoming", "value": 152 }
 		    ]
 	    }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Animations"
+      },
+      {
+        "type": "select",
+        "messageKey": "animationSensitivity",
+        "defaultValue": 800,
+        "label": "Animation Sensitivity",
+    		"options": [
+    		  {
+    		    "label": "No Animations",
+    			  "value": 0
+    		  },
+    		  {
+    		    "label": "Low Sensitivity",
+    			  "value": 1600
+    		  },
+    		  {
+    		    "label": "Standard Sensitivity",
+    			  "value": 800
+    		  },
+    		  {
+    		    "label": "High Sensitivity",
+    			  "value": 400
+    		  }
+    		]
+      }
     ]
   },
   {

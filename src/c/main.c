@@ -98,7 +98,7 @@ bool s_bt_history = true;
 bool s_batt_history = false;
 
 // Threshold in milli-g's.
-#define ACCEL_Y_THRESHOLD 800
+//static int ACCEL_Y_THRESHOLD = 800;
 
 // Different Watch Positions
 static uint16_t beat_spot;
@@ -170,6 +170,7 @@ typedef struct ClaySettings {
   int32_t DisplayTeam;
   int32_t FavoriteTeam;
   int32_t BeatTeam;
+  int animationSensitivity;
 } ClaySettings;
 
 // An instance of the struct
@@ -186,6 +187,7 @@ static void prv_default_settings() {
   settings.DisplayTeam = 0;
   settings.FavoriteTeam = 108; 
   settings.BeatTeam = 26;
+  settings.animationSensitivity = 800;
 }
 
 // Save settings to persistent storage
@@ -223,6 +225,7 @@ static void prv_update_display() {
   if (rect_beat_layer) {
     GRect new_frame = GRect(beat_spot, -10 - beat_primary, 44, 40);
     layer_set_frame(rect_beat_layer, new_frame);
+    layer_mark_dirty(rect_beat_layer);
   }
   
   // Update favorite team logo
@@ -272,8 +275,6 @@ static void prv_update_display() {
   if (s_beat_team_layer) {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
-  
-  animate_beat_team_layer();
   
 }
 
@@ -364,12 +365,13 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     MESSAGE_KEY_DisplayTeam,
     MESSAGE_KEY_FavoriteTeam,
     MESSAGE_KEY_BeatTeam,
+    MESSAGE_KEY_animationSensitivity,
   };
 
   // 3. The simplified loop
   bool settings_changed = false;
   
-  for (uint16_t x = 0; x < 9; x++){
+  for (uint16_t x = 0; x < 10; x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
       
@@ -401,6 +403,7 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         case 6: settings.DisplayTeam = value; break;
         case 7: settings.FavoriteTeam = value; break;
         case 8: settings.BeatTeam = value; break;
+        case 9: settings.animationSensitivity = value; break;
       }
       
       settings_changed = true;
@@ -614,7 +617,7 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
   
-  if (abs(delta) > ACCEL_Y_THRESHOLD && !s_animation) {
+  if (abs(delta) > settings.animationSensitivity && !s_animation && settings.animationSensitivity != 0) {
     // Detected sudden Y movement and play animation
     s_animation = true;
     animate_beat_team_layer();

@@ -25,7 +25,8 @@
             "EmptyBatteryVibration",
             "DisplayTeam",
             "FavoriteTeam",
-            "BeatTeam"
+            "BeatTeam",
+            "animationSensitivity"
         ],
         "projectType": "native",
         "resources": {
