@@ -223,7 +223,7 @@ static void prv_update_display() {
   
   // Update beat team layer position
   if (rect_beat_layer) {
-    GRect new_frame = GRect(beat_spot, -10 - beat_primary, 44, 40);
+    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
     layer_set_frame(rect_beat_layer, new_frame);
     layer_mark_dirty(rect_beat_layer);
   }
@@ -727,9 +727,12 @@ static void main_window_load(Window *window) {
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
+  
+  // Apply saved settings
+  prv_update_display();
 
   //Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
-  beat_team_layer = layer_create_with_data(GRect(-bounds.size.w, 0, bounds.size.w + 10, bounds.size.h / 2 + 60), sizeof(RoundRectData));
+  beat_team_layer = layer_create_with_data(GRect(-bounds.size.w - 10, 0, bounds.size.w + 10, bounds.size.h / 2 + 100), sizeof(RoundRectData));
   RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
     
   if(settings.DisplayTeam > 1){
@@ -836,7 +839,7 @@ static void main_window_load(Window *window) {
   update_time();
   
   // Apply saved settings
-  prv_update_display();
+  //prv_update_display();
   
   // Apply correct layout in case Quick View is already active
   prv_unobstructed_change(0, NULL);
