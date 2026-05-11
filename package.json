@@ -26,7 +26,12 @@
             "DisplayTeam",
             "FavoriteTeam",
             "BeatTeam",
-            "animationSensitivity"
+            "animationSensitivity",
+            "quietTimeBool",
+            "quietTimeStart",
+            "quietTimeEnd",
+            "animationsBatt",
+            "animationsCustom"
         ],
         "projectType": "native",
         "resources": {

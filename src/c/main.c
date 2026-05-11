@@ -34,8 +34,6 @@ Task List:
   - Weather Icons Black
   - Weather Icons White
   - Code
--Battery Saving mode
-  - Code
 -Health steps
   - Football Icon
   - Hash marks
@@ -95,7 +93,7 @@ static bool s_bt_connected = false;
 static bool s_animation = false;
 static BatteryChargeState s_battery_state;
 bool s_bt_history = true;
-bool s_batt_history = false;
+int16_t s_batt_history = 0;
 
 // Threshold in milli-g's.
 //static int ACCEL_Y_THRESHOLD = 800;
@@ -128,7 +126,7 @@ static uint16_t beat_primary;
   static float date_h = 0.74;
   static uint16_t icon_bump = 5;
   #ifdef PBL_PLATFORM_EMERY
-    static uint16_t time_w = 90;
+    static uint16_t time_w = 92;
     static float time_h = 0.70;
     static uint16_t time_x = 160;
     static uint16_t time_y = 70;
@@ -137,7 +135,7 @@ static uint16_t beat_primary;
     static float hor_1 = 0.83;
     static float hor_2 = 0.92;
   #else
-    static uint16_t time_w = 70;
+    static uint16_t time_w = 72;
     static float time_h = 0.70;
     static uint16_t time_x = 120;
     static uint16_t time_y = 50;
@@ -171,6 +169,11 @@ typedef struct ClaySettings {
   int32_t FavoriteTeam;
   int32_t BeatTeam;
   int animationSensitivity;
+  bool quietTimeBool;
+  int32_t quietTimeStart;
+  int32_t quietTimeEnd;
+  int32_t animationsBatt;
+  int32_t animationsCustom;
 } ClaySettings;
 
 // An instance of the struct
@@ -188,6 +191,11 @@ static void prv_default_settings() {
   settings.FavoriteTeam = 108; 
   settings.BeatTeam = 26;
   settings.animationSensitivity = 800;
+  settings.quietTimeBool = false;
+  settings.quietTimeStart = 2330;
+  settings.quietTimeEnd = 630;
+  settings.animationsBatt = 0;
+  settings.animationsCustom = 30;
 }
 
 // Save settings to persistent storage
@@ -366,12 +374,17 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     MESSAGE_KEY_FavoriteTeam,
     MESSAGE_KEY_BeatTeam,
     MESSAGE_KEY_animationSensitivity,
+    MESSAGE_KEY_quietTimeBool,
+    MESSAGE_KEY_quietTimeStart,
+    MESSAGE_KEY_quietTimeEnd,
+    MESSAGE_KEY_animationsBatt,
+    MESSAGE_KEY_animationsCustom,
   };
 
   // 3. The simplified loop
   bool settings_changed = false;
   
-  for (uint16_t x = 0; x < 10; x++){
+  for (uint16_t x = 0; x < 15; x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
       
@@ -404,6 +417,11 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         case 7: settings.FavoriteTeam = value; break;
         case 8: settings.BeatTeam = value; break;
         case 9: settings.animationSensitivity = value; break;
+        case 10: settings.quietTimeBool = value; break;
+        case 11: settings.quietTimeStart = value; break;
+        case 12: settings.quietTimeEnd = value; break;
+        case 13: settings.animationsBatt = value; break;
+        case 14: settings.animationsCustom = value; break;
       }
       
       settings_changed = true;
@@ -412,7 +430,6 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
   
   // Save and apply if any settings were changed
   if(settings_changed){
-  //if (dc_vibe_t || rc_vibe_t || lb_pct_t || lb_vibe_t || eb_pct_t || eb_vibe_t || dp_team_t || fv_team_t || bt_team_t || ver_t) {
     prv_save_settings();
     prv_update_display();
 
@@ -612,12 +629,47 @@ static void prv_unobstructed_did_change(void *context) {
 /*********************/
 
 static void accel_data_handler(AccelData *data, uint32_t num_samples) {
+  // Get the current time
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  
+  // Convert current time to HHMM format
+  // tick_time->tm_hour is 0-23
+  int32_t current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
+  
   if (num_samples == 0 || data == NULL) return;
   // Use the last sample in the batch for current reading
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
   
-  if (abs(delta) > settings.animationSensitivity && !s_animation && settings.animationSensitivity != 0) {
+  if (abs(delta) > settings.animationSensitivity && 
+      !s_animation && 
+      settings.animationSensitivity != 0 && 
+      
+      (
+        settings.animationsBatt == 0 ||
+        (
+          settings.animationsBatt == 1 &&
+          s_batt_history < 1
+        ) ||
+        (
+          settings.animationsBatt == 2 &&
+          s_batt_history < 2
+        ) ||
+        (
+          settings.animationsBatt == 3 &&
+          s_battery_state.charge_percent > settings.animationsCustom
+        )
+      ) && 
+      
+      (
+        !settings.quietTimeBool || 
+        (
+          current_time_integer <= settings.quietTimeStart && 
+          current_time_integer >= settings.quietTimeEnd
+        )
+      )
+     ) {
     // Detected sudden Y movement and play animation
     s_animation = true;
     animate_beat_team_layer();
@@ -674,19 +726,20 @@ static void battery_handler(BatteryChargeState state) {
   // optional: vibrate on low battery threshold or update UI
   if (!state.is_charging && state.charge_percent <= settings.LowBatteryPercent && state.charge_percent > settings.EmptyBatteryPercent ) {
     // warn briefly
-    if(!s_batt_history){
+    if(s_batt_history == 0){
     switch(settings.LowBatteryVibration) {
       case 0: break;
       case 1: vibes_short_pulse(); break;
       case 2: vibes_long_pulse(); break;
       case 3: vibes_double_pulse(); break;
     }
-      s_batt_history = true;
+      s_batt_history = 1;
     }
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_low_bitmap);
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
   }
   else if(!state.is_charging && state.charge_percent <= settings.EmptyBatteryPercent){
+    if(s_batt_history == 1){
     switch(settings.EmptyBatteryVibration) {
       case 0: break;
       case 1: vibes_short_pulse(); break;
@@ -695,16 +748,17 @@ static void battery_handler(BatteryChargeState state) {
     }
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_empty_bitmap);  
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-    s_batt_history = false;
+    s_batt_history = 2;
+    }
   }
   else if(state.is_charging){
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_crg_bitmap);
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-    s_batt_history = false;
+    s_batt_history = 0;
   }
   else{
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
-    s_batt_history = false;
+    s_batt_history = 0;
   }
 }
 

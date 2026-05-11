@@ -518,7 +518,66 @@ module.exports = [
     			  "value": 400
     		  }
     		]
-      }
+      },
+      {
+        "type": "toggle",
+        "messageKey": "quietTimeBool",
+        "label": "Enable Quiet Time",
+        "defaultValue": false
+      },
+      {
+        "type": "input",
+        "messageKey": "quietTimeStart",
+        "label": "Quiet Time Start",
+        "defaultValue": "",
+        "attributes": {
+          "type": "time"
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "quietTimeEnd",
+        "label": "Quiet Time End",
+        "defaultValue": "",
+        "attributes": {
+          "type": "time"
+        }
+      },
+      {
+        "type": "select",
+        "messageKey": "animationsBatt",
+        "defaultValue": 0,
+        "label": "Disable Animations on Battery",
+        "description": "Choose when to stop animations based on a battery percentage",
+      		"options": [
+      		  {
+      		    "label": "Always On",
+      			  "value": 0
+      		  },
+      		  {
+      		    "label": "Low Battery",
+      			  "value": 1
+      		  },
+      		  {
+      		    "label": "Very Low Battery",
+      			  "value": 2
+      		  },
+      		  {
+      		    "label": "Custom Battery Stop",
+      			  "value": 3
+      		  }
+      		]
+      },
+  	  {
+  	    "type": "slider",
+  	    "messageKey": "animationsCustom",
+  	    "defaultValue": 30,
+  	    "label": "Custom Battery Stop",
+  	    "description": "Set flag for animations to stop on battery level",
+  	    "min": 0,
+  	    "max": 100,
+  	    "step": 1
+  	  }
     ]
   },
   {
