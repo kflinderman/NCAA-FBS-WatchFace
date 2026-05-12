@@ -2,9 +2,11 @@
 var Clay = require('@rebble/clay');
 // Load our Clay configuration file
 var clayConfig = require('./config');
-// Initialize Clay
-var clay = new Clay(clayConfig);
+var customClay = require('./customClay');
 
+// Initialize Clay
+var clay = new Clay(clayConfig, customClay);
+/*
 // Helper function for XMLHttpRequest
 var xhrRequest = function (url, type, callback) {
   var xhr = new XMLHttpRequest();
@@ -104,3 +106,4 @@ Pebble.addEventListener('appmessage',
     }
   }
 );
+*/

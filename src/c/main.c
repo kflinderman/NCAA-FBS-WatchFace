@@ -94,6 +94,7 @@ static bool s_animation = false;
 static BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
+int32_t current_time_integer;
 
 // Threshold in milli-g's.
 //static int ACCEL_Y_THRESHOLD = 800;
@@ -159,6 +160,24 @@ static uint16_t beat_primary;
 
 // Define our settings struct
 typedef struct ClaySettings {
+  uint8_t DisconnectVibration;
+  uint8_t ReconnectVibration;
+  uint8_t LowBatteryPercent;
+  uint8_t LowBatteryVibration;
+  uint8_t EmptyBatteryPercent;
+  uint8_t EmptyBatteryVibration;
+  uint8_t DisplayTeam;
+  uint16_t FavoriteTeam;
+  uint16_t BeatTeam;
+  uint16_t animationSensitivity;
+  bool quietTimeBool;
+  uint16_t quietTimeStart;
+  uint16_t quietTimeEnd;
+  uint8_t animationsBatt;
+  uint8_t animationsCustom;
+} ClaySettings;
+/*
+typedef struct ClaySettings {
   int32_t DisconnectVibration;
   int32_t ReconnectVibration;
   int32_t LowBatteryPercent;
@@ -175,6 +194,7 @@ typedef struct ClaySettings {
   int32_t animationsBatt;
   int32_t animationsCustom;
 } ClaySettings;
+*/
 
 // An instance of the struct
 static ClaySettings settings;
@@ -218,11 +238,7 @@ static void prv_load_settings() {
 }
 
 // Apply settings to UI elements
-static void prv_update_display() {
-  // Bounds check team indices
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
-  
+static void prv_update_display() {  
   // Only update if window exists
   if (!s_main_window) return;
   
@@ -313,6 +329,11 @@ static void update_time() {
   
   // Display this date on the TextLayer
   text_layer_set_text(s_date_layer, s_date_buffer);
+  
+  
+  // Convert current time to HHMM format
+  // tick_time->tm_hour is 0-23
+  current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
 }
 
 // Handles time ticks (every minute)
@@ -574,8 +595,10 @@ static void animate_beat_team_layer() {
 }
 
 // Unobstructed area handlers
+/*
 static void prv_unobstructed_will_change(GRect final_unobstructed_screen_area, void *context) {
 }
+*/
 
 static void layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
   GRect move_frame = layer_get_frame(tmp_layer);
@@ -612,6 +635,7 @@ static void prv_unobstructed_change(AnimationProgress progress, void *context) {
   layer_mark_dirty(horizontal_line);
 }
 
+/*
 static void prv_unobstructed_did_change(void *context) {
   Layer *root = window_get_root_layer(s_main_window);
   GRect full_bounds = layer_get_bounds(root);
@@ -623,20 +647,13 @@ static void prv_unobstructed_did_change(void *context) {
   else {
   }
 }
+*/
 
 /*********************/
 /* #7. Accelerometer */
 /*********************/
 
 static void accel_data_handler(AccelData *data, uint32_t num_samples) {
-  // Get the current time
-  time_t temp = time(NULL);
-  struct tm *tick_time = localtime(&temp);
-  
-  // Convert current time to HHMM format
-  // tick_time->tm_hour is 0-23
-  int32_t current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
-  
   if (num_samples == 0 || data == NULL) return;
   // Use the last sample in the batch for current reading
   int16_t curr_y = data[num_samples - 1].y;
@@ -710,9 +727,11 @@ static void connection_handler(bool connected) {
   }
 }
 
+/*
 static bool is_bt_connected() {
   return s_bt_connected;
 }
+*/
 
 /***************/
 /* #9. Battery */
@@ -762,6 +781,7 @@ static void battery_handler(BatteryChargeState state) {
   }
 }
 
+/*
 static int get_battery_level() {
   return s_battery_state.charge_percent;
 }
@@ -769,6 +789,7 @@ static int get_battery_level() {
 static bool is_battery_charging() {
   return s_battery_state.is_charging;
 }
+*/
 
 /*******************/
 /* #10. Main Window */
@@ -791,21 +812,21 @@ static void main_window_load(Window *window) {
     
   if(settings.DisplayTeam > 1){
     // Set the team Colors
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color}); // Set to first team's color
+    //window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color}); // Set to first team's color
     beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color}; // Set to second team's color
   
     // Create GBitmap from resource
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    //s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    //s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
   }
   else{
     // Set the team Colors
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
+    //window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
     beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
   
     // Create GBitmap from resource
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    //s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    //s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
   }
   
   s_logo_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
@@ -865,7 +886,8 @@ static void main_window_load(Window *window) {
   // Create Bluetooth GBitmap from resource
   s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
   s_bt_layer = bitmap_set(bounds.size.w  * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
-  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), is_bt_connected());
+  //layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), is_bt_connected());
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
   
   // Create Battery GBitmap from resource
   s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
@@ -873,6 +895,8 @@ static void main_window_load(Window *window) {
   s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
   s_batt_layer = bitmap_set(bounds.size.w  * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
   
+  battery_handler(battery_state_service_peek());
+  /*
   if (!is_battery_charging() && get_battery_level() <= 30 && get_battery_level() > 10 ) {
     bitmap_layer_set_bitmap(s_batt_layer, s_batt_low_bitmap);
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
@@ -888,21 +912,26 @@ static void main_window_load(Window *window) {
   else{
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
   }
+  */
   
   // Make sure the time and date are displayed from the start
   update_time();
-  
-  // Apply saved settings
-  //prv_update_display();
   
   // Apply correct layout in case Quick View is already active
   prv_unobstructed_change(0, NULL);
 
   // Subscribe to unobstructed area events
+  /*
   UnobstructedAreaHandlers handlers = {
     .will_change = prv_unobstructed_will_change,
     .change = prv_unobstructed_change,
     .did_change = prv_unobstructed_did_change
+  };
+  */
+  UnobstructedAreaHandlers handlers = {
+    .will_change = NULL,
+    .change = prv_unobstructed_change,
+    .did_change = NULL
   };
   unobstructed_area_service_subscribe(handlers, NULL);
 }
@@ -973,7 +1002,8 @@ static void init() {
 
   // Subscribe to continuous accelerometer data for Y-movement detection
   accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
-  accel_data_service_subscribe(1, accel_data_handler);
+  //accel_data_service_subscribe(1, accel_data_handler);
+  accel_data_service_subscribe(5, accel_data_handler);
   
   // Subscribe to bluetooth connection updates and set initial state
   connection_service_subscribe((ConnectionHandlers) {
