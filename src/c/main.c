@@ -216,8 +216,8 @@ static void prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 108; 
-  settings.BeatTeam = 26;
+  settings.FavoriteTeam = 2; 
+  settings.BeatTeam = 1;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
