@@ -129,13 +129,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/Arkansas.png",
-                    "name": "ARKANSAS",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/Auburn.png",
                     "name": "AUBURN",
                     "spaceOptimization": "storage",
@@ -506,13 +499,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/Wyoming.png",
-                    "name": "WYOMING",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/WKU.png",
                     "name": "WKU",
                     "spaceOptimization": "storage",
@@ -571,13 +557,6 @@
                 {
                     "file": "images/NCAA.png",
                     "name": "NCAA",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/LA Tech.png",
-                    "name": "LATECH",
-                    "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -687,13 +666,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/Notre Dame.png",
-                    "name": "NOTREDAME",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/Northwestern.png",
                     "name": "NORTHWESTERN",
                     "spaceOptimization": "storage",
@@ -780,13 +752,6 @@
                 {
                     "file": "images/NCST.png",
                     "name": "NCST",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/UNC.png",
-                    "name": "UNC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -967,13 +932,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/MW.png",
-                    "name": "MW",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/MAC.png",
                     "name": "MAC",
                     "spaceOptimization": "storage",
@@ -1046,13 +1004,6 @@
                 {
                     "file": "images/Syracuse.png",
                     "name": "SYRACUSE",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/Toledo.png",
-                    "name": "TOLEDO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -1158,6 +1109,55 @@
                 {
                     "file": "images/LSU.png",
                     "name": "LSU",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/Arkansas.png",
+                    "name": "ARKANSAS",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/LA Tech.png",
+                    "name": "LATECH",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/Wyoming.png",
+                    "name": "WYOMING",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/MW.png",
+                    "name": "MW",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/UNC.png",
+                    "name": "UNC",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/Notre Dame.png",
+                    "name": "NOTREDAME",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/Toledo.png",
+                    "name": "TOLEDO",
+                    "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }

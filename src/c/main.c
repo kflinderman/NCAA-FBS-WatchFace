@@ -13,23 +13,24 @@
 /*                                 */
 /* #0 Table of Contents:           */
 /*     1. Variables                */
-/*     2. Settings                 */
-/*     3. Time                     */
-/*     4. Communication            */
-/*     5. Drawing Functions        */
-/*     6. Animation                */     
-/*     7. Accelerometer            */
-/*     8. Bluetooth                */
-/*     9. Battery                  */
-/*     10. Main Window              */
-/*     11. Main Function           */
+/*     2. Health                   */
+/*     3. Weather                  */
+/*     4. Settings                 */
+/*     5. Time                     */
+/*     6. Communication            */
+/*     7. Drawing Functions        */
+/*     8. Animation                */     
+/*     9. Accelerometer            */
+/*     10. Bluetooth               */
+/*     11. Battery                 */
+/*     12. Main Window             */
+/*     13. Main Function           */
 /***********************************/
 
 /*
 Task List:
+-Buy me a coffee Settings
 ---Release---
--Keizelpay
-  - Code
 -Weather
   - Weather Icons Black
   - Weather Icons White
@@ -65,6 +66,10 @@ static Window *s_main_window;
 static TextLayer *s_time_layer;
 static TextLayer *s_date_layer;
 static TextLayer *s_beat_layer;
+#if defined(PBL_HEALTH)
+static TextLayer *s_hr_layer;
+static TextLayer *s_step_layer;
+#endif
 static GBitmap *s_logo_bitmap;
 static GBitmap *s_beat_team_bitmap;
 static GBitmap *s_bt_bitmap;
@@ -95,9 +100,6 @@ static BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
 int32_t current_time_integer;
-
-// Threshold in milli-g's.
-//static int ACCEL_Y_THRESHOLD = 800;
 
 // Different Watch Positions
 static uint16_t beat_spot;
@@ -154,8 +156,33 @@ static uint16_t beat_primary;
 #endif
 
 
+/**************/
+/* #2. Health */
+/**************/
+
+#if defined(PBL_HEALTH)
+void health_handler(){
+  #ifdef PBL_HEART_RATE
+  //static char s_hr_buffer[8];
+  //HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
+  //snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
+  //text_layer_set_text(s_hr_layer, s_hr_buffer);
+  #endif
+  static char s_step_buffer[8];
+  HealthMetric stepvalue = HealthMetricStepCount;
+  //HealthValue stepvalue = health_service_peek_current_value(HealthMetricStepCount);
+  snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
+  text_layer_set_text(s_step_layer, s_step_buffer);
+}
+#endif
+
+/***************/
+/* #3. Weather */
+/***************/
+
+
 /****************/
-/* #1. Settings */
+/* #4. Settings */
 /****************/
 
 // Define our settings struct
@@ -176,25 +203,6 @@ typedef struct ClaySettings {
   uint8_t animationsBatt;
   uint8_t animationsCustom;
 } ClaySettings;
-/*
-typedef struct ClaySettings {
-  int32_t DisconnectVibration;
-  int32_t ReconnectVibration;
-  int32_t LowBatteryPercent;
-  int32_t LowBatteryVibration;
-  int32_t EmptyBatteryPercent;
-  int32_t EmptyBatteryVibration;
-  int32_t DisplayTeam;
-  int32_t FavoriteTeam;
-  int32_t BeatTeam;
-  int animationSensitivity;
-  bool quietTimeBool;
-  int32_t quietTimeStart;
-  int32_t quietTimeEnd;
-  int32_t animationsBatt;
-  int32_t animationsCustom;
-} ClaySettings;
-*/
 
 // An instance of the struct
 static ClaySettings settings;
@@ -210,7 +218,7 @@ static void prv_default_settings() {
   settings.DisplayTeam = 0;
   settings.FavoriteTeam = 108; 
   settings.BeatTeam = 26;
-  settings.animationSensitivity = 800;
+  settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
   settings.quietTimeEnd = 630;
@@ -300,10 +308,13 @@ static void prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
+  #if defined(PBL_HEALTH)
+    //health_handler();
+  #endif
 }
 
 /************/
-/* #3. Time */
+/* #5. Time */
 /************/
 
 // Updates the time TextLayer
@@ -351,7 +362,7 @@ static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 }
 
 /*********************/
-/* #4. Communication */
+/* #6. Communication */
 /*********************/
 
 
@@ -479,7 +490,7 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 }
 
 /*************************/
-/* #5. Drawing Functions */
+/* #7. Drawing Functions */
 /*************************/
 
 //{{REVIEW}}
@@ -538,7 +549,7 @@ static void round_rect_update_proc(Layer *layer, GContext *ctx) {
 }
 
 /*****************/
-/* #6. Animation */
+/* #8. Animation */
 /*****************/
 
 //{{REVIEW}}
@@ -650,7 +661,7 @@ static void prv_unobstructed_did_change(void *context) {
 */
 
 /*********************/
-/* #7. Accelerometer */
+/* #9. Accelerometer */
 /*********************/
 
 static void accel_data_handler(AccelData *data, uint32_t num_samples) {
@@ -694,9 +705,9 @@ static void accel_data_handler(AccelData *data, uint32_t num_samples) {
   s_prev_y = curr_y;
 }
 
-/*****************/
-/* #8. Bluetooth */
-/*****************/
+/******************/
+/* #10. Bluetooth */
+/******************/
 
 static void connection_handler(bool connected) {
   s_bt_connected = connected;
@@ -733,9 +744,9 @@ static bool is_bt_connected() {
 }
 */
 
-/***************/
-/* #9. Battery */
-/***************/
+/****************/
+/* #11. Battery */
+/****************/
 
 static void battery_handler(BatteryChargeState state) {
   s_battery_state = state;
@@ -791,9 +802,9 @@ static bool is_battery_charging() {
 }
 */
 
-/*******************/
-/* #10. Main Window */
-/*******************/
+/********************/
+/* #12. Main Window */
+/********************/
 
 //{{REVIEW}}
 
@@ -812,21 +823,11 @@ static void main_window_load(Window *window) {
     
   if(settings.DisplayTeam > 1){
     // Set the team Colors
-    //window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color}); // Set to first team's color
     beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color}; // Set to second team's color
-  
-    // Create GBitmap from resource
-    //s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    //s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
   }
   else{
     // Set the team Colors
-    //window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color}); // Set to first team's color
     beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color}; // Set to second team's color
-  
-    // Create GBitmap from resource
-    //s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    //s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
   }
   
   s_logo_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
@@ -873,8 +874,8 @@ static void main_window_load(Window *window) {
   
     vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, window_layer);
   #else
-	#ifdef PBL_PLATFORM_GABBRO
-	  // Create the TextLayer for the time and date
+	  #ifdef PBL_PLATFORM_GABBRO
+	    // Create the TextLayer for the time and date
       s_date_layer = text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #else
       // Create the TextLayer for the time and date
@@ -886,7 +887,6 @@ static void main_window_load(Window *window) {
   // Create Bluetooth GBitmap from resource
   s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
   s_bt_layer = bitmap_set(bounds.size.w  * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
-  //layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), is_bt_connected());
   layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
   
   // Create Battery GBitmap from resource
@@ -896,23 +896,14 @@ static void main_window_load(Window *window) {
   s_batt_layer = bitmap_set(bounds.size.w  * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
   
   battery_handler(battery_state_service_peek());
-  /*
-  if (!is_battery_charging() && get_battery_level() <= 30 && get_battery_level() > 10 ) {
-    bitmap_layer_set_bitmap(s_batt_layer, s_batt_low_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-  }
-  else if(!is_battery_charging() && get_battery_level() <= 10){
-    bitmap_layer_set_bitmap(s_batt_layer, s_batt_empty_bitmap);  
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-  }
-  else if(is_battery_charging()){
-    bitmap_layer_set_bitmap(s_batt_layer, s_batt_crg_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-  }
-  else{
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
-  }
-  */
+  
+  
+  #if defined(PBL_HEALTH)
+  // Create Health Layers
+  s_hr_layer = text_set((bounds.size.h * rect_h)-100, 10, 50, 32, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  s_step_layer = text_set((bounds.size.h * rect_h)-50, 10, 75, 32, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  health_handler();
+  #endif
   
   // Make sure the time and date are displayed from the start
   update_time();
@@ -921,13 +912,6 @@ static void main_window_load(Window *window) {
   prv_unobstructed_change(0, NULL);
 
   // Subscribe to unobstructed area events
-  /*
-  UnobstructedAreaHandlers handlers = {
-    .will_change = prv_unobstructed_will_change,
-    .change = prv_unobstructed_change,
-    .did_change = prv_unobstructed_did_change
-  };
-  */
   UnobstructedAreaHandlers handlers = {
     .will_change = NULL,
     .change = prv_unobstructed_change,
@@ -942,6 +926,10 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_beat_layer);
+  #if defined(PBL_HEALTH)
+  text_layer_destroy(s_hr_layer);
+  text_layer_destroy(s_step_layer);
+  #endif
 
   // Destroy GBitmap
   gbitmap_destroy(s_logo_bitmap);
@@ -977,7 +965,7 @@ static void main_window_unload(Window *window) {
 }
 
 /**********************/
-/* #11. Main Function */
+/* #13. Main Function */
 /**********************/
 
 // Initializes the app

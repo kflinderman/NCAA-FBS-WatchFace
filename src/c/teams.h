@@ -7,6 +7,7 @@
 typedef struct {
   uint32_t logo_res_id;
   uint8_t color;
+  uint8_t icon_color;
   //const char *name;
 } Team;
 

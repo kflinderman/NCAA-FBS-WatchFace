@@ -500,7 +500,7 @@ module.exports = [
       {
         "type": "select",
         "messageKey": "animationSensitivity",
-        "defaultValue": 800,
+        "defaultValue": 1200,
         "label": "Animation Sensitivity",
     		"options": [
     		  {
@@ -509,15 +509,15 @@ module.exports = [
     		  },
     		  {
     		    "label": "Low Sensitivity",
-    			  "value": 1600
+    			  "value": 2400
     		  },
     		  {
     		    "label": "Standard Sensitivity",
-    			  "value": 800
+    			  "value": 1200
     		  },
     		  {
     		    "label": "High Sensitivity",
-    			  "value": 400
+    			  "value": 600
     		  }
     		]
       },
