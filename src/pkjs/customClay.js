@@ -57,6 +57,12 @@ module.exports = function (minified) {
             isBoolean: false,
             items: ['animationsCustom'],
             showWhen: function(value) { return value === 3; }
+        },
+        {
+            triggerKey: 'stepsBool',
+            isBoolean: true,
+            items: ['stepsGoalBool', 'stepsGoal'],
+            showWhen: function(value) { return value === true; }
         }
     ];
     

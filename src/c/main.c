@@ -39,8 +39,6 @@ Task List:
   - Football Icon
   - Hash marks
   - Code
--Health Heartrate
-  - Code
 -Paper Bag
   - Code
 -Hardcoded Rival
@@ -69,6 +67,8 @@ static TextLayer *s_beat_layer;
 #if defined(PBL_HEALTH)
 static TextLayer *s_hr_layer;
 static TextLayer *s_step_layer;
+static GBitmap *s_football_bitmap;
+static BitmapLayer *s_football_layer;
 #endif
 static GBitmap *s_logo_bitmap;
 static GBitmap *s_beat_team_bitmap;
@@ -87,12 +87,20 @@ static Layer *rect_beat_layer;
 #ifdef PBL_RECT
   static Layer *vertical_line;
 #endif
+
+#if defined(PBL_HEALTH)
 static Layer *hr1;
 static Layer *hr2;
 static Layer *hr3;
 static Layer *hr4;
 static Layer *hr5;
-
+static Layer *step1;
+static Layer *step2;
+static Layer *step3;
+static Layer *step4;
+static Layer *step5;
+static Layer *step6;
+#endif
 
 static GFont s_font;
 static void animate_beat_team_layer();
@@ -116,31 +124,36 @@ static uint16_t beat_primary;
   static float vert_2 = 0.93;
   static float hor_1 = 0.45;
   static float hor_2 = 0.55;
-  #ifdef PBL_PLATFORM_GABBRO
+  static float time_h = 0.62;
+  #if PBL_DISPLAY_HEIGHT > 180
     static uint16_t time_w = 75;
-    static float time_h = 0.62;
     static uint16_t time_x = 150;
     static uint16_t time_y = 70;
     static uint16_t icon_bump = 10;
     static uint16_t hr_thick = 3;
     static bool hr_w = 0;
+    static uint16_t stepx1 = 16;
+    static uint16_t stepx2 = 95;
+    static uint16_t stepy = 50;
   #else
     static uint16_t time_w = 60;
-    static float time_h = 0.62;
     static uint16_t time_x = 120;
     static uint16_t time_y = 50;
     static uint16_t icon_bump = 8;
     static uint16_t hr_thick = 1;
     static bool hr_w = 1;
+    static uint16_t stepx1 = 12;
+    static uint16_t stepx2 = 67;
+    static uint16_t stepy = 37;
   #endif
 #else
   static float rect_h = 0.72;
   static float date_w = 0.81;
   static uint16_t icon_bump = 5;
-  #ifdef PBL_PLATFORM_EMERY
+  static float time_h = 0.70;
+  #if PBL_DISPLAY_HEIGHT > 180
     static float date_h = 0.72;
     static uint16_t time_w = 92;
-    static float time_h = 0.70;
     static uint16_t time_x = 160;
     static uint16_t time_y = 70;
     static float vert_1 = 0.82;
@@ -149,10 +162,12 @@ static uint16_t beat_primary;
     static float hor_2 = 0.92;
     static uint16_t hr_thick = 3;
     static bool hr_w = 0;
+    static uint16_t stepx1 = 16;
+    static uint16_t stepx2 = 95;
+    static uint16_t stepy = 50;
   #else
     static float date_h = 0.74;
     static uint16_t time_w = 72;
-    static float time_h = 0.70;
     static uint16_t time_x = 120;
     static uint16_t time_y = 50;
     static float vert_1 = 0.85;
@@ -161,6 +176,9 @@ static uint16_t beat_primary;
     static float hor_2 = 0.97;
     static uint16_t hr_thick = 1;
     static bool hr_w = 1;
+    static uint16_t stepx1 = 12;
+    static uint16_t stepx2 = 67;
+    static uint16_t stepy = 37;
   #endif
 #endif
 
@@ -189,6 +207,8 @@ typedef struct ClaySettings {
   uint8_t animationsCustom;
   bool stepsBool;
   bool hrBool;
+  bool stepsGoalBool;
+  uint16_t stepsGoal;
 } ClaySettings;
 
 // An instance of the struct
@@ -213,6 +233,8 @@ static void prv_default_settings() {
   settings.animationsCustom = 30;
   settings.stepsBool = false;
   settings.hrBool = false;
+  settings.stepsGoalBool = false;
+  settings.stepsGoal = 10000;
 }
 
 
@@ -257,9 +279,38 @@ void health_handler(){
     snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
     text_layer_set_text(s_step_layer, s_step_buffer);
     layer_set_hidden(text_layer_get_layer(s_step_layer), false);
+    
+    if (settings.stepsGoalBool){
+      float stepDiff = (int)stepvalue / settings.stepsGoal;
+      
+      layer_set_hidden(step1, false);
+      layer_set_hidden(step2, false);
+      layer_set_hidden(step3, false);
+      layer_set_hidden(step4, false);
+      layer_set_hidden(step5, false);
+      layer_set_hidden(step6, false);
+      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), false);
+    }
+    else{
+      layer_set_hidden(step1, true);
+      layer_set_hidden(step2, true);
+      layer_set_hidden(step3, true);
+      layer_set_hidden(step4, true);
+      layer_set_hidden(step5, true);
+      layer_set_hidden(step6, true);
+      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), true);
+    }
   }
-  else{
+  
+  if (!settings.stepsBool){
     layer_set_hidden(text_layer_get_layer(s_step_layer), true);
+    layer_set_hidden(step1, true);
+    layer_set_hidden(step2, true);
+    layer_set_hidden(step3, true);
+    layer_set_hidden(step4, true);
+    layer_set_hidden(step5, true);
+    layer_set_hidden(step6, true);
+    layer_set_hidden(bitmap_layer_get_layer(s_football_layer), true);
   }
 }
 #endif
@@ -465,12 +516,14 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     MESSAGE_KEY_animationsCustom,
     MESSAGE_KEY_stepsBool,
     MESSAGE_KEY_hrBool,
+    MESSAGE_KEY_stepsGoalBool,
+    MESSAGE_KEY_stepsGoal,
   };
 
   // 3. The simplified loop
   bool settings_changed = false;
   
-  for (uint16_t x = 0; x < 17; x++){
+  for (uint16_t x = 0; x < 19; x++){
   //for (uint16_t x = 0; x < sizeof(claysettings_id); x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
@@ -511,6 +564,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         case 14: settings.animationsCustom = value; break;
         case 15: settings.stepsBool = value; break;
         case 16: settings.hrBool = value; break;
+        case 17: settings.stepsGoalBool = value; break;
+        case 18: settings.stepsGoal = value; break;
       }
       
       settings_changed = true;
@@ -929,7 +984,7 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(rect_layer, round_rect_update_proc);
   layer_add_child(window_layer, rect_layer);
 
-  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+  #if PBL_DISPLAY_HEIGHT > 180
     s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
     s_time_layer = text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   #else
@@ -939,7 +994,7 @@ static void main_window_load(Window *window) {
   
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date
-	  #ifdef PBL_PLATFORM_EMERY
+    #if PBL_DISPLAY_HEIGHT > 180
       s_date_layer = text_set(155, bounds.size.h * date_h, 35, 38, GColorBlack, "Dec 31", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
     #else
       s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
@@ -947,7 +1002,7 @@ static void main_window_load(Window *window) {
   
     vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
   #else
-	  #ifdef PBL_PLATFORM_GABBRO
+    #if PBL_DISPLAY_HEIGHT > 180
 	    // Create the TextLayer for the time and date
       s_date_layer = text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #else
@@ -960,7 +1015,7 @@ static void main_window_load(Window *window) {
   // Create Bluetooth GBitmap from resource
   s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
   
-  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+  #if PBL_DISPLAY_HEIGHT > 180
   s_bt_layer = bitmap_set(182, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
   #else
   s_bt_layer = bitmap_set(bounds.size.w  * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
@@ -988,7 +1043,18 @@ static void main_window_load(Window *window) {
   hr3 = line_draw(bounds, bounds.size.w - 17 + (4*hr_w), 35, bounds.size.w - 11 + (2*hr_w), 25, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
   hr4 = line_draw(bounds, bounds.size.w - 11 + (2*hr_w), 25, bounds.size.w - 8 + (hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
   hr5 = line_draw(bounds, bounds.size.w - 8 + (hr_w), 30, bounds.size.w - 5, 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  s_step_layer = text_set(5, (bounds.size.h * time_h) - 20, 40, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  
+  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 40, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  int gaps = ((bounds.size.h * time_h) - stepy - 25) / 4;
+  step1 = line_draw(bounds, (bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27, (bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step2 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy, (bounds.size.w / 2 - stepx2) + stepx1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step3 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 1, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 1, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step4 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 2, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 2, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step5 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 3, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 3, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step6 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 4, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 4, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  
+  s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
+  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 5, stepy + gaps * 4 - 5, 10, 10, s_football_bitmap, window_layer);
   #endif
   
   // Apply saved settings
@@ -1028,7 +1094,7 @@ static void main_window_unload(Window *window) {
   gbitmap_destroy(s_batt_empty_bitmap);
   gbitmap_destroy(s_batt_low_bitmap);
   
-  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+  #if PBL_DISPLAY_HEIGHT > 180
     fonts_unload_custom_font(s_font);
   #endif
 
@@ -1050,11 +1116,19 @@ static void main_window_unload(Window *window) {
   
   
   #if defined(PBL_HEALTH)
+    gbitmap_destroy(s_football_bitmap);
+    bitmap_layer_destroy(s_football_layer);
     layer_destroy(hr1);
     layer_destroy(hr2);
     layer_destroy(hr3);
     layer_destroy(hr4);
     layer_destroy(hr5);
+    layer_destroy(step1);
+    layer_destroy(step2);
+    layer_destroy(step3);
+    layer_destroy(step4);
+    layer_destroy(step5);
+    layer_destroy(step6);
   #endif
 
   // Unsubscribe from TickTimerService

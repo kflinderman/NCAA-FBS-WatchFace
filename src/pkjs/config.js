@@ -290,6 +290,14 @@ module.exports = [
       },
       {
         "type": "toggle",
+        "messageKey": "hrBool",
+        "label": "Show Heart Rate",
+  	    "description": "It will not show even if toggled if no heart rate is detected",
+        "defaultValue": false,
+        "capabilities": ["HEALTH"]
+      },
+      {
+        "type": "toggle",
         "messageKey": "stepsBool",
         "label": "Show Steps",
         "defaultValue": false,
@@ -297,10 +305,19 @@ module.exports = [
       },
       {
         "type": "toggle",
-        "messageKey": "hrBool",
-        "label": "Show Heart Rate",
-  	    "description": "It will not show even if toggled if no heart rate is detected",
+        "messageKey": "stepsGoalBool",
+        "label": "Show Goal Progress",
         "defaultValue": false,
+        "capabilities": ["HEALTH"]
+      },
+  	  {
+  	    "type": "slider",
+  	    "messageKey": "stepsGoal",
+  	    "defaultValue": 10000,
+  	    "label": "Daily Step Goal",
+  	    "min": 0,
+  	    "max": 50000,
+  	    "step": 1,
         "capabilities": ["HEALTH"]
       }
     ]

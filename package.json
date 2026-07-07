@@ -33,7 +33,9 @@
             "animationsBatt",
             "animationsCustom",
             "stepsBool",
-            "hrBool"
+            "hrBool",
+            "stepsGoalBool",
+            "stepsGoal"
         ],
         "projectType": "native",
         "resources": {
