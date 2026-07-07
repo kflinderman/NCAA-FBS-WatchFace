@@ -87,6 +87,11 @@ static Layer *rect_beat_layer;
 #ifdef PBL_RECT
   static Layer *vertical_line;
 #endif
+static Layer *hr1;
+static Layer *hr2;
+static Layer *hr3;
+static Layer *hr4;
+static Layer *hr5;
 
 
 static GFont s_font;
@@ -100,6 +105,7 @@ static BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
 int32_t current_time_integer;
+bool noHR = true;
 
 // Different Watch Positions
 static uint16_t beat_spot;
@@ -116,28 +122,35 @@ static uint16_t beat_primary;
     static uint16_t time_x = 150;
     static uint16_t time_y = 70;
     static uint16_t icon_bump = 10;
+    static uint16_t hr_thick = 3;
+    static bool hr_w = 0;
   #else
     static uint16_t time_w = 60;
     static float time_h = 0.62;
     static uint16_t time_x = 120;
     static uint16_t time_y = 50;
     static uint16_t icon_bump = 8;
+    static uint16_t hr_thick = 1;
+    static bool hr_w = 1;
   #endif
 #else
   static float rect_h = 0.72;
   static float date_w = 0.81;
-  static float date_h = 0.74;
   static uint16_t icon_bump = 5;
   #ifdef PBL_PLATFORM_EMERY
+    static float date_h = 0.72;
     static uint16_t time_w = 92;
     static float time_h = 0.70;
     static uint16_t time_x = 160;
     static uint16_t time_y = 70;
     static float vert_1 = 0.82;
-    static float vert_2 = 0.88;
+    static float vert_2 = 0.90;
     static float hor_1 = 0.83;
     static float hor_2 = 0.92;
+    static uint16_t hr_thick = 3;
+    static bool hr_w = 0;
   #else
+    static float date_h = 0.74;
     static uint16_t time_w = 72;
     static float time_h = 0.70;
     static uint16_t time_x = 120;
@@ -146,6 +159,8 @@ static uint16_t beat_primary;
     static float vert_2 = 0.93;
     static float hor_1 = 0.86;
     static float hor_2 = 0.97;
+    static uint16_t hr_thick = 1;
+    static bool hr_w = 1;
   #endif
 #endif
 
@@ -154,36 +169,6 @@ static uint16_t beat_primary;
 #else
   static uint16_t bitmap_size = 115;
 #endif
-
-
-/**************/
-/* #2. Health */
-/**************/
-
-#if defined(PBL_HEALTH)
-void health_handler(){
-  #ifdef PBL_HEART_RATE
-  //static char s_hr_buffer[8];
-  //HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-  //snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
-  //text_layer_set_text(s_hr_layer, s_hr_buffer);
-  #endif
-  static char s_step_buffer[8];
-  HealthMetric stepvalue = HealthMetricStepCount;
-  //HealthValue stepvalue = health_service_peek_current_value(HealthMetricStepCount);
-  snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
-  text_layer_set_text(s_step_layer, s_step_buffer);
-}
-#endif
-
-/***************/
-/* #3. Weather */
-/***************/
-
-
-/****************/
-/* #4. Settings */
-/****************/
 
 // Define our settings struct
 typedef struct ClaySettings {
@@ -202,6 +187,8 @@ typedef struct ClaySettings {
   uint16_t quietTimeEnd;
   uint8_t animationsBatt;
   uint8_t animationsCustom;
+  bool stepsBool;
+  bool hrBool;
 } ClaySettings;
 
 // An instance of the struct
@@ -216,15 +203,75 @@ static void prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 2; 
-  settings.BeatTeam = 1;
+  settings.FavoriteTeam = 1; 
+  settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
   settings.quietTimeEnd = 630;
   settings.animationsBatt = 0;
   settings.animationsCustom = 30;
+  settings.stepsBool = false;
+  settings.hrBool = false;
 }
+
+
+/**************/
+/* #2. Health */
+/**************/
+
+#if defined(PBL_HEALTH)
+void health_handler(){
+  if(settings.hrBool){
+    static char s_hr_buffer[8];
+    HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
+    if (hrvalue > 0){
+      snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
+      text_layer_set_text(s_hr_layer, s_hr_buffer);
+
+      layer_set_hidden(text_layer_get_layer(s_hr_layer), false);
+      layer_set_hidden(hr1, false);
+      layer_set_hidden(hr2, false);
+      layer_set_hidden(hr3, false);
+      layer_set_hidden(hr4, false);
+      layer_set_hidden(hr5, false);
+      noHR = false;
+    }
+    else{
+      noHR = true;
+    }
+  }
+  
+  if (!settings.hrBool || noHR){
+    layer_set_hidden(text_layer_get_layer(s_hr_layer), true);
+    layer_set_hidden(hr1, true);
+    layer_set_hidden(hr2, true);
+    layer_set_hidden(hr3, true);
+    layer_set_hidden(hr4, true);
+    layer_set_hidden(hr5, true);
+  }
+
+  if (settings.stepsBool){
+    static char s_step_buffer[8];
+    HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
+    snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
+    text_layer_set_text(s_step_layer, s_step_buffer);
+    layer_set_hidden(text_layer_get_layer(s_step_layer), false);
+  }
+  else{
+    layer_set_hidden(text_layer_get_layer(s_step_layer), true);
+  }
+}
+#endif
+
+/***************/
+/* #3. Weather */
+/***************/
+
+
+/****************/
+/* #4. Settings */
+/****************/
 
 // Save settings to persistent storage
 static void prv_save_settings() {
@@ -309,7 +356,7 @@ static void prv_update_display() {
   }
   
   #if defined(PBL_HEALTH)
-    //health_handler();
+  health_handler();
   #endif
 }
 
@@ -345,6 +392,11 @@ static void update_time() {
   // Convert current time to HHMM format
   // tick_time->tm_hour is 0-23
   current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
+  
+  
+  #if defined(PBL_HEALTH)
+    health_handler();
+  #endif
 }
 
 // Handles time ticks (every minute)
@@ -411,12 +463,15 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
     MESSAGE_KEY_quietTimeEnd,
     MESSAGE_KEY_animationsBatt,
     MESSAGE_KEY_animationsCustom,
+    MESSAGE_KEY_stepsBool,
+    MESSAGE_KEY_hrBool,
   };
 
   // 3. The simplified loop
   bool settings_changed = false;
   
-  for (uint16_t x = 0; x < 15; x++){
+  for (uint16_t x = 0; x < 17; x++){
+  //for (uint16_t x = 0; x < sizeof(claysettings_id); x++){
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
       
@@ -454,6 +509,8 @@ static void inbox_received_callback(DictionaryIterator *iterator, void *context)
         case 12: settings.quietTimeEnd = value; break;
         case 13: settings.animationsBatt = value; break;
         case 14: settings.animationsCustom = value; break;
+        case 15: settings.stepsBool = value; break;
+        case 16: settings.hrBool = value; break;
       }
       
       settings_changed = true;
@@ -498,17 +555,20 @@ static void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
 
 static void line_update_proc(Layer *layer, GContext *ctx) {
   LinePoints *points = (LinePoints *)layer_get_data(layer);
-  graphics_context_set_stroke_color(ctx, GColorBlack);
+  graphics_context_set_stroke_width(ctx, points->width);
+  graphics_context_set_stroke_color(ctx, points->color);
   graphics_draw_line(ctx, GPoint(points->x1, points->y1), GPoint(points->x2, points->y2));
 }
 
-Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, Layer *window_layer) {
+Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t width, GColor color, Layer *window_layer) {
   Layer *line_layer = layer_create_with_data(bounds, sizeof(LinePoints));
   LinePoints *points = (LinePoints *)layer_get_data(line_layer);
   points->x1 = x1;
   points->y1 = y1;
   points->x2 = x2;
   points->y2 = y2;
+  points->width = width;
+  points->color = color;
   layer_set_update_proc(line_layer, line_update_proc);
   layer_add_child(window_layer, line_layer);
   return line_layer;
@@ -523,6 +583,18 @@ BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap 
   return s_bitmap_layer;
 }
 
+static void text_layer_border_update_proc(Layer *layer, GContext *ctx) {
+  // Get the boundaries of the layer (always starts at 0, 0 relative to itself)
+  GRect bounds = layer_get_bounds(layer);
+  
+  // Set the stroke color to black and width to 1 pixel
+  graphics_context_set_stroke_color(ctx, GColorBlack);
+  graphics_context_set_stroke_width(ctx, 1);
+  
+  // Draw the rectangle outline around the boundary
+  graphics_draw_rect(ctx, bounds);
+}
+
 TextLayer* text_set (uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color, const char *initial_text, GFont font_handle, GTextAlignment alignment, Layer *window) {
   TextLayer *text_layer = text_layer_create(GRect(x, y, w, h));
 
@@ -534,7 +606,7 @@ TextLayer* text_set (uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text
   layer_add_child(window, text_layer_get_layer(text_layer));
 
   return text_layer;
-}
+} 
 
 static void round_rect_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
@@ -613,7 +685,7 @@ static void prv_unobstructed_will_change(GRect final_unobstructed_screen_area, v
 
 static void layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
   GRect move_frame = layer_get_frame(tmp_layer);
-  move_frame.origin.y = (tmp_bounds.size.h * origin + bump) - diff * bmp_ratio;
+  move_frame.origin.y = ((tmp_bounds.size.h * origin) + bump) - diff * bmp_ratio;
   layer_set_frame(tmp_layer, move_frame);
 }
 
@@ -813,9 +885,6 @@ static void main_window_load(Window *window) {
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-  
-  // Apply saved settings
-  prv_update_display();
 
   //Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
   beat_team_layer = layer_create_with_data(GRect(-bounds.size.w - 10, 0, bounds.size.w + 10, bounds.size.h / 2 + 100), sizeof(RoundRectData));
@@ -870,9 +939,13 @@ static void main_window_load(Window *window) {
   
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date
-    s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+	  #ifdef PBL_PLATFORM_EMERY
+      s_date_layer = text_set(155, bounds.size.h * date_h, 35, 38, GColorBlack, "Dec 31", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+    #else
+      s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+    #endif
   
-    vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, window_layer);
+    vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
   #else
 	  #ifdef PBL_PLATFORM_GABBRO
 	    // Create the TextLayer for the time and date
@@ -882,28 +955,44 @@ static void main_window_load(Window *window) {
       s_date_layer = text_set(bounds.size.w / 2 - 20, bounds.size.h * date_h, 42, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #endif
   #endif
-  horizontal_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_2, bounds.size.w  * hor_2, bounds.size.h * vert_2, window_layer);
+  horizontal_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_2, bounds.size.w  * hor_2, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
   
   // Create Bluetooth GBitmap from resource
   s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
+  
+  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+  s_bt_layer = bitmap_set(182, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+  #else
   s_bt_layer = bitmap_set(bounds.size.w  * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
+  #endif
   layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
   
   // Create Battery GBitmap from resource
   s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
   s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
   s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
+  #if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
+  s_batt_layer = bitmap_set(168, bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+  #else
   s_batt_layer = bitmap_set(bounds.size.w  * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
+  #endif
   
   battery_handler(battery_state_service_peek());
   
   
   #if defined(PBL_HEALTH)
   // Create Health Layers
-  s_hr_layer = text_set((bounds.size.h * rect_h)-100, 10, 50, 32, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-  s_step_layer = text_set((bounds.size.h * rect_h)-50, 10, 75, 32, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-  health_handler();
+  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+  hr1 = line_draw(bounds, bounds.size.w - 23 + (6*hr_w), 30, bounds.size.w - 20 + (5*hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr2 = line_draw(bounds, bounds.size.w - 20 + (5*hr_w), 30, bounds.size.w - 17 + (4*hr_w), 35, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr3 = line_draw(bounds, bounds.size.w - 17 + (4*hr_w), 35, bounds.size.w - 11 + (2*hr_w), 25, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr4 = line_draw(bounds, bounds.size.w - 11 + (2*hr_w), 25, bounds.size.w - 8 + (hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr5 = line_draw(bounds, bounds.size.w - 8 + (hr_w), 30, bounds.size.w - 5, 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  s_step_layer = text_set(5, (bounds.size.h * time_h) - 20, 40, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
   #endif
+  
+  // Apply saved settings
+  prv_update_display();
   
   // Make sure the time and date are displayed from the start
   update_time();
@@ -957,6 +1046,15 @@ static void main_window_unload(Window *window) {
   
   #ifdef PBL_RECT
     layer_destroy(vertical_line);
+  #endif
+  
+  
+  #if defined(PBL_HEALTH)
+    layer_destroy(hr1);
+    layer_destroy(hr2);
+    layer_destroy(hr3);
+    layer_destroy(hr4);
+    layer_destroy(hr5);
   #endif
 
   // Unsubscribe from TickTimerService

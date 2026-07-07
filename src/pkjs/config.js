@@ -169,21 +169,21 @@ module.exports = [
 	    {
 		    "type": "select",
 		    "messageKey": "FavoriteTeam",
-		    "defaultValue": 2,
+		    "defaultValue": 1,
 		    "label": "Favorite Team",
 		    "options": [
-		      { "label": "Clemson", "value": 1 },
-		      { "label": "South Carolina", "value": 2 }
+		      { "label": "Clemson", "value": 0 },
+		      { "label": "South Carolina", "value": 1 }
 		    ]
 	    },
 	    {
 		    "type": "select",
 		    "messageKey": "BeatTeam",
-		    "defaultValue": 1,
+		    "defaultValue": 0,
 		    "label": "Beat Team",
 		    "options": [
-		      { "label": "Clemson", "value": 1 },
-		      { "label": "South Carolina", "value": 2 }
+		      { "label": "Clemson", "value": 0 },
+		      { "label": "South Carolina", "value": 1 }
 		    ]
 	    }
     ]
@@ -278,6 +278,31 @@ module.exports = [
   	    "max": 100,
   	    "step": 1
   	  }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Health",
+        "capabilities": ["HEALTH"]
+      },
+      {
+        "type": "toggle",
+        "messageKey": "stepsBool",
+        "label": "Show Steps",
+        "defaultValue": false,
+        "capabilities": ["HEALTH"]
+      },
+      {
+        "type": "toggle",
+        "messageKey": "hrBool",
+        "label": "Show Heart Rate",
+  	    "description": "It will not show even if toggled if no heart rate is detected",
+        "defaultValue": false,
+        "capabilities": ["HEALTH"]
+      }
     ]
   },
   {

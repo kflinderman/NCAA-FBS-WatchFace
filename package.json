@@ -31,7 +31,9 @@
             "quietTimeStart",
             "quietTimeEnd",
             "animationsBatt",
-            "animationsCustom"
+            "animationsCustom",
+            "stepsBool",
+            "hrBool"
         ],
         "projectType": "native",
         "resources": {
