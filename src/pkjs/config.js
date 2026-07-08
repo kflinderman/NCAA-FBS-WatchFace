@@ -170,8 +170,8 @@ module.exports = [
         "type": "toggle",
         "messageKey": "bagBool",
         "label": "Bag",
-        "defaultValue": false
-        "description": "Are you embarrased by your team?",
+        "defaultValue": false,
+        "description": "Are you embarrased by your team?"
       },
 	    {
 		    "type": "select",

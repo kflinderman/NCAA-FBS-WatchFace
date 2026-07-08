@@ -41,34 +41,24 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer;
-extern TextLayer *s_date_layer;
-extern TextLayer *s_beat_layer;
+extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
 
 #if defined(PBL_HEALTH)
 extern TextLayer *s_hr_layer;
 extern TextLayer *s_step_layer;
 extern GBitmap *s_football_bitmap;
 extern BitmapLayer *s_football_layer;
-extern Layer *hr1, *hr2, *hr3, *hr4, *hr5;
-extern Layer *step1, *step2, *step3, *step4, *step5, *step6;
+//extern Layer *hr1, *hr2, *hr3, *hr4, *hr5;
+//extern Layer *step1, *step2, *step3, *step4, *step5, *step6;
+extern Layer *hr_icon;
+extern Layer *step_ladder;
 extern bool noHR;
 #endif
 
-extern GBitmap *s_logo_bitmap;
-extern GBitmap *s_beat_team_bitmap;
-extern GBitmap *s_bt_bitmap;
-extern GBitmap *s_batt_crg_bitmap;
-extern GBitmap *s_batt_empty_bitmap;
-extern GBitmap *s_batt_low_bitmap;
-extern BitmapLayer *s_logo_layer;
-extern BitmapLayer *s_beat_team_layer;
-extern BitmapLayer *s_bt_layer;
-extern BitmapLayer *s_batt_layer;
-extern Layer *rect_layer;
-extern Layer *horizontal_line;
-extern Layer *beat_team_layer;
-extern Layer *rect_beat_layer;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;;
+Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
+
 #ifdef PBL_RECT
   extern Layer *vertical_line;
 #endif

@@ -56,7 +56,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
   bool settings_changed = false;
 
-  for (uint16_t x = 0; x < 21; x++) {
+  for (uint16_t x = 0; x < 22; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
 

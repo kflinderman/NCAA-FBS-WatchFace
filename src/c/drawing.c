@@ -23,6 +23,78 @@ Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
   return line_layer;
 }
 
+/*******************************************************************
+ * Multi-line layer — draws N segments from one Layer's update_proc
+ * instead of allocating a Layer per segment.
+ *******************************************************************/
+typedef struct {
+  GPoint p1;
+  GPoint p2;
+  uint16_t width;
+  GColor color;
+} LineSegment;
+
+typedef struct {
+  LineSegment *segments; // heap-allocated, grown with realloc()
+  uint16_t count;
+  uint16_t capacity;
+} MultiLineData;
+
+static void multiline_update_proc(Layer *layer, GContext *ctx) {
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+  for (uint16_t i = 0; i < data->count; i++) {
+    LineSegment *seg = &data->segments[i];
+    graphics_context_set_stroke_width(ctx, seg->width);
+    graphics_context_set_stroke_color(ctx, seg->color);
+    graphics_draw_line(ctx, seg->p1, seg->p2);
+  }
+}
+
+Layer* multiline_layer_create(GRect bounds, Layer *parent) {
+  Layer *layer = layer_create_with_data(bounds, sizeof(MultiLineData));
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+  data->segments = NULL;
+  data->count = 0;
+  data->capacity = 0;
+  layer_set_update_proc(layer, multiline_update_proc);
+  layer_add_child(parent, layer);
+  return layer;
+}
+
+void multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color) {
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+
+  if (data->count >= data->capacity) {
+    uint16_t new_capacity = (data->capacity == 0) ? 4 : data->capacity * 2;
+    LineSegment *new_segments = realloc(data->segments, new_capacity * sizeof(LineSegment));
+    if (!new_segments) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "multiline_add_segment: realloc failed, segment dropped");
+      return;
+    }
+    data->segments = new_segments;
+    data->capacity = new_capacity;
+  }
+
+  data->segments[data->count++] = (LineSegment){
+    .p1 = p1, .p2 = p2, .width = width, .color = color
+  };
+
+  layer_mark_dirty(layer);
+}
+
+void multiline_clear(Layer *layer) {
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+  data->count = 0;
+  layer_mark_dirty(layer);
+}
+
+void multiline_layer_destroy(Layer *layer) {
+  if (!layer) return;
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+  free(data->segments);
+  layer_destroy(layer);
+}
+
 BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window) {
   BitmapLayer *s_bitmap_layer = bitmap_layer_create(GRect(x, y, w, h));
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);

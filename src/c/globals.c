@@ -13,13 +13,15 @@ TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
 TextLayer *s_hr_layer, *s_step_layer;
 GBitmap *s_football_bitmap;
 BitmapLayer *s_football_layer;
-Layer *hr1, *hr2, *hr3, *hr4, *hr5;
-Layer *step1, *step2, *step3, *step4, *step5, *step6;
+//Layer *hr1, *hr2, *hr3, *hr4, *hr5;
+//Layer *step1, *step2, *step3, *step4, *step5, *step6;
+Layer *hr_icon;
+Layer *step_ladder;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
 Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 #ifdef PBL_RECT
   Layer *vertical_line;
@@ -206,6 +208,19 @@ void prv_update_display() {
   }
   if (s_beat_team_layer) {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
+  }
+  
+  if(settings.bagBool){
+    s_bag_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BAG);
+    if (settings.DisplayTeam > 1){
+      bitmap_layer_set_bitmap(s_bag_layerb, s_bag_bitmap);
+    }
+    else{
+      bitmap_layer_set_bitmap(s_bag_layerf, s_bag_bitmap);
+    }
+  }
+  else{
+    gbitmap_destroy(s_bag_bitmap);
   }
 
   #if defined(PBL_HEALTH)
