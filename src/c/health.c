@@ -25,8 +25,8 @@ void health_handler() {
 
   HealthValue stepvalue = 0;
   if(settings.stepsBool || settings.stepsGoalBool){
-    //stepvalue = health_service_sum_today(HealthMetricStepCount);
-    stepvalue = 4000;
+    stepvalue = health_service_sum_today(HealthMetricStepCount);
+    //stepvalue = 4000;
   }
   
   if (settings.stepsBool) {
