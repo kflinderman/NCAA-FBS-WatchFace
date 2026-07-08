@@ -44,14 +44,10 @@ extern Window *s_main_window;
 extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
 
 #if defined(PBL_HEALTH)
-extern TextLayer *s_hr_layer;
-extern TextLayer *s_step_layer;
+extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
 extern GBitmap *s_football_bitmap;
 extern BitmapLayer *s_football_layer;
-//extern Layer *hr1, *hr2, *hr3, *hr4, *hr5;
-//extern Layer *step1, *step2, *step3, *step4, *step5, *step6;
-extern Layer *hr_icon;
-extern Layer *step_ladder;
+extern Layer *hr_icon, *step_ladder;
 extern bool noHR;
 #endif
 

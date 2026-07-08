@@ -1,14 +1,9 @@
 /*
 Task List:
--Health steps
-  - Hash marks
-  - Code
 ---Release---
 -Weather
   - Weather Icons Black
   - Weather Icons White
-  - Code
--Paper Bag
   - Code
 -Football API Integration
   - API
@@ -40,55 +35,6 @@ static void main_window_load(Window *window) {
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-
-  
-#if defined(PBL_HEALTH)
-  // Create Health Layers
-  #if PBL_DISPLAY_HEIGHT > 180
-  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
-  #else
-  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-  #endif
-  //hr1 = line_draw(bounds, bounds.size.w - 23 + (6*hr_w), 30, bounds.size.w - 20 + (5*hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //hr2 = line_draw(bounds, bounds.size.w - 20 + (5*hr_w), 30, bounds.size.w - 17 + (4*hr_w), 35, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //hr3 = line_draw(bounds, bounds.size.w - 17 + (4*hr_w), 35, bounds.size.w - 11 + (2*hr_w), 25, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //hr4 = line_draw(bounds, bounds.size.w - 11 + (2*hr_w), 25, bounds.size.w - 8 + (hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //hr5 = line_draw(bounds, bounds.size.w - 8 + (hr_w), 30, bounds.size.w - 5, 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  hr_icon = multiline_layer_create(bounds, window_layer);
-  multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*hr_w), 30), GPoint(bounds.size.w - 20 + (5*hr_w), 30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*hr_w), 30), GPoint(bounds.size.w - 17 + (4*hr_w), 35), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(hr_icon, GPoint(bounds.size.w - 17 + (4*hr_w), 35), GPoint(bounds.size.w - 11 + (2*hr_w), 25), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*hr_w), 25), GPoint(bounds.size.w - 8 + (hr_w),    30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  
-  #if PBL_DISPLAY_HEIGHT > 180
-  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
-  #else
-  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
-  #endif
-  int gaps = ((bounds.size.h * time_h) - stepy - 25) / 4;
-  //step1 = line_draw(bounds, (bounds.size.w / 2 - stepx2) + (stepx1 / 2)-1, (bounds.size.h * time_h) - 27, (bounds.size.w / 2 - stepx2) + (stepx1 / 2)-1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //step2 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy, (bounds.size.w / 2 - stepx2) + stepx1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //step3 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 1, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 1, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //step4 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 2, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 2, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //step5 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 3, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 3, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  //step6 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 4, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 4, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step_ladder = multiline_layer_create(bounds, window_layer);
-  multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + gaps * 1), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 1), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + gaps * 2), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 2), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + gaps * 3), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 3), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + gaps * 4), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 4), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  
-  
-  s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_football);
-  #if PBL_DISPLAY_HEIGHT > 180
-  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 7, stepy + gaps * 4 - 6, 12, 12, s_football_bitmap, window_layer);
-  #else
-  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 5, stepy + gaps * 4 - 4, 8, 8, s_football_bitmap, window_layer);
-  #endif
-#endif
   
   // Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
   beat_team_layer = layer_create_with_data(GRect(-bounds.size.w - 10, 0, bounds.size.w + 10, bounds.size.h / 2 + 100), sizeof(RoundRectData));
@@ -103,6 +49,60 @@ static void main_window_load(Window *window) {
   s_logo_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
   s_bag_layerf = bitmap_set(0, 0, bitmap_size, bitmap_size, s_bag_bitmap, bitmap_layer_get_layer(s_logo_layer));
 
+  #if defined(PBL_HEALTH)
+    // Create Health Layers
+    #if PBL_DISPLAY_HEIGHT > 180
+    s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+    #else
+    s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+    #endif
+    hr_icon = multiline_layer_create(bounds, window_layer);
+    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*hr_w), 30), GPoint(bounds.size.w - 20 + (5*hr_w), 30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*hr_w), 30), GPoint(bounds.size.w - 17 + (4*hr_w), 35), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 17 + (4*hr_w), 35), GPoint(bounds.size.w - 11 + (2*hr_w), 25), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*hr_w), 25), GPoint(bounds.size.w - 8 + (hr_w),    30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    
+    #if PBL_DISPLAY_HEIGHT > 180
+    s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+    #else
+    s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+    #endif
+    uint16_t gaps = ((bounds.size.h * time_h) - stepy - 25) / 3;
+    uint16_t gaps2 = gaps / 5;
+    step_ladder = multiline_layer_create(bounds, window_layer);
+    //multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+  
+    for (uint16_t x = 0; x < 4; x++) {
+      multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + (gaps * x)), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + (gaps * x)), 2, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+      
+      if (x < 3){
+        for (uint16_t y = 1; y < 6; y++) {
+          multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + 3, stepy + (gaps * x) + (gaps2 * y)), GPoint((bounds.size.w / 2 - stepx2) + stepx1 - 3, stepy + (gaps * x) + (gaps2 * y)), 1, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+        }
+      }
+    }
+    
+    s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_football);
+    #if PBL_DISPLAY_HEIGHT > 180
+      s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 6, 12, 12, s_football_bitmap, window_layer);
+      #ifdef PBL_RECT
+        s_td_layer = text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      #else
+        s_td_layer = text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      #endif
+      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+    #else
+      s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 4, 8, 8, s_football_bitmap, window_layer);
+      #ifdef PBL_RECT
+        s_td_layer = text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      #else
+        s_td_layer = text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      #endif
+      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+    #endif
+  #endif
+  
   // Create beat_team_layer with per-layer color data
   layer_set_update_proc(beat_team_layer, round_rect_update_proc);
   layer_add_child(window_layer, beat_team_layer);
@@ -124,7 +124,7 @@ static void main_window_load(Window *window) {
   layer_add_child(window_layer, rect_beat_layer);
 
   s_beat_layer = text_set(0, 10, 44, 30, GColorBlack, "BEAT", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, rect_beat_layer);
-
+  
   rect_layer = layer_create_with_data(GRect(0, bounds.size.h * rect_h, bounds.size.w, 100), sizeof(RoundRectData));
 
   RoundRectData *rect_data = (RoundRectData *)layer_get_data(rect_layer);
@@ -163,7 +163,8 @@ static void main_window_load(Window *window) {
   s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
 
 #if PBL_DISPLAY_HEIGHT > 180
-  s_bt_layer = bitmap_set(182, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+  //182
+  s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
 #else
   s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
 #endif
@@ -173,8 +174,9 @@ static void main_window_load(Window *window) {
   s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
   s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
   s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
-#if defined(PBL_PLATFORM_EMERY) || defined(PBL_PLATFORM_GABBRO)
-  s_batt_layer = bitmap_set(168, bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+#if PBL_DISPLAY_HEIGHT > 180
+  //168
+  s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
 #else
   s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
 #endif
@@ -212,7 +214,10 @@ static void main_window_unload(Window *window) {
   gbitmap_destroy(s_batt_crg_bitmap);
   gbitmap_destroy(s_batt_empty_bitmap);
   gbitmap_destroy(s_batt_low_bitmap);
-  gbitmap_destroy(s_bag_bitmap);
+  if(s_bag_bitmap) {
+    gbitmap_destroy(s_bag_bitmap);
+    s_bag_bitmap = NULL; 
+  }
 
 #if PBL_DISPLAY_HEIGHT > 180
   fonts_unload_custom_font(s_font);
@@ -239,17 +244,6 @@ static void main_window_unload(Window *window) {
 #if defined(PBL_HEALTH)
   gbitmap_destroy(s_football_bitmap);
   bitmap_layer_destroy(s_football_layer);
-  //layer_destroy(hr1);
-  //layer_destroy(hr2);
-  //layer_destroy(hr3);
-  //layer_destroy(hr4);
-  //layer_destroy(hr5);
-  //layer_destroy(step1);
-  //layer_destroy(step2);
-  //layer_destroy(step3);
-  //layer_destroy(step4);
-  //layer_destroy(step5);
-  //layer_destroy(step6);
   multiline_layer_destroy(hr_icon);
   multiline_layer_destroy(step_ladder);
 #endif

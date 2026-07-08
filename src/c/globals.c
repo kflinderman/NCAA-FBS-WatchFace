@@ -10,13 +10,10 @@ Window *s_main_window;
 TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
 
 #if defined(PBL_HEALTH)
-TextLayer *s_hr_layer, *s_step_layer;
+TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
 GBitmap *s_football_bitmap;
 BitmapLayer *s_football_layer;
-//Layer *hr1, *hr2, *hr3, *hr4, *hr5;
-//Layer *step1, *step2, *step3, *step4, *step5, *step6;
-Layer *hr_icon;
-Layer *step_ladder;
+Layer *hr_icon, *step_ladder;
 bool noHR = true;
 #endif
 
@@ -52,7 +49,7 @@ uint16_t beat_primary;
     uint16_t time_x = 150;
     uint16_t time_y = 70;
     uint16_t icon_bump = 10;
-    uint16_t hr_thick = 3;
+    uint16_t hr_thick = 2;
     bool hr_w = 0;
     uint16_t stepx1 = 16;
     uint16_t stepx2 = 95;
@@ -82,7 +79,7 @@ uint16_t beat_primary;
     float vert_2 = 0.90;
     float hor_1 = 0.83;
     float hor_2 = 0.92;
-    uint16_t hr_thick = 3;
+    uint16_t hr_thick = 2;
     bool hr_w = 0;
     uint16_t stepx1 = 16;
     uint16_t stepx2 = 95;
@@ -210,19 +207,32 @@ void prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
-  if(settings.bagBool){
-    s_bag_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BAG);
-    if (settings.DisplayTeam > 1){
-      bitmap_layer_set_bitmap(s_bag_layerb, s_bag_bitmap);
-    }
-    else{
-      bitmap_layer_set_bitmap(s_bag_layerf, s_bag_bitmap);
-    }
+  if(settings.bagBool) {
+      // Prevent a memory leak by only creating the bitmap if it doesn't already exist
+      if(!s_bag_bitmap) {
+          s_bag_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BAG);
+      }
+  
+      // Set the bitmap on the active layer, and explicitly clear it from the inactive layer
+      if (settings.DisplayTeam > 1) {
+          bitmap_layer_set_bitmap(s_bag_layerb, s_bag_bitmap);
+          bitmap_layer_set_bitmap(s_bag_layerf, NULL); 
+      } else {
+          bitmap_layer_set_bitmap(s_bag_layerf, s_bag_bitmap);
+          bitmap_layer_set_bitmap(s_bag_layerb, NULL); 
+      }
+  } else {
+      // Clear the bitmap from BOTH layers before destroying it
+      bitmap_layer_set_bitmap(s_bag_layerb, NULL);
+      bitmap_layer_set_bitmap(s_bag_layerf, NULL);
+  
+      // Safely destroy and nullify the pointer
+      if(s_bag_bitmap) {
+          gbitmap_destroy(s_bag_bitmap);
+          s_bag_bitmap = NULL; 
+      }
   }
-  else{
-    gbitmap_destroy(s_bag_bitmap);
-  }
-
+  
   #if defined(PBL_HEALTH)
     health_handler();
   #endif

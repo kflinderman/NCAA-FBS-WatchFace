@@ -66,9 +66,9 @@ module.exports = function (minified) {
             showWhen: function(value) { return value === 3; }
         },
         {
-            triggerKey: 'stepsBool',
+            triggerKey: 'stepsGoalBool',
             isBoolean: true,
-            items: ['stepsGoalBool', 'stepsGoal'],
+            items: ['stepsGoal'],
             showWhen: function(value) { return value === true; }
         },
         {
