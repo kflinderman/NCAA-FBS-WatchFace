@@ -1,3 +1,27 @@
+/*
+Task List:
+-Health steps
+  - Hash marks
+  - Code
+---Release---
+-Weather
+  - Weather Icons Black
+  - Weather Icons White
+  - Code
+-Paper Bag
+  - Code
+-Football API Integration
+  - API
+  - Code
+-Champ Designation
+  - Icons
+    - Nat Champ
+    - Conf Champ
+    - Winning Season
+    - Bowl Win
+  - Code
+*/
+
 #include <pebble.h>
 #include "globals.h"
 #include "health.h"
@@ -17,6 +41,41 @@ static void main_window_load(Window *window) {
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
 
+  
+#if defined(PBL_HEALTH)
+  // Create Health Layers
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+  #else
+  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  #endif
+  hr1 = line_draw(bounds, bounds.size.w - 23 + (6*hr_w), 30, bounds.size.w - 20 + (5*hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr2 = line_draw(bounds, bounds.size.w - 20 + (5*hr_w), 30, bounds.size.w - 17 + (4*hr_w), 35, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr3 = line_draw(bounds, bounds.size.w - 17 + (4*hr_w), 35, bounds.size.w - 11 + (2*hr_w), 25, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr4 = line_draw(bounds, bounds.size.w - 11 + (2*hr_w), 25, bounds.size.w - 8 + (hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  hr5 = line_draw(bounds, bounds.size.w - 8 + (hr_w), 30, bounds.size.w - 5, 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 100, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  #else
+  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  #endif
+  int gaps = ((bounds.size.h * time_h) - stepy - 25) / 4;
+  step1 = line_draw(bounds, (bounds.size.w / 2 - stepx2) + (stepx1 / 2)-1, (bounds.size.h * time_h) - 27, (bounds.size.w / 2 - stepx2) + (stepx1 / 2)-1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step2 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy, (bounds.size.w / 2 - stepx2) + stepx1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step3 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 1, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 1, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step4 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 2, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 2, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step5 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 3, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 3, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+  step6 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 4, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 4, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
+
+  s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_football);
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 7, stepy + gaps * 4 - 6, 12, 12, s_football_bitmap, window_layer);
+  #else
+  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 5, stepy + gaps * 4 - 4, 8, 8, s_football_bitmap, window_layer);
+  #endif
+#endif
+  
   // Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
   beat_team_layer = layer_create_with_data(GRect(-bounds.size.w - 10, 0, bounds.size.w + 10, bounds.size.h / 2 + 100), sizeof(RoundRectData));
   RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
@@ -105,28 +164,6 @@ static void main_window_load(Window *window) {
 #endif
 
   battery_handler(battery_state_service_peek());
-
-#if defined(PBL_HEALTH)
-  // Create Health Layers
-  s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
-  hr1 = line_draw(bounds, bounds.size.w - 23 + (6*hr_w), 30, bounds.size.w - 20 + (5*hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  hr2 = line_draw(bounds, bounds.size.w - 20 + (5*hr_w), 30, bounds.size.w - 17 + (4*hr_w), 35, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  hr3 = line_draw(bounds, bounds.size.w - 17 + (4*hr_w), 35, bounds.size.w - 11 + (2*hr_w), 25, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  hr4 = line_draw(bounds, bounds.size.w - 11 + (2*hr_w), 25, bounds.size.w - 8 + (hr_w), 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  hr5 = line_draw(bounds, bounds.size.w - 8 + (hr_w), 30, bounds.size.w - 5, 30, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-
-  s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 40, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
-  int gaps = ((bounds.size.h * time_h) - stepy - 25) / 4;
-  step1 = line_draw(bounds, (bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27, (bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step2 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy, (bounds.size.w / 2 - stepx2) + stepx1, stepy, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step3 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 1, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 1, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step4 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 2, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 2, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step5 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 3, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 3, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-  step6 = line_draw(bounds, bounds.size.w / 2 - stepx2, stepy + gaps * 4, (bounds.size.w / 2 - stepx2) + stepx1, stepy + gaps * 4, hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, window_layer);
-
-  s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
-  s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 5, stepy + gaps * 4 - 5, 10, 10, s_football_bitmap, window_layer);
-#endif
 
   // Apply saved settings
   prv_update_display();

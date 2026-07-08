@@ -6,7 +6,7 @@ void health_handler() {
   if (settings.hrBool) {
     static char s_hr_buffer[8];
     HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-    if (hrvalue > 0) {
+    //if (hrvalue > 0) {
       snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
       text_layer_set_text(s_hr_layer, s_hr_buffer);
 
@@ -17,9 +17,9 @@ void health_handler() {
       layer_set_hidden(hr4, false);
       layer_set_hidden(hr5, false);
       noHR = false;
-    } else {
-      noHR = true;
-    }
+    //} else {
+      //noHR = true;
+    //}
   }
 
   if (!settings.hrBool || noHR) {
@@ -33,15 +33,29 @@ void health_handler() {
 
   if (settings.stepsBool) {
     static char s_step_buffer[8];
-    HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
+    //HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
+    HealthValue stepvalue = 4000;
     snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
     text_layer_set_text(s_step_layer, s_step_buffer);
     layer_set_hidden(text_layer_get_layer(s_step_layer), false);
 
     if (settings.stepsGoalBool) {
-      float stepDiff = (int)stepvalue / settings.stepsGoal;
-      (void)stepDiff; // currently unused, kept from original logic
-
+      float stepDiff = (float)stepvalue / settings.stepsGoal;
+      LinePoints *data = (LinePoints *)layer_get_data(step1);
+      uint16_t top_y = data->y2;
+      uint16_t bottom_y = data->y1;
+      if (stepDiff >= 1){
+        stepDiff = 1;
+      }
+      
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Top: %d Bottom: %d", top_y, bottom_y);
+      GRect frame = layer_get_frame(bitmap_layer_get_layer(s_football_layer));
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Before: %d", frame.origin.y);
+      frame.origin.y = bottom_y - (bottom_y - top_y) * stepDiff;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "After: %d", frame.origin.y);
+      
+      layer_set_frame(bitmap_layer_get_layer(s_football_layer), frame);
+      
       layer_set_hidden(step1, false);
       layer_set_hidden(step2, false);
       layer_set_hidden(step3, false);

@@ -35,7 +35,10 @@
             "stepsBool",
             "hrBool",
             "stepsGoalBool",
-            "stepsGoal"
+            "stepsGoal",
+            "hardcodeRivalBool",
+            "donate",
+            "bagBool"
         ],
         "projectType": "native",
         "resources": {
@@ -108,6 +111,22 @@
                     "file": "images/bag.png",
                     "name": "BAG",
                     "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/football-color.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }

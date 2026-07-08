@@ -166,6 +166,13 @@ module.exports = [
 		      }
 		    ]
 	    },
+      {
+        "type": "toggle",
+        "messageKey": "bagBool",
+        "label": "Bag",
+        "defaultValue": false
+        "description": "Are you embarrased by your team?",
+      },
 	    {
 		    "type": "select",
 		    "messageKey": "FavoriteTeam",
@@ -176,6 +183,12 @@ module.exports = [
 		      { "label": "South Carolina", "value": 1 }
 		    ]
 	    },
+      {
+        "type": "toggle",
+        "messageKey": "hardcodeRivalBool",
+        "label": "Beat your Rival?",
+        "defaultValue": true
+      },
 	    {
 		    "type": "select",
 		    "messageKey": "BeatTeam",
@@ -319,6 +332,27 @@ module.exports = [
   	    "max": 50000,
   	    "step": 1,
         "capabilities": ["HEALTH"]
+      }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "Donation"
+      },
+      {
+        "type": "toggle",
+        "messageKey": "donate",
+        "label": "Donation",
+  	    "description": "Consider donating to help support me!",
+        "defaultValue": false
+      },
+      {
+        "type": "text",
+        "id": "donation_block",
+        "defaultValue": "<div style='text-align: center; margin-top: 20px;'>\n  <p>If you like this watchface, consider supporting my work!</p>\n  <a href='https://www.paypal.me/kennylinderman1/5' target='_blank'>\n    <img src='https://cdn.buymeacoffee.com/buttons/v2/default-blue.png' alt='Buy Me A Coffee' style='height: 50px !important; width: 217px !important;' />\n  </a>\n</div>"
       }
     ]
   },

@@ -8,11 +8,18 @@ module.exports = function (minified) {
             var shouldShow = config.showWhen(currentValue);
             
             config.items.forEach(function(itemKey) {
+                // 1. Try finding by Message Key first
                 var item = clayConfig.getItemByMessageKey(itemKey);
+                
+                // 2. Fallback: Try finding by element ID if message key doesn't match
+                if (!item) {
+                    item = clayConfig.getItemById(itemKey);
+                }
+                
                 if (item) {
                     shouldShow ? item.show() : item.hide();
                 } else {
-                    console.log("Error: Could not find item '" + itemKey + "'. Check your Message Keys/IDs!");
+                    console.log("Error: Could not find item '" + itemKey + "' by Key or ID!");
                 }
             });
         };
@@ -63,6 +70,18 @@ module.exports = function (minified) {
             isBoolean: true,
             items: ['stepsGoalBool', 'stepsGoal'],
             showWhen: function(value) { return value === true; }
+        },
+        {
+            triggerKey: 'donate',
+            isBoolean: true,
+            items: ['donation_block'],
+            showWhen: function(value) { return value === true; }
+        },
+        {
+            triggerKey: 'hardcodeRivalBool',
+            isBoolean: true,
+            items: ['BeatTeam'],
+            showWhen: function(value) { return value === false; }
         }
     ];
     

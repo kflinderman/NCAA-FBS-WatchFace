@@ -8,31 +8,27 @@ void update_time() {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
 
-  // Write the current hours and minutes into a buffer
+  // Time handler
   static char s_buffer[8];
   strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
-
-  // Display this time on the TextLayer
   text_layer_set_text(s_time_layer, s_buffer);
 
-  // Write the month and day into a buffer with a newline
+  // Month/day handler
   static char s_date_buffer[10];
-#ifdef PBL_ROUND
-  strftime(s_date_buffer, sizeof(s_date_buffer), "%b %e", tick_time);
-#else
-  strftime(s_date_buffer, sizeof(s_date_buffer), "%b\n%e", tick_time);
-#endif
-
-  // Display this date on the TextLayer
+  #ifdef PBL_ROUND
+    strftime(s_date_buffer, sizeof(s_date_buffer), "%b %e", tick_time);
+  #else
+    strftime(s_date_buffer, sizeof(s_date_buffer), "%b\n%e", tick_time);
+  #endif
   text_layer_set_text(s_date_layer, s_date_buffer);
 
   // Convert current time to HHMM format
   // tick_time->tm_hour is 0-23
   current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
 
-#if defined(PBL_HEALTH)
-  health_handler();
-#endif
+  #if defined(PBL_HEALTH)
+    health_handler();
+  #endif
 }
 
 // Handles time ticks (every minute)

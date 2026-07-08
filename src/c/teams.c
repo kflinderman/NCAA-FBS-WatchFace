@@ -3,13 +3,13 @@
 
 #if defined(PBL_COLOR)
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8 },
-  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8 },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8, .rival = 1 },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 0  },
 };
 #else
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8 },
-  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8 },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 1  },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 0  },
 };
 #endif
 

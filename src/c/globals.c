@@ -7,13 +7,10 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer;
-TextLayer *s_date_layer;
-TextLayer *s_beat_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
 
 #if defined(PBL_HEALTH)
-TextLayer *s_hr_layer;
-TextLayer *s_step_layer;
+TextLayer *s_hr_layer, *s_step_layer;
 GBitmap *s_football_bitmap;
 BitmapLayer *s_football_layer;
 Layer *hr1, *hr2, *hr3, *hr4, *hr5;
@@ -21,20 +18,9 @@ Layer *step1, *step2, *step3, *step4, *step5, *step6;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap;
-GBitmap *s_beat_team_bitmap;
-GBitmap *s_bt_bitmap;
-GBitmap *s_batt_crg_bitmap;
-GBitmap *s_batt_empty_bitmap;
-GBitmap *s_batt_low_bitmap;
-BitmapLayer *s_logo_layer;
-BitmapLayer *s_beat_team_layer;
-BitmapLayer *s_bt_layer;
-BitmapLayer *s_batt_layer;
-Layer *rect_layer;
-Layer *horizontal_line;
-Layer *beat_team_layer;
-Layer *rect_beat_layer;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer;
+Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 #ifdef PBL_RECT
   Layer *vertical_line;
 #endif
@@ -52,10 +38,6 @@ int32_t current_time_integer;
 uint16_t beat_spot;
 uint16_t beat_primary;
 
-/*******************************************
- * Layout constants — same values/ifdef structure
- * as the original single-file version
- *******************************************/
 #ifdef PBL_ROUND
   float rect_h = 0.66;
   float date_h = 0.84;
@@ -126,9 +108,6 @@ uint16_t beat_primary;
   uint16_t bitmap_size = 115;
 #endif
 
-/*******************************************
- * Settings: defaults / load / save / apply
- *******************************************/
 void prv_default_settings() {
   settings.DisconnectVibration = 3;
   settings.ReconnectVibration = 1;
@@ -149,6 +128,9 @@ void prv_default_settings() {
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
+  settings.hardcodeRival = true;
+  settings.donate = false;
+  settings.bagBool = false;
 }
 
 void prv_save_settings() {
@@ -159,8 +141,7 @@ void prv_load_settings() {
   prv_default_settings();
   // Only load if the saved struct matches current size
   // (protects against corrupt data or struct layout changes)
-  if (persist_exists(SETTINGS_KEY) &&
-      persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
+  if (persist_exists(SETTINGS_KEY) && persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
@@ -188,6 +169,10 @@ void prv_update_display() {
   }
   if (s_beat_team_bitmap) {
     gbitmap_destroy(s_beat_team_bitmap);
+  }
+  
+  if (settings.hardcodeRival){
+    settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
   }
 
   if (settings.DisplayTeam > 1) {
@@ -223,7 +208,7 @@ void prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
 
-#if defined(PBL_HEALTH)
-  health_handler();
-#endif
+  #if defined(PBL_HEALTH)
+    health_handler();
+  #endif
 }

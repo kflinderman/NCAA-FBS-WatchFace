@@ -3,7 +3,7 @@
 #include "animation.h"
 
 /*********************/
-/* Accelerometer      */
+/* Accelerometer     */
 /*********************/
 void accel_data_handler(AccelData *data, uint32_t num_samples) {
   if (num_samples == 0 || data == NULL) return;
@@ -14,40 +14,24 @@ void accel_data_handler(AccelData *data, uint32_t num_samples) {
   if (abs(delta) > settings.animationSensitivity &&
       !s_animation &&
       settings.animationSensitivity != 0 &&
-
-      (
-        settings.animationsBatt == 0 ||
-        (
-          settings.animationsBatt == 1 &&
-          s_batt_history < 1
-        ) ||
-        (
-          settings.animationsBatt == 2 &&
-          s_batt_history < 2
-        ) ||
-        (
-          settings.animationsBatt == 3 &&
-          s_battery_state.charge_percent > settings.animationsCustom
-        )
+      (settings.animationsBatt == 0 ||
+        (settings.animationsBatt == 1 && s_batt_history < 1) ||
+        (settings.animationsBatt == 2 && s_batt_history < 2) ||
+        (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)
       ) &&
-
-      (
-        !settings.quietTimeBool ||
-        (
-          current_time_integer <= settings.quietTimeStart &&
-          current_time_integer >= settings.quietTimeEnd
-        )
+      (!settings.quietTimeBool ||
+        (current_time_integer <= settings.quietTimeStart && current_time_integer >= settings.quietTimeEnd)
       )
      ) {
-    // Detected sudden Y movement and play animation
-    s_animation = true;
-    animate_beat_team_layer();
-  }
+      // Detected sudden Y movement and play animation
+      s_animation = true;
+      animate_beat_team_layer();
+    }
   s_prev_y = curr_y;
 }
 
 /******************/
-/* Bluetooth       */
+/* Bluetooth      */
 /******************/
 void connection_handler(bool connected) {
   s_bt_connected = connected;
@@ -79,7 +63,7 @@ void connection_handler(bool connected) {
 }
 
 /****************/
-/* Battery       */
+/* Battery      */
 /****************/
 void battery_handler(BatteryChargeState state) {
   s_battery_state = state;

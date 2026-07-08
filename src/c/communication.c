@@ -49,11 +49,14 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
     MESSAGE_KEY_hrBool,
     MESSAGE_KEY_stepsGoalBool,
     MESSAGE_KEY_stepsGoal,
+    MESSAGE_KEY_hardcodeRivalBool, 
+    MESSAGE_KEY_donate,
+    MESSAGE_KEY_bagBool,
   };
 
   bool settings_changed = false;
 
-  for (uint16_t x = 0; x < 19; x++) {
+  for (uint16_t x = 0; x < 21; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
 
@@ -93,6 +96,9 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
         case 16: settings.hrBool = value; break;
         case 17: settings.stepsGoalBool = value; break;
         case 18: settings.stepsGoal = value; break;
+        case 19: settings.hardcodeRival = value; break;
+        case 20: settings.donate = value; break;
+        case 21: settings.bagBool = value; break;
       }
 
       settings_changed = true;

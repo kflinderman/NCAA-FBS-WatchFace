@@ -29,6 +29,9 @@ typedef struct ClaySettings {
   bool hrBool;
   bool stepsGoalBool;
   uint16_t stepsGoal;
+  bool hardcodeRival;
+  bool donate;
+  bool bagBool;
 } ClaySettings;
 
 extern ClaySettings settings;
