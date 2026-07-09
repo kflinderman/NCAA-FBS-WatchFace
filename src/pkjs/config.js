@@ -187,7 +187,7 @@ module.exports = [
         "type": "toggle",
         "messageKey": "hardcodeRivalBool",
         "label": "Beat your Rival?",
-        "defaultValue": true
+        "defaultValue": false
       },
 	    {
 		    "type": "select",
