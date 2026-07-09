@@ -95,6 +95,14 @@ void multiline_layer_destroy(Layer *layer) {
   layer_destroy(layer);
 }
 
+void multiline_set_all_colors(Layer *layer, GColor color) {
+  MultiLineData *data = (MultiLineData *)layer_get_data(layer);
+  for (uint16_t i = 0; i < data->count; i++) {
+    data->segments[i].color = color;
+  }
+  layer_mark_dirty(layer);
+}
+
 BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window) {
   BitmapLayer *s_bitmap_layer = bitmap_layer_create(GRect(x, y, w, h));
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
