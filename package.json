@@ -31,7 +31,14 @@
             "quietTimeStart",
             "quietTimeEnd",
             "animationsBatt",
-            "animationsCustom"
+            "animationsCustom",
+            "stepsBool",
+            "hrBool",
+            "stepsGoalBool",
+            "stepsGoal",
+            "hardcodeRivalBool",
+            "donate",
+            "bagBool"
         ],
         "projectType": "native",
         "resources": {
@@ -62,23 +69,9 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/bt.png",
-                    "name": "BT",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/gamecockp2.png",
                     "memoryFormat": "Smallest",
                     "name": "GAMECOCK",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/fullbatt.png",
-                    "name": "FULLBATT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -1158,6 +1151,36 @@
                     "file": "images/Toledo.png",
                     "name": "TOLEDO",
                     "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/fullbatt.png",
+                    "name": "FULLBATT",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/bt.png",
+                    "name": "BT",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/football-color.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }
