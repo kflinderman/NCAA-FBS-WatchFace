@@ -1,5 +1,6 @@
 #include "globals.h"
 #include "health.h"
+#include "drawing.h"
 
 /*******************************************
  * Definitions for all extern globals
@@ -114,8 +115,8 @@ void prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 26;
-  settings.FavoriteTeam = 108;
+  settings.DisplayTeam = 0;
+  settings.FavoriteTeam = 1;
   settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
@@ -127,7 +128,7 @@ void prv_default_settings() {
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
-  settings.hardcodeRival = true;
+  settings.hardcodeRival = false;
   settings.donate = false;
   settings.bagBool = false;
 }
@@ -179,6 +180,14 @@ void prv_update_display() {
     s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
     s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
 
+    #if defined(PBL_HEALTH)
+    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    
+    multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    #endif
+    
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
       if (beat_data) {
@@ -190,7 +199,15 @@ void prv_update_display() {
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
     s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
     s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-
+    
+    #if defined(PBL_HEALTH)
+    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    
+    multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    #endif
+    
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
       if (beat_data) {
