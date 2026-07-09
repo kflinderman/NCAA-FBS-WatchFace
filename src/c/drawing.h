@@ -40,6 +40,8 @@ void multiline_clear(Layer *layer);
 // created with multiline_layer_create().
 void multiline_layer_destroy(Layer *layer);
 
+void multiline_set_all_colors(Layer *layer, GColor color);
+
 BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h,
                          GBitmap *bitmap, Layer *window);
 
