@@ -206,7 +206,7 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
 
   // Open AppMessage
-  const int inbox_size = 256;
+  const int inbox_size = 512;
   const int outbox_size = 256;
   app_message_open(inbox_size, outbox_size);
 }

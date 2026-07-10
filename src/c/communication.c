@@ -3,7 +3,7 @@
 
 
 void configuration_callback(DictionaryIterator *iterator, void *context){
-  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration");
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   // Check for Clay settings data
   uint32_t claysettings_id[] = {
     MESSAGE_KEY_DisconnectVibration,
@@ -59,8 +59,8 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
 
   for (uint16_t x = 0; x < 40; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
+    
     if (temp_t) {
-
       int32_t value = 0;
 
       if (temp_t->type == TUPLE_CSTRING) {

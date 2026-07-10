@@ -454,7 +454,7 @@ module.exports = [
       {
         "type": "heading",
         "defaultValue": "API Score",
-        "messageKey": "api_score"
+        "id": "api_score"
       },
       {
         "type": "toggle",
@@ -500,7 +500,7 @@ module.exports = [
       {
         "type": "heading",
         "defaultValue": "API Opponent",
-        "messageKey": "api_opponent"
+        "id": "api_opponent"
       },
       {
         "type": "toggle",
