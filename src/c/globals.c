@@ -131,6 +131,24 @@ void prv_default_settings() {
   settings.hardcodeRival = false;
   settings.donate = false;
   settings.bagBool = false;
+  settings.animationDelay = false;
+  settings.countdownBool = false;
+  settings.countdownTime = 0;
+  settings.countdownCustom = 1200;
+  settings.countdownDisplay = 1;
+  settings.api = false;
+  settings.api_quiet = false;
+  settings.scoreDisplayBool = false;
+  settings.scoreUpdate = 5;
+  settings.scoreLocation = 1;
+  settings.opponentBool = false;
+  settings.opponentSelect = 0;
+  settings.customOpponent = 0;
+  settings.weatherBool = false;
+  settings.weatherQuiet = false;
+  settings.weatherUnits = 0;
+  settings.weatherManual = false;
+  settings.weatherLocation = 12345;
 }
 
 void prv_save_settings() {

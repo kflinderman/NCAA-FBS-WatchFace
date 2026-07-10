@@ -28,11 +28,36 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
     MESSAGE_KEY_hardcodeRivalBool, 
     MESSAGE_KEY_donate,
     MESSAGE_KEY_bagBool,
+    MESSAGE_KEY_animationDelay,
+    MESSAGE_KEY_countdownBool,
+    MESSAGE_KEY_countdownTime,
+    MESSAGE_KEY_countdownCustom,
+    MESSAGE_KEY_countdownDisplay,
+    MESSAGE_KEY_api,
+    MESSAGE_KEY_api_quiet,
+    MESSAGE_KEY_scoreDisplayBool,
+    MESSAGE_KEY_scoreUpdate,
+    MESSAGE_KEY_scoreLocation,
+    MESSAGE_KEY_opponentBool,
+    MESSAGE_KEY_opponentSelect,
+    MESSAGE_KEY_customOpponent,
+    MESSAGE_KEY_weatherBool,
+    MESSAGE_KEY_weatherQuiet,
+    MESSAGE_KEY_weatherUnits,
+    MESSAGE_KEY_weatherManual,
+    MESSAGE_KEY_weatherLocation,
   };
 
   bool settings_changed = false;
+  
+  Tuple *key_tuple = dict_find(iterator, MESSAGE_KEY_api_key);
+  if (key_tuple){
+    snprintf(settings.api_key, sizeof(settings.api_key), "%s", key_tuple->value->cstring);
+    settings_changed = true;
+  }
+  
 
-  for (uint16_t x = 0; x < 22; x++) {
+  for (uint16_t x = 0; x < 40; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     if (temp_t) {
 
@@ -75,6 +100,24 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
         case 19: settings.hardcodeRival = value; break;
         case 20: settings.donate = value; break;
         case 21: settings.bagBool = value; break;
+        case 22: settings.animationDelay = value; break;
+        case 23: settings.countdownBool = value; break;
+        case 24: settings.countdownTime = value; break;
+        case 25: settings.countdownCustom = value; break;
+        case 26: settings.countdownDisplay = value; break;
+        case 27: settings.api = value; break;
+        case 28: settings.api_quiet = value; break;
+        case 29: settings.scoreDisplayBool = value; break;
+        case 30: settings.scoreUpdate = value; break;
+        case 31: settings.scoreLocation = value; break;
+        case 32: settings.opponentBool = value; break;
+        case 33: settings.opponentSelect = value; break;
+        case 34: settings.customOpponent = value; break;
+        case 35: settings.weatherBool = value; break;
+        case 36: settings.weatherQuiet = value; break;
+        case 37: settings.weatherUnits = value; break;
+        case 38: settings.weatherManual = value; break;
+        case 39: settings.weatherLocation = value; break;
       }
 
       settings_changed = true;

@@ -32,6 +32,25 @@ typedef struct ClaySettings {
   bool hardcodeRival;
   bool donate;
   bool bagBool;
+  bool animationDelay;
+  bool countdownBool;
+  uint8_t countdownTime;
+  uint16_t countdownCustom;
+  uint8_t countdownDisplay;
+  bool api;
+  char api_key[128];
+  bool api_quiet;
+  bool scoreDisplayBool;
+  uint16_t scoreUpdate;
+  uint8_t scoreLocation;
+  bool opponentBool;
+  uint8_t opponentSelect;
+  uint16_t customOpponent;
+  bool weatherBool;
+  bool weatherQuiet;
+  bool weatherUnits;
+  bool weatherManual;
+  uint32_t weatherLocation;
 } ClaySettings;
 
 extern ClaySettings settings;

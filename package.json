@@ -59,9 +59,7 @@
             "weatherUnits",
             "weatherManual",
             "weatherLocation",
-            "TEMPERATURE",
-            "CONDITIONS",
-            "REQUEST_WEATHER"
+            "countdownCustom"
         ],
         "projectType": "native",
         "resources": {
