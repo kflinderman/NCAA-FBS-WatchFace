@@ -1,6 +1,7 @@
 #include "sensors.h"
 #include "globals.h"
 #include "animation.h"
+#include "drawing.h"
 
 /*********************/
 /* Accelerometer     */
@@ -62,6 +63,19 @@ void connection_handler(bool connected) {
   }
 }
 
+void bluetooth_draw(Layer *window_layer, GRect bounds){
+  // Create Bluetooth GBitmap from resource
+  s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
+
+  #if PBL_DISPLAY_HEIGHT > 180
+    //182
+    s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+  #else
+    s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
+  #endif
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
+}
+
 /****************/
 /* Battery      */
 /****************/
@@ -103,4 +117,18 @@ void battery_handler(BatteryChargeState state) {
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
     s_batt_history = 0;
   }
+}
+
+void battery_draw(Layer *window_layer, GRect bounds){
+  // Create Battery GBitmap from resource
+  s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
+  s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
+  s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
+  
+  #if PBL_DISPLAY_HEIGHT > 180
+    //168
+    s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+  #else
+    s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
+  #endif
 }

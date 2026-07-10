@@ -1,33 +1,9 @@
 #include "communication.h"
 #include "globals.h"
 
-// AppMessage received handler
-void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  /*
-  // Check for weather data
-  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
-  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
 
-  if (temp_tuple && conditions_tuple) {
-    static char temperature_buffer[8];
-    static char conditions_buffer[32];
-    static char weather_layer_buffer[32];
-
-    int temp_value = (int)temp_tuple->value->int32;
-
-    // Convert to Fahrenheit if setting is enabled
-    if (settings.TemperatureUnit) {
-      temp_value = (temp_value * 9 / 5) + 32;
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°F", temp_value);
-    } else {
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°C", temp_value);
-    }
-
-    snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
-    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s %s", temperature_buffer, conditions_buffer);
-  }
-  */
-
+void configuration_callback(DictionaryIterator *iterator, void *context){
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration");
   // Check for Clay settings data
   uint32_t claysettings_id[] = {
     MESSAGE_KEY_DisconnectVibration,
@@ -109,17 +85,26 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   if (settings_changed) {
     prv_save_settings();
     prv_update_display();
-
-    // Refetch weather if the temperature unit changed so the display updates
-    /*
-    if (temp_unit_t) {
-      DictionaryIterator *iter;
-      app_message_outbox_begin(&iter);
-      dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
-      app_message_outbox_send();
-    }
-    */
   }
+}
+
+void weather_callback(DictionaryIterator *iterator, void *context){
+  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
+  //Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+
+  if (temp_tuple) {
+    static char temperature_buffer[8];
+    APP_LOG(APP_LOG_LEVEL_INFO, "Temperature: %d", (int)temp_tuple->value->int32);
+    snprintf(temperature_buffer, sizeof(temperature_buffer), "%dF", (int)temp_tuple->value->int32);
+    text_layer_set_text(s_weather_layer, temperature_buffer);
+  }
+}
+
+// AppMessage received handler
+void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
+  configuration_callback(iterator, context);
+  weather_callback(iterator, context);
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {

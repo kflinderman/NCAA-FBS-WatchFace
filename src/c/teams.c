@@ -3,8 +3,8 @@
 
 #if defined(PBL_COLOR)
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8, .rival = 1 },
-  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 0  },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorBlackARGB8, .rival = 1 },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 26 },
 };
 #else
 const Team TEAMS[] = {

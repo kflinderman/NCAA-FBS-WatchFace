@@ -41,7 +41,7 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
+extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer;
 
 #if defined(PBL_HEALTH)
 extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;

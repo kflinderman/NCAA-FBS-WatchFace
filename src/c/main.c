@@ -25,6 +25,7 @@ Task List:
 #include "sensors.h"
 #include "timekeeping.h"
 #include "communication.h"
+#include "weather.h"
 
 /***********************************/
 /* NCAA FBS Watchface              */
@@ -50,58 +51,10 @@ static void main_window_load(Window *window) {
   s_bag_layerf = bitmap_set(0, 0, bitmap_size, bitmap_size, s_bag_bitmap, bitmap_layer_get_layer(s_logo_layer));
 
   #if defined(PBL_HEALTH)
-    // Create Health Layers
-    #if PBL_DISPLAY_HEIGHT > 180
-    s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
-    #else
-    s_hr_layer = text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-    #endif
-    hr_icon = multiline_layer_create(bounds, window_layer);
-    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*hr_w), 30), GPoint(bounds.size.w - 20 + (5*hr_w), 30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*hr_w), 30), GPoint(bounds.size.w - 17 + (4*hr_w), 35), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 17 + (4*hr_w), 35), GPoint(bounds.size.w - 11 + (2*hr_w), 25), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*hr_w), 25), GPoint(bounds.size.w - 8 + (hr_w),    30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    #if PBL_DISPLAY_HEIGHT > 180
-    s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
-    #else
-    s_step_layer = text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
-    #endif
-    uint16_t gaps = ((bounds.size.h * time_h) - stepy - 25) / 3;
-    uint16_t gaps2 = gaps / 5;
-    step_ladder = multiline_layer_create(bounds, window_layer);
-    //multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  
-    for (uint16_t x = 0; x < 4; x++) {
-      multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + (gaps * x)), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + (gaps * x)), 2, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-      
-      if (x < 3){
-        for (uint16_t y = 1; y < 6; y++) {
-          multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + 3, stepy + (gaps * x) + (gaps2 * y)), GPoint((bounds.size.w / 2 - stepx2) + stepx1 - 3, stepy + (gaps * x) + (gaps2 * y)), 1, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-        }
-      }
-    }
-    
-    s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_football);
-    #if PBL_DISPLAY_HEIGHT > 180
-      s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 6, 12, 12, s_football_bitmap, window_layer);
-      #ifdef PBL_RECT
-        s_td_layer = text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-      #else
-        s_td_layer = text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-      #endif
-      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
-    #else
-      s_football_layer = bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 4, 8, 8, s_football_bitmap, window_layer);
-      #ifdef PBL_RECT
-        s_td_layer = text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-      #else
-        s_td_layer = text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-      #endif
-      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
-    #endif
+    health_draw(window_layer, bounds);
   #endif
+  
+  weather_draw(window_layer, bounds);
   
   // Create beat_team_layer with per-layer color data
   layer_set_update_proc(beat_team_layer, round_rect_update_proc);
@@ -109,11 +62,12 @@ static void main_window_load(Window *window) {
   s_beat_team_layer = bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_beat_team_bitmap, beat_team_layer);
   s_bag_layerb = bitmap_set(0, 0, bitmap_size, bitmap_size, s_bag_bitmap, bitmap_layer_get_layer(s_beat_team_layer));
 
-#ifdef PBL_RECT
-  beat_spot = 0;
-#else
-  beat_spot = bounds.size.w / 2 - 22;
-#endif
+  #ifdef PBL_RECT
+    beat_spot = 0;
+  #else
+    beat_spot = bounds.size.w / 2 - 22;
+  #endif
+  
   beat_primary = settings.DisplayTeam;
 
   // rect_beat_layer with its own color
@@ -132,54 +86,11 @@ static void main_window_load(Window *window) {
   layer_set_update_proc(rect_layer, round_rect_update_proc);
   layer_add_child(window_layer, rect_layer);
 
-#if PBL_DISPLAY_HEIGHT > 180
-  s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
-  s_time_layer = text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
-#else
-  s_time_layer = text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
-#endif
+  timeDate_draw(window_layer, bounds);
+  
+  bluetooth_draw(window_layer, bounds);
 
-#ifdef PBL_RECT
-  // Create the TextLayer for the time and date
-  #if PBL_DISPLAY_HEIGHT > 180
-    s_date_layer = text_set(155, bounds.size.h * date_h, 35, 38, GColorBlack, "Dec 31", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
-  #else
-    s_date_layer = text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-  #endif
-
-  vertical_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
-#else
-  #if PBL_DISPLAY_HEIGHT > 180
-    // Create the TextLayer for the time and date
-    s_date_layer = text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-  #else
-    // Create the TextLayer for the time and date
-    s_date_layer = text_set(bounds.size.w / 2 - 20, bounds.size.h * date_h, 42, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-  #endif
-#endif
-  horizontal_line = line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_2, bounds.size.w * hor_2, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
-
-  // Create Bluetooth GBitmap from resource
-  s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
-
-#if PBL_DISPLAY_HEIGHT > 180
-  //182
-  s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
-#else
-  s_bt_layer = bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
-#endif
-  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
-
-  // Create Battery GBitmap from resource
-  s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
-  s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
-  s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
-#if PBL_DISPLAY_HEIGHT > 180
-  //168
-  s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
-#else
-  s_batt_layer = bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
-#endif
+  battery_draw(window_layer, bounds);
 
   battery_handler(battery_state_service_peek());
 
@@ -202,10 +113,11 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_time_layer);
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_beat_layer);
-#if defined(PBL_HEALTH)
-  text_layer_destroy(s_hr_layer);
-  text_layer_destroy(s_step_layer);
-#endif
+  text_layer_destroy(s_weather_layer);
+  #if defined(PBL_HEALTH)
+    text_layer_destroy(s_hr_layer);
+    text_layer_destroy(s_step_layer);
+  #endif
 
   // Destroy GBitmap
   gbitmap_destroy(s_logo_bitmap);
@@ -219,9 +131,9 @@ static void main_window_unload(Window *window) {
     s_bag_bitmap = NULL; 
   }
 
-#if PBL_DISPLAY_HEIGHT > 180
-  fonts_unload_custom_font(s_font);
-#endif
+  #if PBL_DISPLAY_HEIGHT > 180
+    fonts_unload_custom_font(s_font);
+  #endif
 
   // Destroy BitmapLayer
   bitmap_layer_destroy(s_logo_layer);
@@ -237,16 +149,16 @@ static void main_window_unload(Window *window) {
   layer_destroy(beat_team_layer);
   layer_destroy(rect_beat_layer);
 
-#ifdef PBL_RECT
-  layer_destroy(vertical_line);
-#endif
+  #ifdef PBL_RECT
+    layer_destroy(vertical_line);
+  #endif
 
-#if defined(PBL_HEALTH)
-  gbitmap_destroy(s_football_bitmap);
-  bitmap_layer_destroy(s_football_layer);
-  multiline_layer_destroy(hr_icon);
-  multiline_layer_destroy(step_ladder);
-#endif
+  #if defined(PBL_HEALTH)
+    gbitmap_destroy(s_football_bitmap);
+    bitmap_layer_destroy(s_football_layer);
+    multiline_layer_destroy(hr_icon);
+    multiline_layer_destroy(step_ladder);
+  #endif
 
   // Unsubscribe from TickTimerService
   tick_timer_service_unsubscribe();
