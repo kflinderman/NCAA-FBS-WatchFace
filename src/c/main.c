@@ -4,7 +4,6 @@ Task List:
 -Weather
   - Weather Icons Black
   - Weather Icons White
-  - Code
 -Football API Integration
   - API
   - Code

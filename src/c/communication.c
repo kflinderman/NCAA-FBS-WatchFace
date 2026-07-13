@@ -45,6 +45,11 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
     MESSAGE_KEY_weatherBool,
     MESSAGE_KEY_weatherQuiet,
     MESSAGE_KEY_weatherUnits,
+    MESSAGE_KEY_rankingBool,
+    MESSAGE_KEY_winBool,
+    MESSAGE_KEY_confBool,
+    MESSAGE_KEY_bowlBool,
+    MESSAGE_KEY_champBool,
   };
 
   bool settings_changed = false;
@@ -56,7 +61,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
   }
   
 
-  for (uint16_t x = 0; x < 38; x++) {
+  for (uint16_t x = 0; x < 43; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     
     if (temp_t) {
@@ -115,6 +120,11 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
         case 35: settings.weatherBool = value; break;
         case 36: settings.weatherQuiet = value; break;
         case 37: settings.weatherUnits = value; break;
+        case 38: settings.rankingBool = value; break;
+        case 39: settings.winBool = value; break;
+        case 40: settings.confBool = value; break;
+        case 41: settings.bowlBool = value; break;
+        case 42: settings.champBool = value; break;
       }
 
       settings_changed = true;

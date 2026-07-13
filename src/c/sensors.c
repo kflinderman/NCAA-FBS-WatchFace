@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "animation.h"
 #include "drawing.h"
+#include "timekeeping.h"
 
 /*********************/
 /* Accelerometer     */
@@ -26,7 +27,12 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
      ) {
       // Detected sudden Y movement and play animation
       s_animation = true;
-      animation_beat_team_layer();
+      if(settings.animationDelay){
+        app_timer_register(1000, timer_callback, NULL);
+      }
+      else{
+        animation_beat_team_layer();
+      }
     }
   s_prev_y = curr_y;
 }

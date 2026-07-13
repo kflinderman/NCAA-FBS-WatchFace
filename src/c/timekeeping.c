@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "health.h"
 #include "drawing.h"
+#include "animation.h"
 
 // Updates the time TextLayer
 void update_time() {
@@ -46,6 +47,10 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       app_message_outbox_send();
     }
   }
+}
+
+void timer_callback(void *data) {
+  animation_beat_team_layer();
 }
 
 void timeDate_draw(Layer *window_layer, GRect bounds){

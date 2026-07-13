@@ -151,6 +151,11 @@ void globals_prv_default_settings() {
   settings.weatherBool = false;
   settings.weatherQuiet = false;
   settings.weatherUnits = 0;
+  settings.rankingBool = false;
+  settings.winBool = false;
+  settings.confBool = false;
+  settings.bowlBool = false;
+  settings.champBool = false;
 }
 
 void globals_prv_save_settings() {
@@ -165,8 +170,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
 }
 
 void globals_prv_update_display() {

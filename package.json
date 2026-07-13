@@ -59,7 +59,12 @@
             "weatherUnits",
             "weatherManual",
             "weatherLocation",
-            "countdownCustom"
+            "countdownCustom",
+            "rankingBool",
+            "winBool",
+            "confBool",
+            "bowlBool",
+            "champBool"
         ],
         "projectType": "native",
         "resources": {

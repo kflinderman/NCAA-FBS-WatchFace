@@ -49,6 +49,11 @@ typedef struct ClaySettings {
   bool weatherBool;
   bool weatherQuiet;
   bool weatherUnits;
+  bool rankingBool;
+  bool winBool;
+  bool confBool;
+  bool bowlBool;
+  bool champBool;
 } ClaySettings;
 
 extern ClaySettings settings;

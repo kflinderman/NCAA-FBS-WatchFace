@@ -12,12 +12,12 @@ void weather_temp_update(){
       unit = 'C';
     }
     else{
-      tempTemperature = (temperatureValue * (9/5)) + 32;
+      tempTemperature = ((temperatureValue * 9) / 5) + 32;
       unit = 'F';
     }
     
     static char s_temp_buffer[8];
-    snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d%c", (int)tempTemperature, unit);
+    snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d%c", tempTemperature, unit);
     text_layer_set_text(s_weather_layer, s_temp_buffer);
 
     layer_set_hidden(text_layer_get_layer(s_weather_layer), false);

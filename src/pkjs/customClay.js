@@ -131,7 +131,14 @@ module.exports = function (minified) {
                             ]
                         }
                     ]
-                }
+                },
+                { key: 'api_extras' },
+                { key: 'superlatives'},
+                { key: 'rankingBool' },
+                { key: 'winBool' },
+                { key: 'confBool' },
+                { key: 'bowlBool' },
+                { key: 'champBool' }
             ]
         },
         {

@@ -459,17 +459,19 @@ module.exports = [
       {
         "type": "toggle",
         "label": "Display Score During Game",
+        "description": "Score will always be of Favorite Team",
         "defaultValue": false,
         "messageKey": "scoreDisplayBool"
       },
       {
-        "type": "input",
+        "type": "slider",
         "label": "Score Updated Frequency (in minutes)",
         "messageKey": "scoreUpdate",
+        "description": "Be careful, if you constantly switch teams and have a low update frequency there is a chance to hit your API limit. Do the math.",
         "defaultValue": 5,
-        "attributes": {
-          "type": "number"
-        }
+  	    "min": 1,
+  	    "max": 60,
+  	    "step": 1
       },
       {
         "type": "select",
@@ -690,6 +692,51 @@ module.exports = [
 		      { "label": "Wyoming", "value": 152 }
 		    ]
 	    }
+    ]
+  },
+  {
+    "type": "section",
+    "items": [
+      {
+        "type": "heading",
+        "defaultValue": "API Extras",
+        "id": "api_extras"
+      },
+      {
+        "type": "text",
+        "id": "superlatives",
+        "defaultValue": "Add small markings for season superlatives"
+      },
+      {
+        "type": "toggle",
+        "label": "Display Ranking",
+        "defaultValue": false,
+        "messageKey": "rankingBool"
+      },
+      {
+        "type": "toggle",
+        "label": "Winning Season Marking",
+        "defaultValue": false,
+        "messageKey": "winBool"
+      },
+      {
+        "type": "toggle",
+        "label": "Conference Champion Marking",
+        "defaultValue": false,
+        "messageKey": "confBool"
+      },
+      {
+        "type": "toggle",
+        "label": "Bowl Win Marking",
+        "defaultValue": false,
+        "messageKey": "bowlBool"
+      },
+      {
+        "type": "toggle",
+        "label": "Champion Marking",
+        "defaultValue": false,
+        "messageKey": "champBool"
+      }
     ]
   },
   {
