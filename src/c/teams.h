@@ -9,7 +9,7 @@ typedef struct {
   uint8_t color;
   uint8_t icon_color;
   uint8_t rival;
-  //const char *name;
+  const char *name;
 } Team;
 
 // DECLARE the variables here
