@@ -1,7 +1,7 @@
 #pragma once
 #include <pebble.h>
 
-Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t width, GColor color, Layer *window_layer);
+Layer* drawing_line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2, uint16_t width, GColor color, Layer *window_layer);
 
 /*******************************************************************
  * Multi-line layer
@@ -23,27 +23,27 @@ Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
 
 // Creates an empty multi-line layer and adds it as a child of `parent`.
 // Add segments to it with multiline_add_segment().
-Layer* multiline_layer_create(GRect bounds, Layer *parent);
+Layer* drawing_multiline_layer_create(GRect bounds, Layer *parent);
 
 // Appends one line segment to the layer and marks it dirty. Segment
 // coordinates are relative to the layer's own bounds, same as any
 // other layer's update_proc.
-void multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color);
+void drawing_multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color);
 
 // Removes every segment from the layer (e.g. to redraw from scratch)
 // without destroying the layer itself.
-void multiline_clear(Layer *layer);
+void drawing_multiline_clear(Layer *layer);
 
 // Frees the layer's heap-allocated segment array, then destroys the
 // layer. Always use this instead of plain layer_destroy() for layers
 // created with multiline_layer_create().
-void multiline_layer_destroy(Layer *layer);
+void drawing_multiline_layer_destroy(Layer *layer);
 
-void multiline_set_all_colors(Layer *layer, GColor color);
+void drawing_multiline_set_all_colors(Layer *layer, GColor color);
 
-BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window);
+BitmapLayer* drawing_bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window);
 
-TextLayer* text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color, const char *initial_text, GFont font_handle, GTextAlignment alignment, Layer *window);
+TextLayer* drawing_text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color, const char *initial_text, GFont font_handle, GTextAlignment alignment, Layer *window);
 
 // Exposed so main.c can assign it via layer_set_update_proc()
-void round_rect_update_proc(Layer *layer, GContext *ctx);
+void drawing_round_rect_update_proc(Layer *layer, GContext *ctx);

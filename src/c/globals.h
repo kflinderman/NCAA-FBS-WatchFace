@@ -49,8 +49,6 @@ typedef struct ClaySettings {
   bool weatherBool;
   bool weatherQuiet;
   bool weatherUnits;
-  bool weatherManual;
-  uint32_t weatherLocation;
 } ClaySettings;
 
 extern ClaySettings settings;
@@ -70,8 +68,8 @@ extern Layer *hr_icon, *step_ladder;
 extern bool noHR;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap, *s_conditions_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb, *s_conditions_layer;
 Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 
 #ifdef PBL_RECT
@@ -90,6 +88,8 @@ extern BatteryChargeState s_battery_state;
 extern bool s_bt_history;
 extern int16_t s_batt_history;
 extern int32_t current_time_integer;
+extern int16_t temperatureValue;
+extern int16_t conditionValue;
 
 extern uint16_t beat_spot;
 extern uint16_t beat_primary;
@@ -116,7 +116,7 @@ extern uint16_t bitmap_size;
  * Settings persistence + display application
  * (settings.c)
  *******************************************/
-void prv_default_settings(void);
-void prv_save_settings(void);
-void prv_load_settings(void);
-void prv_update_display(void);
+void globals_prv_default_settings(void);
+void globals_prv_save_settings(void);
+void globals_prv_load_settings(void);
+void globals_prv_update_display(void);

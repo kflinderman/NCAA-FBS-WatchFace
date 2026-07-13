@@ -1,5 +1,6 @@
 #include "communication.h"
 #include "globals.h"
+#include "weather.h"
 
 
 void configuration_callback(DictionaryIterator *iterator, void *context){
@@ -44,8 +45,6 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
     MESSAGE_KEY_weatherBool,
     MESSAGE_KEY_weatherQuiet,
     MESSAGE_KEY_weatherUnits,
-    MESSAGE_KEY_weatherManual,
-    MESSAGE_KEY_weatherLocation,
   };
 
   bool settings_changed = false;
@@ -57,7 +56,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
   }
   
 
-  for (uint16_t x = 0; x < 40; x++) {
+  for (uint16_t x = 0; x < 38; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     
     if (temp_t) {
@@ -116,8 +115,6 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
         case 35: settings.weatherBool = value; break;
         case 36: settings.weatherQuiet = value; break;
         case 37: settings.weatherUnits = value; break;
-        case 38: settings.weatherManual = value; break;
-        case 39: settings.weatherLocation = value; break;
       }
 
       settings_changed = true;
@@ -126,20 +123,33 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
 
   // Save and apply if any settings were changed
   if (settings_changed) {
-    prv_save_settings();
-    prv_update_display();
+    globals_prv_save_settings();
+    globals_prv_update_display();
   }
 }
 
 void weather_callback(DictionaryIterator *iterator, void *context){
+  APP_LOG(APP_LOG_LEVEL_INFO, "Weather - Dict size: %d", dict_size(iterator));
+  
+  bool weather_changed = false;
+  
   Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
-  //Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
+  
+  if (conditions_tuple){
+    conditionValue = conditions_tuple->value->int16;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Conditions: %d", conditionValue);
+    weather_changed = true;
+  }
 
   if (temp_tuple) {
-    static char temperature_buffer[8];
-    APP_LOG(APP_LOG_LEVEL_INFO, "Temperature: %d", (int)temp_tuple->value->int32);
-    snprintf(temperature_buffer, sizeof(temperature_buffer), "%dF", (int)temp_tuple->value->int32);
-    text_layer_set_text(s_weather_layer, temperature_buffer);
+    temperatureValue = temp_tuple->value->int16;
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Temperature: %d", temperatureValue);
+    weather_changed = true;
+  }
+  
+  if (weather_changed){
+    weather_update();
   }
 }
 

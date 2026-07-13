@@ -726,22 +726,7 @@ module.exports = [
 		        "value": "1"
 		      }
 		    ]
-	    },
-      {
-        "type": "toggle",
-        "label": "Manual Location",
-        "messageKey": "weatherManual",
-        "defaultValue": false,
-      },
-      {
-        "type": "input",
-        "label": "Custom Location",
-        "messageKey": "weatherLocation",
-        "defaultValue": "",
-        "attributes": {
-          "type": "number"
-        }
-      }
+	    }
     ]
   },
   {

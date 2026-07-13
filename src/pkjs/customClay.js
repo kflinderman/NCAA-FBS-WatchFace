@@ -140,13 +140,6 @@ module.exports = function (minified) {
             children: [
                 { key: 'weatherQuiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
                 { key: 'weatherUnits' },
-                {
-                    key: 'weatherManual',
-                    condition: isTrue, // display below on true
-                    children: [
-                        { key: 'weatherLocation' }
-                    ]
-                }
             ]
         },
         {
