@@ -155,6 +155,29 @@
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
+                },
+                {
+                    "characterRegex": "[\\uF00D\\uF002\\uF003\\uF00B\\uF0B2\\uF008\\uF006\\uF00A\\uF009\\uF065\\uF010\\uF005\\uF07B]",
+                    "file": "fonts/Weather Icons.ttf",
+                    "name": "FONT_WEATHER_ICONS_18",
+                    "targetPlatforms": [
+                        "emery",
+                        "gabbro"
+                    ],
+                    "type": "font"
+                },
+                {
+                    "characterRegex": "[\\uF00D\\uF002\\uF003\\uF00B\\uF0B2\\uF008\\uF006\\uF00A\\uF009\\uF065\\uF010\\uF005\\uF07B]",
+                    "file": "fonts/Weather Icons.ttf",
+                    "name": "FONT_WEATHER_ICONS_12",
+                    "targetPlatforms": [
+                        "aplite",
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "flint"
+                    ],
+                    "type": "font"
                 }
             ]
         },

@@ -36,7 +36,7 @@ static void main_window_load(Window *window) {
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
   
   s_logo_layer = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
@@ -67,8 +67,6 @@ static void main_window_load(Window *window) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
   sensor_battery_draw(window_layer, bounds);
-
-  sensor_battery_handler(battery_state_service_peek());
 
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
   // Apply saved settings
