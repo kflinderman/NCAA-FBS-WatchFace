@@ -64,7 +64,14 @@
             "winBool",
             "confBool",
             "bowlBool",
-            "champBool"
+            "champBool",
+            "REQUEST_SCORE",
+            "ScoreTeamIndex",
+            "ScoreHomeTeam",
+            "ScoreAwayTeam",
+            "ScoreHomePoints",
+            "ScoreAwayPoints",
+            "ScoreCompleted"
         ],
         "projectType": "native",
         "resources": {

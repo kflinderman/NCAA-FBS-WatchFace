@@ -63,7 +63,7 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_test_layer;
+extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
 
 #if defined(PBL_HEALTH)
 extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
@@ -73,15 +73,15 @@ extern Layer *hr_icon, *step_ladder;
 extern bool noHR;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap, *s_conditions_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb, *s_conditions_layer;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
 Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 
 #ifdef PBL_RECT
   extern Layer *vertical_line;
 #endif
 
-extern GFont s_font;
+extern GFont s_font, s_wIcon;
 
 /*******************************************
  * Sensor / state variables
@@ -95,6 +95,18 @@ extern int16_t s_batt_history;
 extern int32_t current_time_integer;
 extern int16_t temperatureValue;
 extern int16_t conditionValue;
+
+/*******************************************
+	* CFBD score state — NOT persisted (live
+	* data refreshed from the API, unlike
+	* ClaySettings which is user configuration)
+ *******************************************/
+extern char scoreHomeTeam[32];
+extern char scoreAwayTeam[32];
+extern int16_t scoreHomePoints;
+extern int16_t scoreAwayPoints;
+extern bool scoreCompleted;
+extern bool scoreValid; // false until the first successful response arrives
 
 extern uint16_t beat_spot;
 extern uint16_t beat_primary;

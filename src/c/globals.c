@@ -10,7 +10,7 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_test_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
 
 #if defined(PBL_HEALTH)
 TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
@@ -20,14 +20,14 @@ Layer *hr_icon, *step_ladder;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap, *s_conditions_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb, *s_conditions_layer;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
 Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 #ifdef PBL_RECT
   Layer *vertical_line;
 #endif
 
-GFont s_font;
+GFont s_font, s_wIcon;
 
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
@@ -38,6 +38,13 @@ int16_t s_batt_history = 0;
 int32_t current_time_integer;
 int16_t temperatureValue = 0;
 int16_t conditionValue = 0;
+
+char scoreHomeTeam[32] = "";
+char scoreAwayTeam[32] = "";
+int16_t scoreHomePoints = 0;
+int16_t scoreAwayPoints = 0;
+bool scoreCompleted = false;
+bool scoreValid = false;
 
 uint16_t beat_spot;
 uint16_t beat_primary;
@@ -214,6 +221,7 @@ void globals_prv_update_display() {
     #endif
     
     text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
@@ -237,8 +245,7 @@ void globals_prv_update_display() {
     #endif
     
     text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    //HERE
-    //Swap icon colors if necessary
+    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);

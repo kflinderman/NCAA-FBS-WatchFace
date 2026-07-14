@@ -90,6 +90,7 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_date_layer);
   text_layer_destroy(s_beat_layer);
   text_layer_destroy(s_weather_layer);
+  text_layer_destroy(s_conditions_layer);
   #if defined(PBL_HEALTH)
     text_layer_destroy(s_hr_layer);
     text_layer_destroy(s_step_layer);
@@ -102,7 +103,6 @@ static void main_window_unload(Window *window) {
   gbitmap_destroy(s_batt_crg_bitmap);
   gbitmap_destroy(s_batt_empty_bitmap);
   gbitmap_destroy(s_batt_low_bitmap);
-  gbitmap_destroy(s_conditions_bitmap);
   if(s_bag_bitmap) {
     gbitmap_destroy(s_bag_bitmap);
     s_bag_bitmap = NULL; 
@@ -111,6 +111,7 @@ static void main_window_unload(Window *window) {
   #if PBL_DISPLAY_HEIGHT > 180
     fonts_unload_custom_font(s_font);
   #endif
+  fonts_unload_custom_font(s_wIcon);
 
   // Destroy BitmapLayer
   bitmap_layer_destroy(s_logo_layer);
@@ -119,7 +120,6 @@ static void main_window_unload(Window *window) {
   bitmap_layer_destroy(s_batt_layer);
   bitmap_layer_destroy(s_bag_layerf);
   bitmap_layer_destroy(s_bag_layerb);
-  bitmap_layer_destroy(s_conditions_layer);
 
   // Destroy Layers
   layer_destroy(rect_layer);

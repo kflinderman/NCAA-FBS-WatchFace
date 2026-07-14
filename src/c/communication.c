@@ -1,7 +1,7 @@
 #include "communication.h"
 #include "globals.h"
 #include "weather.h"
-
+#include "api.h"
 
 void configuration_callback(DictionaryIterator *iterator, void *context){
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
@@ -138,36 +138,12 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
   }
 }
 
-void weather_callback(DictionaryIterator *iterator, void *context){
-  APP_LOG(APP_LOG_LEVEL_INFO, "Weather - Dict size: %d", dict_size(iterator));
-  
-  bool weather_changed = false;
-  
-  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
-  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
-  
-  if (conditions_tuple){
-    conditionValue = conditions_tuple->value->int16;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Conditions: %d", conditionValue);
-    weather_changed = true;
-  }
-
-  if (temp_tuple) {
-    temperatureValue = temp_tuple->value->int16;
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "Temperature: %d", temperatureValue);
-    weather_changed = true;
-  }
-  
-  if (weather_changed){
-    weather_update();
-  }
-}
-
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
+  api_score_callback(iterator, context);
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {

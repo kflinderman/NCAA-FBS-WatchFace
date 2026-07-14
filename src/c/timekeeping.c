@@ -3,6 +3,7 @@
 #include "health.h"
 #include "drawing.h"
 #include "animation.h"
+#include "api.h"
 
 // Updates the time TextLayer
 void update_time() {
@@ -47,6 +48,17 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       app_message_outbox_send();
     }
   }
+    if (settings.api && settings.scoreDisplayBool &&
+      (!settings.api_quiet || (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd))) {
+    // settings.scoreUpdate is user-configurable (minutes between refreshes),
+    // unlike the hardcoded 30-minute weather interval above.
+    uint16_t interval = settings.scoreUpdate > 0 ? settings.scoreUpdate : 5;
+    if (tick_time->tm_min % interval == 0) {
+      api_request_score();
+    }
+  }
+
+  
 }
 
 void timer_callback(void *data) {
