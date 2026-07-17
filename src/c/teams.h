@@ -20,10 +20,10 @@ typedef struct {
   uint16_t vs_score;
   uint32_t gametime;
   uint16_t ranking;
-  bool w_season;
-  bool conf_champ;
-  bool bowl_w;
-  bool champion;
+  uint16_t wins;
+  uint16_t postseasonGames;
+  uint16_t postseasonWins;
+  uint16_t postseasonLosses;
 } API_Info;
 	
 typedef struct {
