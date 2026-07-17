@@ -29,12 +29,22 @@ Do I make an API indicator? Like the battery level, but of # of calls in a month
 #include "api.h"
 #include "globals.h"
 
-// In-memory buffer for JSON reassembly (games are chunked)
-#define CFBD_JSON_MAX 8192
+#define CFBD_JSON_MAX 2048
 static char cfbd_games_json[CFBD_JSON_MAX] = {0};
-static int cfbd_json_pos = 0;
-static int cfbd_total_chunks = 0;
-static int cfbd_chunks_received = 0;
+static char cfbd_records_json[CFBD_JSON_MAX] = {0};
+static char cfbd_rankings_json[CFBD_JSON_MAX] = {0};
+
+static int cfbd_json_pos_games = 0;
+static int cfbd_json_pos_records = 0;
+static int cfbd_json_pos_rankings = 0;
+
+static int cfbd_total_chunks_games = 0;
+static int cfbd_total_chunks_records = 0;
+static int cfbd_total_chunks_rankings = 0;
+
+static int cfbd_chunks_received_games = 0;
+static int cfbd_chunks_received_records = 0;
+static int cfbd_chunks_received_rankings = 0;
 
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
@@ -108,59 +118,97 @@ bool api_should_light_sync(void) {
 }
 
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Metadata chunk
-  APP_LOG(APP_LOG_LEVEL_INFO, "Checking for CFBD Chunks");
+  // Metadata
   Tuple *metadata_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_TOTAL_CHUNKS);
   if (metadata_tuple) {
-    cfbd_total_chunks = metadata_tuple->value->uint16;
-    cfbd_chunks_received = 0;
-    cfbd_json_pos = 0;
+    cfbd_total_chunks_games = metadata_tuple->value->uint16;
+    
+    Tuple *records_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_TOTAL_CHUNKS);
+    Tuple *rankings_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_TOTAL_CHUNKS);
+    
+    if (records_tuple) cfbd_total_chunks_records = records_tuple->value->uint16;
+    if (rankings_tuple) cfbd_total_chunks_rankings = rankings_tuple->value->uint16;
+    
+    // Reset all buffers
+    cfbd_chunks_received_games = 0;
+    cfbd_chunks_received_records = 0;
+    cfbd_chunks_received_rankings = 0;
+    cfbd_json_pos_games = 0;
+    cfbd_json_pos_records = 0;
+    cfbd_json_pos_rankings = 0;
+    
     memset(cfbd_games_json, 0, CFBD_JSON_MAX);
+    memset(cfbd_records_json, 0, CFBD_JSON_MAX);
+    memset(cfbd_rankings_json, 0, CFBD_JSON_MAX);
     
-    Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
-    Tuple *ts_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_NEXT_SEASON_TS);
-    
-    if (year_tuple) {
-      settings.cfbd.current_season_year = year_tuple->value->uint16;
-    }
-    if (ts_tuple) {
-      settings.cfbd.next_season_first_game_ts = ts_tuple->value->uint32;
-    }
-    
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD metadata: %d chunks, year %d",
-      cfbd_total_chunks, settings.cfbd.current_season_year);
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD metadata: %d game chunks, %d record chunks, %d ranking chunks",
+      cfbd_total_chunks_games, cfbd_total_chunks_records, cfbd_total_chunks_rankings);
     return;
   }
 
-  // Data chunk
-  Tuple *chunk_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_INDEX);
-  Tuple *chunk_data_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_DATA);
+  // Game chunks
+  Tuple *game_index = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_INDEX);
+  Tuple *game_data = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_DATA);
   
-  if (chunk_index_tuple && chunk_data_tuple) {
-    const char *chunk_data = chunk_data_tuple->value->cstring;
-    int chunk_len = strlen(chunk_data);
-    
-    // Append to buffer
-    if (cfbd_json_pos + chunk_len < CFBD_JSON_MAX - 1) {
-      strcat(cfbd_games_json, chunk_data);
-      cfbd_json_pos += chunk_len;
-      cfbd_chunks_received++;
-      
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD chunk %d/%d, buffer now %d bytes",
-        chunk_index_tuple->value->uint8, cfbd_total_chunks, cfbd_json_pos);
+  if (game_index && game_data) {
+    const char *chunk = game_data->value->cstring;
+    int len = strlen(chunk);
+    if (cfbd_json_pos_games + len < CFBD_JSON_MAX - 1) {
+      strcat(cfbd_games_json, chunk);
+      cfbd_json_pos_games += len;
+      cfbd_chunks_received_games++;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Game chunk %d/%d", cfbd_chunks_received_games, cfbd_total_chunks_games);
     }
+  }
 
-    // All chunks arrived, parse and apply
-    if (cfbd_chunks_received >= cfbd_total_chunks) {
-      APP_LOG(APP_LOG_LEVEL_INFO, "All CFBD chunks received, parsing...");
-      // TODO: Parse cfbd_games_json and populate team_cfbd[] array
-      
-      settings.cfbd.last_full_sync_ts = time(NULL);
-      settings.cfbd.api_data_valid = true;
-      settings.cfbd.api_calls_this_month += 3;  // Rough estimate: calendar, games, records, rankings
-      
-      globals_prv_save_settings();
-      globals_prv_update_display();
+  // Record chunks
+  Tuple *record_index = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_CHUNK_INDEX);
+  Tuple *record_data = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_CHUNK_DATA);
+  
+  if (record_index && record_data) {
+    const char *chunk = record_data->value->cstring;
+    int len = strlen(chunk);
+    if (cfbd_json_pos_records + len < CFBD_JSON_MAX - 1) {
+      strcat(cfbd_records_json, chunk);
+      cfbd_json_pos_records += len;
+      cfbd_chunks_received_records++;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Record chunk %d/%d", cfbd_chunks_received_records, cfbd_total_chunks_records);
     }
+  }
+
+  // Ranking chunks
+  Tuple *ranking_index = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_CHUNK_INDEX);
+  Tuple *ranking_data = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_CHUNK_DATA);
+  
+  if (ranking_index && ranking_data) {
+    const char *chunk = ranking_data->value->cstring;
+    int len = strlen(chunk);
+    if (cfbd_json_pos_rankings + len < CFBD_JSON_MAX - 1) {
+      strcat(cfbd_rankings_json, chunk);
+      cfbd_json_pos_rankings += len;
+      cfbd_chunks_received_rankings++;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "Ranking chunk %d/%d", cfbd_chunks_received_rankings, cfbd_total_chunks_rankings);
+    }
+  }
+
+  // Check if all three types are complete
+  bool all_games_received = (cfbd_total_chunks_games == 0) || (cfbd_chunks_received_games >= cfbd_total_chunks_games);
+  bool all_records_received = (cfbd_total_chunks_records == 0) || (cfbd_chunks_received_records >= cfbd_total_chunks_records);
+  bool all_rankings_received = (cfbd_total_chunks_rankings == 0) || (cfbd_chunks_received_rankings >= cfbd_total_chunks_rankings);
+
+  if (all_games_received && all_records_received && all_rankings_received) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "All CFBD data received!");
+    
+    // TODO: Parse all three JSON buffers
+    // Parse cfbd_games_json
+    // Parse cfbd_records_json
+    // Parse cfbd_rankings_json
+    // Populate api_info array
+    
+    settings.cfbd.last_full_sync_ts = time(NULL);
+    settings.cfbd.api_data_valid = true;
+    settings.cfbd.api_calls_this_month += 3;
+    globals_prv_save_settings();
+    globals_prv_update_display();
   }
 }

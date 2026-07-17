@@ -121,12 +121,12 @@ var cfbd = (function() {
    */
   function fetchGames(year, week, postseason, apiKey, callback) {
     if (postseason){
-      var url = constants.API_BASE + '/games?year=' + year + '&seasonType=postseason&week=' + week + '&classification=fbs';
+      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=postseason&classification=fbs';
     }
     else{
-      var url = constants.API_BASE + '/games?year=' + year + '&seasonType=regular&week=' + week + '&classification=fbs';
+      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=regular&classification=fbs';
     }
-    
+    console.log('Grabbing game data for: ' + year + ' week ' + week + (postseason ? ' (offseason)' : ''));
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
         console.log('No games for ' + year + ' week ' + week);
@@ -139,8 +139,18 @@ var cfbd = (function() {
         return new Date(a.startDate) - new Date(b.startDate);
       });
 
-      console.log('Fetched ' + data.length + ' games for week ' + week);
-      callback(data);
+      var trimmedGames = data.map(function(game) {
+        return {
+          startDate: game.startDate,
+          homeTeam: game.homeTeam,
+          homePoints: game.homePoints,
+          awayTeam: game.awayTeam,
+          awayPoints: game.awayPoints
+        };
+      });
+
+      console.log('Fetched ' + trimmedGames.length + ' games for week ' + week);
+      callback(trimmedGames);
     }, function(status) {
       console.log('fetchGames failed for week ' + week + ': ' + status);
       callback([]);
@@ -179,8 +189,23 @@ var cfbd = (function() {
         return;
       }
 
-      var fbsRecords = data.filter(function(record) {
+      var fbsRecords = data
+      .filter(function(record) {
         return record.classification === 'fbs';
+      })
+      .map(function(record) {
+        return {
+          team: record.team,
+          total: {
+            games: record.total.games,
+            wins: record.total.wins
+          },
+          postseason: {
+            games: record.postseason.games,
+            wins: record.postseason.wins,
+            losses: record.postseason.losses
+          }
+        };
       });
 
       console.log('Fetched records for ' + data.length + ' teams (' + fbsRecords.length + ' FBS)');
@@ -203,7 +228,7 @@ var cfbd = (function() {
     else{
       var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=regular&week=' + week;
     }
-      
+
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
         console.log('No rankings for year ' + year);
@@ -224,22 +249,27 @@ var cfbd = (function() {
 
           if (poll.poll === 'Playoff Committee Rankings') {
             selectedPoll = poll;
-            break; // best match found, stop looking entirely
+            break;
           } else if (poll.poll === 'AP Top 25' && !selectedPoll) {
-            selectedPoll = poll; // keep as fallback, but keep scanning in case CFP shows up
+            selectedPoll = poll;
           }
         }
 
         if (selectedPoll && selectedPoll.poll === 'Playoff Committee Rankings') break;
       }
 
-      var result = selectedPoll ? selectedPoll.ranks : [];
+      var trimmedRanks = selectedPoll ? selectedPoll.ranks.map(function(entry) {
+        return {
+          rank: entry.rank,
+          school: entry.school
+        };
+      }) : [];
 
       console.log('Selected poll: ' + (selectedPoll ? selectedPoll.poll : 'none found') +
-                  ' (' + result.length + ' ranks)');
+                  ' (' + trimmedRanks.length + ' ranks)');
 
-      cache.rankings = result;
-      callback(result);
+      cache.rankings = trimmedRanks;
+      callback(trimmedRanks);
     }, function(status) {
       console.log('fetchRankings failed: ' + status);
       callback([]);
@@ -264,12 +294,26 @@ var cfbd = (function() {
 
     // Try current year first
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
+
+      // 1. Define the next step as a helper function
+      const fetchNextSeasonBoundary = function() {
+        fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
+          if (firstGame && firstGame.startDate) {
+            cache.nextSeasonFirstGameTs = Math.floor(new Date(firstGame.startDate).getTime() / 1000);
+          }
+          callback(cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates);
+        });
+      };
+
       if (calendarResult.isInSeason) {
         console.log('Using year ' + currentYear);
         cache.currentYear = currentYear;
         cache.seasonDates[0] = calendarResult.startDate;
         cache.seasonDates[1] = calendarResult.endDate;
         cache.weekDates = calendarResult.weekDates;
+
+        // 2. Execute here if current year is valid
+        fetchNextSeasonBoundary();
       }
       else {
         // Try last year
@@ -280,21 +324,17 @@ var cfbd = (function() {
             cache.seasonDates[0] = lastYearResult.startDate;
             cache.seasonDates[1] = lastYearResult.endDate;
             cache.weekDates = lastYearResult.weekDates;
+
+            // 3. Execute here if last year is valid
+            fetchNextSeasonBoundary();
           } else {
             // Offseason: use next year, fetch its first game
             console.error('No Schedules Found');
             callback([]);
-            return;
+            return; // Stops execution, fetchNextSeasonBoundary is never called
           }
         });
       }
-      // Fetch current year's first game as boundary
-      fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
-        if (firstGame && firstGame.startDate) {
-          cache.nextSeasonFirstGameTs = Math.floor(new Date(firstGame.startDate).getTime() / 1000);
-        }
-        callback(cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates);
-      });
     });
   }
 
@@ -429,7 +469,8 @@ var cfbd = (function() {
         rankings: []
       };
 
-      var expected = target.offseason ? 2 : 3; // records+rankings, or +games
+      //var expected = target.offseason ? 2 : 3; // records+rankings, or +games
+      var expected = 3;
       var completed = 0;
 
       function onComplete() {
@@ -449,14 +490,15 @@ var cfbd = (function() {
         });
       }, constants.BATCH_DELAY);
 
-      if (!target.offseason) {
+      //if (!target.offseason) {
         setTimeout(function() {
-          fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
+          //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
+          fetchGames(target.year, 13, false, apiKey, function(data) {
             results.games = data;
             onComplete();
           });
         }, constants.BATCH_DELAY * 2);
-      }
+      //}
     }
   };
 })();

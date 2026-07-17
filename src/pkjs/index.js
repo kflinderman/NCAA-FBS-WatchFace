@@ -149,34 +149,47 @@ function sendScoreToWatch(game) {
 }
 
 function sendCFBDDataToWatch(cfbdData) {
-  console.log('sendCFBDDataToWatch called with ' + cfbdData.games.length + ' games');
+  console.log('sendCFBDDataToWatch called with ' + cfbdData.games.length + ' games, ' 
+    + cfbdData.records.length + ' records, ' + cfbdData.rankings.length + ' rankings');
 
-  // Serialize games array (most data-heavy)
   var gamesJson = JSON.stringify(cfbdData.games);
   var recordsJson = JSON.stringify(cfbdData.records);
   var rankingsJson = JSON.stringify(cfbdData.rankings);
 
-  // AppMessage max ~512 bytes usable payload, so chunk aggressively
+  console.log('Games: ' + gamesJson.length + ' bytes, Records: ' + recordsJson.length 
+    + ' bytes, Rankings: ' + rankingsJson.length + ' bytes');
+
+  // Chunk size for AppMessage
   var chunkSize = 480;
-  var gameChunks = [];
-  for (var i = 0; i < gamesJson.length; i += chunkSize) {
-    gameChunks.push(gamesJson.substring(i, i + chunkSize));
-  }
+  
+  // Create chunk arrays for each data type
+  var gameChunks = chunkString(gamesJson, chunkSize);
+  var recordChunks = chunkString(recordsJson, chunkSize);
+  var rankingChunks = chunkString(rankingsJson, chunkSize);
 
-  console.log('Splitting ' + gamesJson.length + ' chars into ' + gameChunks.length + ' chunks');
+  console.log('Game chunks: ' + gameChunks.length + ', Record chunks: ' + recordChunks.length 
+    + ', Ranking chunks: ' + rankingChunks.length);
 
-  // Send metadata first
+  // Send metadata first (includes all three chunk counts)
   var dictionary = {
-    'CFBD_GAMES_TOTAL_CHUNKS': gameChunks.length,
     'CFBD_YEAR': cfbdData.year,
-    'CFBD_NEXT_SEASON_TS': cfbdData.nextSeasonFirstGameTs || 0
+    'CFBD_NEXT_SEASON_TS': cfbdData.nextSeasonFirstGameTs || 0,
+    'CFBD_GAMES_TOTAL_CHUNKS': gameChunks.length,
+    'CFBD_RECORDS_TOTAL_CHUNKS': recordChunks.length,
+    'CFBD_RANKINGS_TOTAL_CHUNKS': rankingChunks.length
   };
 
   Pebble.sendAppMessage(dictionary,
     function(e) {
       console.log('CFBD metadata sent');
-      // Send game chunks
-      sendGameChunks(gameChunks, 0);
+      // Send all three data types sequentially
+      sendGameChunks(gameChunks, 0, function() {
+        sendRecordChunks(recordChunks, 0, function() {
+          sendRankingChunks(rankingChunks, 0, function() {
+            console.log('All CFBD data sent');
+          });
+        });
+      });
     },
     function(e) {
       console.log('Error sending CFBD metadata!');
@@ -184,9 +197,20 @@ function sendCFBDDataToWatch(cfbdData) {
   );
 }
 
-function sendGameChunks(chunks, index) {
+// Helper to break strings into chunks
+function chunkString(str, size) {
+  var chunks = [];
+  for (var i = 0; i < str.length; i += size) {
+    chunks.push(str.substring(i, i + size));
+  }
+  return chunks;
+}
+
+// Send game chunks
+function sendGameChunks(chunks, index, callback) {
   if (index >= chunks.length) {
     console.log('All game chunks sent');
+    if (callback) callback();
     return;
   }
 
@@ -197,14 +221,65 @@ function sendGameChunks(chunks, index) {
 
   Pebble.sendAppMessage(dictionary,
     function(e) {
-      console.log('Game chunk ' + index + ' sent');
-      // Send next chunk with small delay
+      console.log('Game chunk ' + index + '/' + chunks.length + ' sent');
       setTimeout(function() {
-        sendGameChunks(chunks, index + 1);
+        sendGameChunks(chunks, index + 1, callback);
       }, 50);
     },
     function(e) {
       console.log('Error sending game chunk ' + index + '!');
+    }
+  );
+}
+
+// Send record chunks (similar structure)
+function sendRecordChunks(chunks, index, callback) {
+  if (index >= chunks.length) {
+    console.log('All record chunks sent');
+    if (callback) callback();
+    return;
+  }
+
+  var dictionary = {
+    'CFBD_RECORDS_CHUNK_INDEX': index,
+    'CFBD_RECORDS_CHUNK_DATA': chunks[index]
+  };
+
+  Pebble.sendAppMessage(dictionary,
+    function(e) {
+      console.log('Record chunk ' + index + '/' + chunks.length + ' sent');
+      setTimeout(function() {
+        sendRecordChunks(chunks, index + 1, callback);
+      }, 50);
+    },
+    function(e) {
+      console.log('Error sending record chunk ' + index + '!');
+    }
+  );
+}
+
+// Send ranking chunks (similar structure)
+function sendRankingChunks(chunks, index, callback) {
+  if (index >= chunks.length) {
+    console.log('All ranking chunks sent');
+    if (callback) callback();
+    return;
+  }
+
+  var dictionary = {
+    'CFBD_RANKINGS_CHUNK_INDEX': index,
+    'CFBD_RANKINGS_CHUNK_DATA': chunks[index]
+  };
+
+  Pebble.sendAppMessage(dictionary,
+    function(e) {
+      console.log('Ranking chunk ' + index + '/' + chunks.length + ' sent');
+      setTimeout(function() {
+        sendRankingChunks(chunks, index + 1, callback);
+      }, 50);
+    },
+    function(e) {
+      console.log('Error sending ranking chunk ' + index + '!');
     }
   );
 }
