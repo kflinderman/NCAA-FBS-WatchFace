@@ -46,6 +46,30 @@ static int cfbd_chunks_received_games = 0;
 static int cfbd_chunks_received_records = 0;
 static int cfbd_chunks_received_rankings = 0;
 
+
+/**
+ * Debug helper: log a long string in safe-sized pieces, since APP_LOG
+ * truncates long messages once you factor in its own file/line/level
+ * prefix eating into the line budget.
+ */
+static void log_json_chunks(const char *label, const char *json) {
+  int len = strlen(json);
+  int chunk_size = 100; // conservative given APP_LOG's own prefix overhead
+  int chunk_index = 0;
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "%s: %d bytes total", label, len);
+
+  for (int i = 0; i < len; i += chunk_size) {
+    char chunk_buf[101];
+    int remaining = len - i;
+    int this_chunk = remaining < chunk_size ? remaining : chunk_size;
+    memcpy(chunk_buf, json + i, this_chunk);
+    chunk_buf[this_chunk] = '\0';
+    APP_LOG(APP_LOG_LEVEL_INFO, "%s[%d]: %s", label, chunk_index, chunk_buf);
+    chunk_index++;
+  }
+}
+
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
@@ -198,6 +222,10 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
 
   if (all_games_received && all_records_received && all_rankings_received) {
     APP_LOG(APP_LOG_LEVEL_INFO, "All CFBD data received!");
+    
+    //log_json_chunks("games", cfbd_games_json);
+    //log_json_chunks("records", cfbd_records_json);
+    //log_json_chunks("rankings", cfbd_rankings_json);
     
     // TODO: Parse all three JSON buffers
     // Parse cfbd_games_json
