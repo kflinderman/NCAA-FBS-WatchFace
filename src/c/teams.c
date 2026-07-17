@@ -13,5 +13,11 @@ const Team TEAMS[] = {
 };
 #endif
 
+
+API_Info api_info[] = {
+  { .name = "Clemson", .id = 0 },
+  { .name = "South Carolina", .id = 1 },
+};
+
 // Define the count based on the array
 const size_t TEAMS_COUNT = sizeof(TEAMS) / sizeof(TEAMS[0]);
