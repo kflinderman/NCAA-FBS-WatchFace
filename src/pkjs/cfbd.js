@@ -302,7 +302,7 @@ var cfbd = (function() {
    * Helper: Fetch the first game (by date) of a given year's season
    */
   function fetchFirstGameOfYear(year, apiKey, callback) {
-    fetchGames(year, 1, apiKey, function(games) {
+    fetchGames(year, 1, false, apiKey, function(games) {
       if (games.length > 0) {
         // games are already sorted by startDate from fetchGames
         callback(games[0]);
@@ -394,7 +394,6 @@ var cfbd = (function() {
         // (cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates)
         // so syncLightCFBD can read off it directly.
         this.syncLightCFBD(apiKey, function(lightResults) {
-          console.log('=== CFBD Full Sync Complete ===');
           callback({
             year: year,
             nextSeasonFirstGameTs: nextSeasonTs,
