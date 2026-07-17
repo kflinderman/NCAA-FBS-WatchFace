@@ -25,7 +25,17 @@ typedef struct {
   bool bowl_w;
   bool champion;
 } API_Info;
+	
+typedef struct {
+  uint32_t next_season_first_game_ts;
+  uint16_t current_season_year;
+  uint32_t last_full_sync_ts;
+  uint8_t api_calls_this_month;
+  bool api_data_valid;
+} CFBDState;
 
 // DECLARE the variables here
 extern const Team TEAMS[];
 extern const size_t TEAMS_COUNT;
+extern API_Info API_DATA[];
+extern CFBDState cfbd_state;

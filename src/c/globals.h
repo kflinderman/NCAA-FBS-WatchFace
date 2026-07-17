@@ -54,6 +54,7 @@ typedef struct ClaySettings {
   bool confBool;
   bool bowlBool;
   bool champBool;
+  CFBDState cfbd;
 } ClaySettings;
 
 extern ClaySettings settings;
@@ -73,9 +74,9 @@ extern Layer *hr_icon, *step_ladder;
 extern bool noHR;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
-Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
+extern GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
+extern BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
+extern Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 
 #ifdef PBL_RECT
   extern Layer *vertical_line;

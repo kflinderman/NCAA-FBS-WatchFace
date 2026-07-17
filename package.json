@@ -65,13 +65,21 @@
             "confBool",
             "bowlBool",
             "champBool",
-            "REQUEST_SCORE",
             "ScoreTeamIndex",
             "ScoreHomeTeam",
             "ScoreAwayTeam",
             "ScoreHomePoints",
             "ScoreAwayPoints",
-            "ScoreCompleted"
+            "ScoreCompleted",
+            "REQUEST_CFBD_FULL_SYNC",
+            "REQUEST_CFBD_LIGHT_SYNC",
+            "cfbd_year",
+            "cfbd_week",
+            "CFBD_GAMES_TOTAL_CHUNKS",
+            "CFBD_YEAR",
+            "CFBD_NEXT_SEASON_TS",
+            "CFBD_GAMES_CHUNK_INDEX",
+            "CFBD_GAMES_CHUNK_DATA"
         ],
         "projectType": "native",
         "resources": {

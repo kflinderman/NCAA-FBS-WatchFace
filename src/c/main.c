@@ -80,7 +80,6 @@ static void main_window_load(Window *window) {
   // Apply correct layout in case Quick View is already active
   APP_LOG(APP_LOG_LEVEL_INFO, "Apply Correct Layout w/ Quick View");
   animation_prv_unobstructed_change(0, NULL);
-
 }
 
 // Unloads the main window's UI elements
@@ -196,7 +195,7 @@ static void init() {
 
   // Open AppMessage
   const int inbox_size = 512;
-  const int outbox_size = 256;
+  const int outbox_size = 512;
   app_message_open(inbox_size, outbox_size);
 }
 

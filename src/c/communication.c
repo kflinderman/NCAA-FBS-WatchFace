@@ -143,7 +143,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
-  api_score_callback(iterator, context);
+  api_cfbd_callback(iterator, context);
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {

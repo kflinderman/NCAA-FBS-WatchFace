@@ -1,13 +1,20 @@
+// src/c/api_cfbd.h
 #pragma once
 #include <pebble.h>
 
-// Sends a request up to PebbleKit JS asking it to fetch the current
-// score for the relevant team from the CFBD API. Mirrors the
-// REQUEST_WEATHER pattern in timekeeping.c. No-op if api/scoreDisplayBool
-// are off, or if no API key has been configured.
-void api_request_score(void);
+// Request full CFBD sync (heavy operation, calendar + games + records + rankings)
+// Typically called on app launch or manual user refresh
+void api_request_cfbd_full_sync(void);
 
-// Called from communication.c's inbox_received_callback when a
-// score response arrives from JS. Parses the trimmed score fields
-// out of the AppMessage dictionary.
-void api_score_callback(DictionaryIterator *iterator, void *context);
+// Request light CFBD sync (just this week's games + rankings)
+// Lightweight operation for daily refreshes
+void api_request_cfbd_light_sync(void);
+
+// Process incoming CFBD data chunks from JS
+void api_cfbd_callback(DictionaryIterator *iterator, void *context);
+
+// Helper: check if we should do a full sync (based on timestamp + API call budget)
+bool api_should_full_sync(void);
+
+// Helper: check if light sync is needed (e.g., weekly refresh)
+bool api_should_light_sync(void);

@@ -48,13 +48,15 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       app_message_outbox_send();
     }
   }
-    if (settings.api && settings.scoreDisplayBool &&
-      (!settings.api_quiet || (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd))) {
-    // settings.scoreUpdate is user-configurable (minutes between refreshes),
-    // unlike the hardcoded 30-minute weather interval above.
-    uint16_t interval = settings.scoreUpdate > 0 ? settings.scoreUpdate : 5;
-    if (tick_time->tm_min % interval == 0) {
-      api_request_score();
+  
+  api_request_cfbd_full_sync();
+  
+  // Check if we should sync CFBD data (e.g., once daily at 2 AM)
+  if (tick_time->tm_hour == 2 && tick_time->tm_min == 0) {
+    if (api_should_full_sync()) {
+      api_request_cfbd_full_sync();
+    } else if (api_should_light_sync()) {
+      api_request_cfbd_light_sync();
     }
   }
 

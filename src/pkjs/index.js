@@ -1,8 +1,11 @@
+// src/pkjs/index.js
 // Import the Clay package
 var Clay = require('@rebble/clay');
 // Load our Clay configuration file
 var clayConfig = require('./config');
 var customClay = require('./customClay');
+// Load CFBD module
+var cfbdModule = require('./cfbd');
 
 // Initialize Clay
 var clay = new Clay(clayConfig, customClay);
@@ -70,17 +73,6 @@ function getWeather() {
     { timeout: 15000, maximumAge: 60000 }
   );
 }
-
-// ---------------------------------------------------------------------
-// CFBD score lookup
-// ---------------------------------------------------------------------
-// TODO: this must grow to match all 154 entries in TEAMS[] (teams.c) once
-// the full roster is wired into config.js's FavoriteTeam/BeatTeam dropdowns.
-// Index 0/1 match the current placeholder options in config.js.
-var CFBD_TEAM_NAMES = [
-  'Clemson',
-  'South Carolina'
-];
 
 // Like xhrRequest, but adds a Bearer auth header. Kept separate from the
 // existing xhrRequest helper (used for the unauthenticated weather API)
@@ -156,6 +148,67 @@ function sendScoreToWatch(game) {
   );
 }
 
+function sendCFBDDataToWatch(cfbdData) {
+  console.log('sendCFBDDataToWatch called with ' + cfbdData.games.length + ' games');
+
+  // Serialize games array (most data-heavy)
+  var gamesJson = JSON.stringify(cfbdData.games);
+  var recordsJson = JSON.stringify(cfbdData.records);
+  var rankingsJson = JSON.stringify(cfbdData.rankings);
+
+  // AppMessage max ~512 bytes usable payload, so chunk aggressively
+  var chunkSize = 480;
+  var gameChunks = [];
+  for (var i = 0; i < gamesJson.length; i += chunkSize) {
+    gameChunks.push(gamesJson.substring(i, i + chunkSize));
+  }
+
+  console.log('Splitting ' + gamesJson.length + ' chars into ' + gameChunks.length + ' chunks');
+
+  // Send metadata first
+  var dictionary = {
+    'CFBD_GAMES_TOTAL_CHUNKS': gameChunks.length,
+    'CFBD_YEAR': cfbdData.year,
+    'CFBD_NEXT_SEASON_TS': cfbdData.nextSeasonFirstGameTs || 0
+  };
+
+  Pebble.sendAppMessage(dictionary,
+    function(e) {
+      console.log('CFBD metadata sent');
+      // Send game chunks
+      sendGameChunks(gameChunks, 0);
+    },
+    function(e) {
+      console.log('Error sending CFBD metadata!');
+    }
+  );
+}
+
+function sendGameChunks(chunks, index) {
+  if (index >= chunks.length) {
+    console.log('All game chunks sent');
+    return;
+  }
+
+  var dictionary = {
+    'CFBD_GAMES_CHUNK_INDEX': index,
+    'CFBD_GAMES_CHUNK_DATA': chunks[index]
+  };
+
+  Pebble.sendAppMessage(dictionary,
+    function(e) {
+      console.log('Game chunk ' + index + ' sent');
+      // Send next chunk with small delay
+      setTimeout(function() {
+        sendGameChunks(chunks, index + 1);
+      }, 50);
+    },
+    function(e) {
+      console.log('Error sending game chunk ' + index + '!');
+    }
+  );
+}
+
 Pebble.addEventListener('ready',
   function(e) {
     console.log('PebbleKit JS ready!');
@@ -169,6 +222,7 @@ Pebble.addEventListener('appmessage',
     if (e.payload['REQUEST_WEATHER']) {
       getWeather();
     }
+    /*
     if (e.payload['REQUEST_SCORE']) {
       var apiKey = e.payload['api_key'];
       var teamIndex = e.payload['ScoreTeamIndex'];
@@ -177,6 +231,35 @@ Pebble.addEventListener('appmessage',
       } else {
         getScore(apiKey, teamIndex);
       }
+    }
+    */
+    // ===== NEW: CFBD Full Sync (typically on app startup or manual refresh) =====
+    if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
+      var apiKey = e.payload['api_key'];
+      if (!apiKey) {
+        console.log('REQUEST_CFBD_FULL_SYNC with no api_key - skipping');
+        return;
+      }
+
+      cfbdModule.syncFullCFBD(apiKey, function(fullData) {
+        sendCFBDDataToWatch(fullData);
+      });
+    }
+
+    // ===== NEW: CFBD Light Sync (weekly games + rankings refresh) =====
+    if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
+      var apiKey = e.payload['api_key'];
+      var year = e.payload['cfbd_year'];
+      var week = e.payload['cfbd_week'];
+      
+      if (!apiKey || !year || !week) {
+        console.log('REQUEST_CFBD_LIGHT_SYNC missing parameters');
+        return;
+      }
+
+      cfbdModule.syncLightCFBD(year, week, apiKey, function(lightData) {
+        sendCFBDDataToWatch(lightData);
+      });
     }
   }
 );

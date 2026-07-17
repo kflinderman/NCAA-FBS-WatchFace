@@ -163,6 +163,11 @@ void globals_prv_default_settings() {
   settings.confBool = false;
   settings.bowlBool = false;
   settings.champBool = false;
+  settings.cfbd.next_season_first_game_ts = 0;
+  settings.cfbd.current_season_year = 0;
+  settings.cfbd.last_full_sync_ts = 0;
+  settings.cfbd.api_calls_this_month = 0;
+  settings.cfbd.api_data_valid = false;
 }
 
 void globals_prv_save_settings() {
