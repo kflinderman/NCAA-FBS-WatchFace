@@ -119,9 +119,13 @@ var cfbd = (function() {
    * GET /games for a specific year/week to find first game
    * Returns: [ { id, startDate, homeTeam, awayTeam, ... }, ... ]
    */
-  function fetchGames(year, week, apiKey, callback) {
-    var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&classification=fbs';
-    //games?year=2025&week=1&classification=fbs
+  function fetchGames(year, week, postseason, apiKey, callback) {
+    if (postseason){
+      var url = constants.API_BASE + '/games?year=' + year + '&seasonType=postseason&week=' + week + '&classification=fbs';
+    }
+    else{
+      var url = constants.API_BASE + '/games?year=' + year + '&seasonType=regular&week=' + week + '&classification=fbs';
+    }
     
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
@@ -165,22 +169,23 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /records for all teams in a year
-   * Returns: [ { team, year, total: { wins, losses }, conf: { wins, losses }, postseason: { ... } }, ... ]
-   */
   function fetchRecords(year, apiKey, callback) {
     var url = constants.API_BASE + '/records?year=' + year;
-    
+
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
         console.log('No records for year ' + year);
         callback([]);
         return;
       }
-      console.log('Fetched records for ' + data.length + ' teams');
-      cache.records = data;
-      callback(data);
+
+      var fbsRecords = data.filter(function(record) {
+        return record.classification === 'fbs';
+      });
+
+      console.log('Fetched records for ' + data.length + ' teams (' + fbsRecords.length + ' FBS)');
+      cache.records = fbsRecords;
+      callback(fbsRecords);
     }, function(status) {
       console.log('fetchRecords failed: ' + status);
       callback([]);
@@ -191,18 +196,50 @@ var cfbd = (function() {
    * GET /rankings for a year (current/latest poll)
    * Returns: [ { year, week, poll, ranks: [ { rank, team, ... }, ... ] }, ... ]
    */
-  function fetchRankings(year, apiKey, callback) {
-    var url = constants.API_BASE + '/rankings?year=' + year;
-    
+  function fetchRankings(year, week, postseason, apiKey, callback) {
+    if (postseason){
+      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=postseason&week=' + week;
+    }
+    else{
+      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=regular&week=' + week;
+    }
+      
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
         console.log('No rankings for year ' + year);
         callback([]);
         return;
       }
-      console.log('Fetched ' + data.length + ' ranking polls');
-      cache.rankings = data;
-      callback(data);
+
+      console.log('Fetched ' + data.length + ' ranking entries');
+
+      var selectedPoll = null;
+
+      for (var i = 0; i < data.length; i++) {
+        var entry = data[i];
+        if (!entry.polls || !Array.isArray(entry.polls)) continue;
+
+        for (var j = 0; j < entry.polls.length; j++) {
+          var poll = entry.polls[j];
+
+          if (poll.poll === 'Playoff Committee Rankings') {
+            selectedPoll = poll;
+            break; // best match found, stop looking entirely
+          } else if (poll.poll === 'AP Top 25' && !selectedPoll) {
+            selectedPoll = poll; // keep as fallback, but keep scanning in case CFP shows up
+          }
+        }
+
+        if (selectedPoll && selectedPoll.poll === 'Playoff Committee Rankings') break;
+      }
+
+      var result = selectedPoll ? selectedPoll.ranks : [];
+
+      console.log('Selected poll: ' + (selectedPoll ? selectedPoll.poll : 'none found') +
+                  ' (' + result.length + ' ranks)');
+
+      cache.rankings = result;
+      callback(result);
     }, function(status) {
       console.log('fetchRankings failed: ' + status);
       callback([]);
@@ -336,53 +373,6 @@ var cfbd = (function() {
       offseason: true
     };
   }
-  
-  /**
-   * Phase 2: Batch fetch all CFBD data (games, records, rankings) for a year
-   * 
-   * Call this periodically (e.g., daily or after user triggers a refresh)
-   * Returns all three datasets aggregated
-   */
-  function batchFetchSeasonData(year, apiKey, callback) {
-    console.log('Phase 2: Batch fetch season data for year ' + year);
-
-    var results = {
-      games: [],
-      records: [],
-      rankings: []
-    };
-    var completed = 0;
-
-    function onComplete() {
-      completed++;
-      if (completed === 3) {
-        console.log('All batch data fetched');
-        callback(results);
-      }
-    }
-
-    // Stagger the requests slightly to avoid connection pool issues
-    setTimeout(function() {
-      fetchAllGamesForYear(year, apiKey, function(data) {
-        results.games = data;
-        onComplete();
-      });
-    }, 0);
-
-    setTimeout(function() {
-      fetchRecords(year, apiKey, function(data) {
-        results.records = data;
-        onComplete();
-      });
-    }, constants.BATCH_DELAY);
-
-    setTimeout(function() {
-      fetchRankings(year, apiKey, function(data) {
-        results.rankings = data;
-        onComplete();
-      });
-    }, constants.BATCH_DELAY * 2);
-  }
 
   /**
    * Public API
@@ -454,7 +444,7 @@ var cfbd = (function() {
       });
 
       setTimeout(function() {
-        fetchRankings(target.year, apiKey, function(data) {
+        fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
           results.rankings = data;
           onComplete();
         });
@@ -462,7 +452,7 @@ var cfbd = (function() {
 
       if (!target.offseason) {
         setTimeout(function() {
-          fetchGames(target.year, target.week, apiKey, function(data) {
+          fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
             results.games = data;
             onComplete();
           });
