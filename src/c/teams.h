@@ -38,4 +38,5 @@ typedef struct {
 extern const Team TEAMS[];
 extern const size_t TEAMS_COUNT;
 extern API_Info API_DATA[];
+extern const size_t API_DATA_COUNT;
 extern CFBDState cfbd_state;
