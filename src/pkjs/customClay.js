@@ -1,112 +1,232 @@
 module.exports = function (minified) {
     var clayConfig = this;
-    
-    // Generic toggle handler factory
-    function createToggleHandler(config) {
-        return function() {
-            var currentValue = config.isBoolean ? !!this.get() : parseInt(this.get(), 10);
-            var shouldShow = config.showWhen(currentValue);
-            
-            config.items.forEach(function(itemKey) {
-                // 1. Try finding by Message Key first
-                var item = clayConfig.getItemByMessageKey(itemKey);
-                
-                // 2. Fallback: Try finding by element ID if message key doesn't match
-                if (!item) {
-                    item = clayConfig.getItemById(itemKey);
+
+    // ------------------------------------------------------------------
+    // Visibility tree
+    // ------------------------------------------------------------------
+    // Each node represents one Clay item.
+    //   key:             messageKey (or id, for text/donation_block items)
+    //   condition:       fn(rawValue) -> bool. If present, controls whether
+    //                    this node's CHILDREN are shown (this node must
+    //                    itself be visible for the condition to matter).
+    //   externalKey:     messageKey of ANOTHER item elsewhere in the tree
+    //                    whose truthiness gates this node's OWN visibility,
+    //                    in addition to its parent's visibility.
+    //   children:        nested nodes, hidden automatically if this node
+    //                    is hidden (cascading), and further filtered by
+    //                    `condition` if present.
+    //
+    // A node is visible only if every ancestor is visible AND every
+    // ancestor's condition (if any) evaluates true against that ancestor's
+    // current value. That's what makes "higher hides everything below it"
+    // work automatically, no matter how deep the nesting.
+    // ------------------------------------------------------------------
+
+    var isTrue = function (v) { return v === true; };
+    var isFalse = function (v) { return v === false; };
+    var eq = function (target) {
+        return function (v) { return parseInt(v, 10) === target; };
+    };
+    var neq = function (target) {
+        return function (v) { return parseInt(v, 10) !== target; };
+    };
+
+    var tree = [
+        { key: 'DisplayTeam' },
+        { key: 'bagBool' },
+        { key: 'FavoriteTeam' },
+        {
+            key: 'hardcodeRivalBool',
+            condition: isFalse, // display below on false
+            children: [
+                { key: 'BeatTeam' }
+            ]
+        },
+        { key: 'DisconnectVibration' },
+        { key: 'ReconnectVibration' },
+        {
+            key: 'LowBatteryPercent',
+            condition: neq(0), // hide below on 0
+            children: [
+                { key: 'LowBatteryVibration' }
+            ]
+        },
+        {
+            key: 'EmptyBatteryPercent',
+            condition: neq(0), // hide below on 0
+            children: [
+                { key: 'EmptyBatteryVibration' }
+            ]
+        },
+        {
+            key: 'quietTimeBool',
+            condition: isTrue, // display below on true
+            children: [
+                { key: 'quietTimeStart' },
+                { key: 'quietTimeEnd' }
+            ]
+        },
+        {
+            key: 'animationSensitivity',
+            condition: neq(0), // hide below on 0
+            children: [
+                { key: 'animationDelay' },
+                {
+                    key: 'animationsBatt',
+                    condition: eq(3), // display below on 3
+                    children: [
+                        { key: 'animationsCustom' }
+                    ]
                 }
-                
-                if (item) {
-                    shouldShow ? item.show() : item.hide();
-                } else {
-                    console.log("Error: Could not find item '" + itemKey + "' by Key or ID!");
-                }
-            });
-        };
-    }
-    
-    // Special handler for animationSensitivity that checks dependent toggles
-    function toggleAnimationsSens() {
-        var currentValue = parseInt(this.get(), 10);
-        var shouldShow = currentValue !== 0; // Show when NOT 0
-        
-        // Only show items if their parent toggles are also in the correct state
-        var quietTimeBool = clayConfig.getItemByMessageKey('quietTimeBool');
-        var animationsBatt = clayConfig.getItemByMessageKey('animationsBatt');
-        
-        // Check if quietTime items should be shown (quietTimeBool must be enabled)
-        var showQuietTimeItems = shouldShow && quietTimeBool && !!quietTimeBool.get();
-        var quietTimeStart = clayConfig.getItemByMessageKey('quietTimeStart');
-        var quietTimeEnd = clayConfig.getItemByMessageKey('quietTimeEnd');
-        if (quietTimeStart) showQuietTimeItems ? quietTimeStart.show() : quietTimeStart.hide();
-        if (quietTimeEnd) showQuietTimeItems ? quietTimeEnd.show() : quietTimeEnd.hide();
-        
-        // Check if animationsCustom should be shown (animationsBatt must be 3)
-        var showAnimationsCustom = shouldShow && animationsBatt && parseInt(animationsBatt.get(), 10) === 3;
-        var animationsCustom = clayConfig.getItemByMessageKey('animationsCustom');
-        if (animationsCustom) showAnimationsCustom ? animationsCustom.show() : animationsCustom.hide();
-        
-        // Always show/hide the parent toggles based on animationSensitivity
-        if (quietTimeBool) shouldShow ? quietTimeBool.show() : quietTimeBool.hide();
-        if (animationsBatt) shouldShow ? animationsBatt.show() : animationsBatt.hide();
-    }
-    
-    // Configuration for simple toggles
-    var toggleConfigs = [
-        {
-            triggerKey: 'quietTimeBool',
-            isBoolean: true,
-            items: ['quietTimeStart', 'quietTimeEnd'],
-            showWhen: function(value) { return value === true; }
+            ]
         },
         {
-            triggerKey: 'animationsBatt',
-            isBoolean: false,
-            items: ['animationsCustom'],
-            showWhen: function(value) { return value === 3; }
+            key: 'countdownBool',
+            condition: isTrue, // display below on true
+            children: [
+                {
+                    key: 'countdownTime',
+                    condition: eq(1), // display below on 1
+                    children: [
+                        { key: 'countdownCustom' }
+                    ]
+                },
+                { key: 'countdownDisplay' }
+            ]
+        },
+        { key: 'hrBool' },
+        { key: 'stepsBool' },
+        {
+            key: 'stepsGoalBool',
+            condition: isTrue, // display below on true
+            children: [
+                { key: 'stepsGoal' }
+            ]
         },
         {
-            triggerKey: 'stepsGoalBool',
-            isBoolean: true,
-            items: ['stepsGoal'],
-            showWhen: function(value) { return value === true; }
+            key: 'api',
+            condition: isTrue, // display below on true
+            children: [
+                { key: 'api_key' },
+                { key: 'api_quiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
+                { key: 'api_score' },
+                {
+                    key: 'scoreDisplayBool',
+                    condition: isTrue, // display below on true
+                    children: [
+                        { key: 'scoreUpdate' },
+                        { key: 'scoreLocation' }
+                    ]
+                },
+                { key: 'api_opponent' },
+                {
+                    key: 'opponentBool',
+                    condition: isTrue, // display below on true
+                    children: [
+                        {
+                            key: 'opponentSelect',
+                            condition: eq(2), // display below on 2
+                            children: [
+                                { key: 'customOpponent' }
+                            ]
+                        }
+                    ]
+                },
+                { key: 'api_extras' },
+                { key: 'superlatives'},
+                { key: 'rankingBool' },
+                { key: 'winBool' },
+                { key: 'confBool' },
+                { key: 'bowlBool' },
+                { key: 'champBool' }
+            ]
         },
         {
-            triggerKey: 'donate',
-            isBoolean: true,
-            items: ['donation_block'],
-            showWhen: function(value) { return value === true; }
+            key: 'weatherBool',
+            condition: isTrue, // display below on true
+            children: [
+                { key: 'weatherQuiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
+                { key: 'weatherUnits' },
+            ]
         },
         {
-            triggerKey: 'hardcodeRivalBool',
-            isBoolean: true,
-            items: ['BeatTeam'],
-            showWhen: function(value) { return value === false; }
+            key: 'donate',
+            condition: isTrue, // display below on true
+            children: [
+                { key: 'donation_block' }
+            ]
         }
     ];
-    
-    // Set up all toggles after build
-    clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
-        // Set up simple toggles
-        toggleConfigs.forEach(function(config) {
-            var toggleItem = clayConfig.getItemByMessageKey(config.triggerKey);
-            
-            if (toggleItem) {
-                var handler = createToggleHandler(config);
-                handler.call(toggleItem);
-                toggleItem.on('change', handler);
+
+    // ------------------------------------------------------------------
+    // Engine
+    // ------------------------------------------------------------------
+
+    function getItem(key) {
+        var item = clayConfig.getItemByMessageKey(key);
+        if (!item) {
+            item = clayConfig.getItemById(key);
+        }
+        return item;
+    }
+
+    // Recursively applies visibility down the tree.
+    // parentVisible = whether this node's parent chain allows it to show.
+    function applyNode(node, parentVisible) {
+        var item = getItem(node.key);
+        var ownVisible = parentVisible;
+
+        if (ownVisible && node.externalKey) {
+            var extItem = getItem(node.externalKey);
+            if (extItem) {
+                ownVisible = ownVisible && !!extItem.get();
             } else {
-                console.log("Error: Could not find '" + config.triggerKey + "' toggle.");
+                console.log("Error: Could not find external control '" + node.externalKey + "' for '" + node.key + "'!");
+            }
+        }
+
+        if (item) {
+            ownVisible ? item.show() : item.hide();
+        } else {
+            console.log("Error: Could not find item '" + node.key + "' by Key or ID!");
+        }
+
+        if (node.children && node.children.length) {
+            var childrenVisible = ownVisible;
+            if (ownVisible && node.condition) {
+                childrenVisible = item ? node.condition(item.get()) : false;
+            }
+            node.children.forEach(function (child) {
+                applyNode(child, childrenVisible);
+            });
+        }
+    }
+
+    function recomputeAll() {
+        tree.forEach(function (node) {
+            applyNode(node, true);
+        });
+    }
+
+    // Attach a 'change' listener to every node in the tree (any node's
+    // value could gate its own children, or be an externalKey target for
+    // something elsewhere), and just recompute the whole tree each time.
+    // This guarantees correct cascading no matter how deep or tangled
+    // the dependencies get.
+    function attachListeners(nodes) {
+        nodes.forEach(function (node) {
+            var item = getItem(node.key);
+            if (item) {
+                item.on('change', recomputeAll);
+            }
+            if (node.children && node.children.length) {
+                attachListeners(node.children);
             }
         });
-        
-        // Set up animationSensitivity with special logic
-        var animationsSenseToggle = clayConfig.getItemByMessageKey('animationSensitivity');
-        if (animationsSenseToggle) {
-            toggleAnimationsSens.call(animationsSenseToggle);
-            animationsSenseToggle.on('change', toggleAnimationsSens);
-        } else {
-            console.log("Error: Could not find 'animationSensitivity' toggle.");
-        }
+    }
+
+    clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
+        attachListeners(tree);
+        recomputeAll();
     });
 };
