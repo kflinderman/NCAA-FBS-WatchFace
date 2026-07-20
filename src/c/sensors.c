@@ -1,11 +1,13 @@
 #include "sensors.h"
 #include "globals.h"
 #include "animation.h"
+#include "drawing.h"
+#include "timekeeping.h"
 
 /*********************/
 /* Accelerometer     */
 /*********************/
-void accel_data_handler(AccelData *data, uint32_t num_samples) {
+void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   if (num_samples == 0 || data == NULL) return;
   // Use the last sample in the batch for current reading
   int16_t curr_y = data[num_samples - 1].y;
@@ -25,7 +27,12 @@ void accel_data_handler(AccelData *data, uint32_t num_samples) {
      ) {
       // Detected sudden Y movement and play animation
       s_animation = true;
-      animate_beat_team_layer();
+      if(settings.animationDelay){
+        app_timer_register(1000, timer_callback, NULL);
+      }
+      else{
+        animation_beat_team_layer();
+      }
     }
   s_prev_y = curr_y;
 }
@@ -33,7 +40,7 @@ void accel_data_handler(AccelData *data, uint32_t num_samples) {
 /******************/
 /* Bluetooth      */
 /******************/
-void connection_handler(bool connected) {
+void sensor_connection_handler(bool connected) {
   s_bt_connected = connected;
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Bluetooth: %d History: %d", s_bt_connected, s_bt_history);
 
@@ -62,10 +69,23 @@ void connection_handler(bool connected) {
   }
 }
 
+void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
+  // Create Bluetooth GBitmap from resource
+  s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
+
+  #if PBL_DISPLAY_HEIGHT > 180
+    //182
+    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+  #else
+    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
+  #endif
+  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
+}
+
 /****************/
 /* Battery      */
 /****************/
-void battery_handler(BatteryChargeState state) {
+void sensor_battery_handler(BatteryChargeState state) {
   s_battery_state = state;
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
 
@@ -103,4 +123,18 @@ void battery_handler(BatteryChargeState state) {
     layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
     s_batt_history = 0;
   }
+}
+
+void sensor_battery_draw(Layer *window_layer, GRect bounds){
+  // Create Battery GBitmap from resource
+  s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
+  s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
+  s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
+  
+  #if PBL_DISPLAY_HEIGHT > 180
+    //168
+    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+  #else
+    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
+  #endif
 }

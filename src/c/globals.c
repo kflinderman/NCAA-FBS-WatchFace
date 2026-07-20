@@ -1,6 +1,8 @@
 #include "globals.h"
 #include "health.h"
 #include "drawing.h"
+#include "weather.h"
+#include "display.h"
 
 /*******************************************
  * Definitions for all extern globals
@@ -8,7 +10,7 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
 
 #if defined(PBL_HEALTH)
 TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
@@ -25,7 +27,7 @@ Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
   Layer *vertical_line;
 #endif
 
-GFont s_font;
+GFont s_font, s_wIcon;
 
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
@@ -34,6 +36,15 @@ BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
 int32_t current_time_integer;
+int16_t temperatureValue = 0;
+int16_t conditionValue = 0;
+
+char scoreHomeTeam[32] = "";
+char scoreAwayTeam[32] = "";
+int16_t scoreHomePoints = 0;
+int16_t scoreAwayPoints = 0;
+bool scoreCompleted = false;
+bool scoreValid = false;
 
 uint16_t beat_spot;
 uint16_t beat_primary;
@@ -108,7 +119,7 @@ uint16_t beat_primary;
   uint16_t bitmap_size = 115;
 #endif
 
-void prv_default_settings() {
+void globals_prv_default_settings() {
   settings.DisconnectVibration = 3;
   settings.ReconnectVibration = 1;
   settings.LowBatteryPercent = 30;
@@ -131,28 +142,54 @@ void prv_default_settings() {
   settings.hardcodeRival = false;
   settings.donate = false;
   settings.bagBool = false;
+  settings.animationDelay = false;
+  settings.countdownBool = false;
+  settings.countdownTime = 0;
+  settings.countdownCustom = 1200;
+  settings.countdownDisplay = 1;
+  settings.api = false;
+  settings.api_quiet = false;
+  settings.scoreDisplayBool = false;
+  settings.scoreUpdate = 5;
+  settings.scoreLocation = 1;
+  settings.opponentBool = false;
+  settings.opponentSelect = 0;
+  settings.customOpponent = 0;
+  settings.weatherBool = false;
+  settings.weatherQuiet = false;
+  settings.weatherUnits = 0;
+  settings.rankingBool = false;
+  settings.winBool = false;
+  settings.confBool = false;
+  settings.bowlBool = false;
+  settings.champBool = false;
+  settings.cfbd.next_season_first_game_ts = 0;
+  settings.cfbd.current_season_year = 0;
+  settings.cfbd.last_full_sync_ts = 0;
+  settings.cfbd.api_calls_this_month = 0;
+  settings.cfbd.api_data_valid = false;
 }
 
-void prv_save_settings() {
+void globals_prv_save_settings() {
   persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
 }
 
-void prv_load_settings() {
-  prv_default_settings();
+void globals_prv_load_settings() {
+  globals_prv_default_settings();
   // Only load if the saved struct matches current size
   // (protects against corrupt data or struct layout changes)
   if (persist_exists(SETTINGS_KEY) && persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
 }
 
-void prv_update_display() {
+void globals_prv_update_display() {
   // Only update if window exists
   if (!s_main_window) return;
-
+  
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
@@ -184,9 +221,12 @@ void prv_update_display() {
     text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     
-    multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     #endif
+    
+    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
@@ -195,7 +235,8 @@ void prv_update_display() {
         layer_mark_dirty(beat_team_layer);
       }
     }
-  } else {
+  } 
+  else {
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
     s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
     s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
@@ -204,9 +245,12 @@ void prv_update_display() {
     text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
-    multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     #endif
+    
+    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
     if (beat_team_layer) {
       RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
@@ -224,33 +268,12 @@ void prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
-  if(settings.bagBool) {
-      // Prevent a memory leak by only creating the bitmap if it doesn't already exist
-      if(!s_bag_bitmap) {
-          s_bag_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BAG);
-      }
   
-      // Set the bitmap on the active layer, and explicitly clear it from the inactive layer
-      if (settings.DisplayTeam > 1) {
-          bitmap_layer_set_bitmap(s_bag_layerb, s_bag_bitmap);
-          bitmap_layer_set_bitmap(s_bag_layerf, NULL); 
-      } else {
-          bitmap_layer_set_bitmap(s_bag_layerf, s_bag_bitmap);
-          bitmap_layer_set_bitmap(s_bag_layerb, NULL); 
-      }
-  } else {
-      // Clear the bitmap from BOTH layers before destroying it
-      bitmap_layer_set_bitmap(s_bag_layerb, NULL);
-      bitmap_layer_set_bitmap(s_bag_layerf, NULL);
-  
-      // Safely destroy and nullify the pointer
-      if(s_bag_bitmap) {
-          gbitmap_destroy(s_bag_bitmap);
-          s_bag_bitmap = NULL; 
-      }
-  }
+  display_setupBag();
   
   #if defined(PBL_HEALTH)
     health_handler();
   #endif
+  
+  weather_update();
 }

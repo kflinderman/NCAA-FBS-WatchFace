@@ -1,14 +1,14 @@
 #include "drawing.h"
 #include "structure.h"
 
-static void line_update_proc(Layer *layer, GContext *ctx) {
+static void drawing_line_update_proc(Layer *layer, GContext *ctx) {
   LinePoints *points = (LinePoints *)layer_get_data(layer);
   graphics_context_set_stroke_width(ctx, points->width);
   graphics_context_set_stroke_color(ctx, points->color);
   graphics_draw_line(ctx, GPoint(points->x1, points->y1), GPoint(points->x2, points->y2));
 }
 
-Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
+Layer* drawing_line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
                   uint16_t width, GColor color, Layer *window_layer) {
   Layer *line_layer = layer_create_with_data(bounds, sizeof(LinePoints));
   LinePoints *points = (LinePoints *)layer_get_data(line_layer);
@@ -18,7 +18,7 @@ Layer* line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y
   points->y2 = y2;
   points->width = width;
   points->color = color;
-  layer_set_update_proc(line_layer, line_update_proc);
+  layer_set_update_proc(line_layer, drawing_line_update_proc);
   layer_add_child(window_layer, line_layer);
   return line_layer;
 }
@@ -40,7 +40,7 @@ typedef struct {
   uint16_t capacity;
 } MultiLineData;
 
-static void multiline_update_proc(Layer *layer, GContext *ctx) {
+static void drawing_multiline_update_proc(Layer *layer, GContext *ctx) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   for (uint16_t i = 0; i < data->count; i++) {
     LineSegment *seg = &data->segments[i];
@@ -50,18 +50,18 @@ static void multiline_update_proc(Layer *layer, GContext *ctx) {
   }
 }
 
-Layer* multiline_layer_create(GRect bounds, Layer *parent) {
+Layer* drawing_multiline_layer_create(GRect bounds, Layer *parent) {
   Layer *layer = layer_create_with_data(bounds, sizeof(MultiLineData));
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   data->segments = NULL;
   data->count = 0;
   data->capacity = 0;
-  layer_set_update_proc(layer, multiline_update_proc);
+  layer_set_update_proc(layer, drawing_multiline_update_proc);
   layer_add_child(parent, layer);
   return layer;
 }
 
-void multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color) {
+void drawing_multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
 
   if (data->count >= data->capacity) {
@@ -82,20 +82,20 @@ void multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, G
   layer_mark_dirty(layer);
 }
 
-void multiline_clear(Layer *layer) {
+void drawing_multiline_clear(Layer *layer) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   data->count = 0;
   layer_mark_dirty(layer);
 }
 
-void multiline_layer_destroy(Layer *layer) {
+void drawing_multiline_layer_destroy(Layer *layer) {
   if (!layer) return;
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   free(data->segments);
   layer_destroy(layer);
 }
 
-void multiline_set_all_colors(Layer *layer, GColor color) {
+void drawing_multiline_set_all_colors(Layer *layer, GColor color) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   for (uint16_t i = 0; i < data->count; i++) {
     data->segments[i].color = color;
@@ -103,7 +103,7 @@ void multiline_set_all_colors(Layer *layer, GColor color) {
   layer_mark_dirty(layer);
 }
 
-BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window) {
+BitmapLayer* drawing_bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window) {
   BitmapLayer *s_bitmap_layer = bitmap_layer_create(GRect(x, y, w, h));
   bitmap_layer_set_compositing_mode(s_bitmap_layer, GCompOpSet);
   bitmap_layer_set_bitmap(s_bitmap_layer, bitmap);
@@ -114,14 +114,14 @@ BitmapLayer* bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap 
 
 // Kept for parity with the original file — not currently wired to any layer's
 // update_proc, but preserved in case you want a bordered TextLayer later.
-static void text_layer_border_update_proc(Layer *layer, GContext *ctx) {
+static void drawing_text_layer_border_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   graphics_context_set_stroke_color(ctx, GColorBlack);
   graphics_context_set_stroke_width(ctx, 1);
   graphics_draw_rect(ctx, bounds);
 }
 
-TextLayer* text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color,
+TextLayer* drawing_text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color,
                      const char *initial_text, GFont font_handle,
                      GTextAlignment alignment, Layer *window) {
   TextLayer *text_layer = text_layer_create(GRect(x, y, w, h));
@@ -136,7 +136,7 @@ TextLayer* text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_
   return text_layer;
 }
 
-void round_rect_update_proc(Layer *layer, GContext *ctx) {
+void drawing_round_rect_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
   uint16_t stroke_radius = 8;
   // If layer has RoundRectData, use its fill_color; otherwise default to white
