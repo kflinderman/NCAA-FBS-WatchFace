@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "structure.h"
 
+
 // Animation complete handler
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
