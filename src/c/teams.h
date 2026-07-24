@@ -1,7 +1,7 @@
 // teams.h
 #pragma once
-
 #include <pebble.h>
+
 
 // Struct to represent a team
 typedef struct {

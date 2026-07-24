@@ -1,6 +1,7 @@
 #pragma once
 #include <pebble.h>
 
+
 void animate_beat_team_layer(void);
 
 // Subscribes this window's unobstructed-area handlers. Call once from

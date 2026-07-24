@@ -2,6 +2,7 @@
 #include "health.h"
 #include "drawing.h"
 
+
 /*******************************************
  * Definitions for all extern globals
  *******************************************/

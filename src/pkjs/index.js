@@ -4,6 +4,7 @@ var Clay = require('@rebble/clay');
 var clayConfig = require('./config');
 var customClay = require('./customClay');
 
+
 // Initialize Clay
 var clay = new Clay(clayConfig, customClay);
 /*

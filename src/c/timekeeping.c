@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "health.h"
 
+
 // Updates the time TextLayer
 void update_time() {
   // Get a tm structure

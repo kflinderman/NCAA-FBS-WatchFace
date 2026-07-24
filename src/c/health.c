@@ -1,6 +1,7 @@
 #include "health.h"
 #include "globals.h"
 
+
 #if defined(PBL_HEALTH)
 void health_handler() {
   if (settings.hrBool) {

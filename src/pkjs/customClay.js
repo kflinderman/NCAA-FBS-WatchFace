@@ -85,6 +85,7 @@ module.exports = function (minified) {
         }
     ];
     
+    
     // Set up all toggles after build
     clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
         // Set up simple toggles

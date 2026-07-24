@@ -1,6 +1,7 @@
 #include "communication.h"
 #include "globals.h"
 
+
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   /*
