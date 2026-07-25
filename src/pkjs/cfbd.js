@@ -421,86 +421,104 @@ var cfbd = (function() {
     cache: cache,
 
     /**
-     * Full workflow: determine season + fetch all data
-     * Call on app launch and periodically (e.g., daily)
+     * Full workflow: determine season + boundary only. Calendar data
+     * (year, next season kickoff, season/week date ranges) is all the
+     * watch needs from a full sync - games/records/rankings are fetched
+     * separately by syncLightCFBD, on its own trigger, for whatever the
+     * current week turns out to be.
+     * Call on app launch and periodically (e.g., daily).
      */
     syncFullCFBD: function(apiKey, callback) {
-      console.log('=== CFBD Full Sync Start ===');
+      console.log('=== CFBD Full Sync Start (calendar only) ===');
 
       determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
-
-        // cache is already populated by determineSeasonAndBoundary at this point
-        // (cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates)
-        // so syncLightCFBD can read off it directly.
-        this.syncLightCFBD(apiKey, function(lightResults) {
-          callback({
-            year: year,
-            nextSeasonFirstGameTs: nextSeasonTs,
-            seasonDates: seasonDates,
-            weekDates: weekDates,
-            games: lightResults.games,
-            records: lightResults.records,
-            rankings: lightResults.rankings,
-            week: lightResults.week,
-            offseason: lightResults.offseason
-          });
+        callback({
+          year: year,
+          nextSeasonFirstGameTs: nextSeasonTs,
+          seasonDates: seasonDates,
+          weekDates: weekDates
         });
-      }.bind(this));
+      });
     },
 
     /**
    * Lighter refresh: uses cached season info from syncFullCFBD to determine
    * the correct year/week, then fetches games+records+rankings (or just
    * records+rankings if we're in the offseason).
+   *
+   * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates to
+   * already be populated (normally true after a prior syncFullCFBD call in
+   * this same JS session). If the JS worker restarted and light sync fires
+   * first - which can happen, since the watch decides to sync based on its
+   * own persisted timestamps, not on what this JS session has done - that
+   * cache would be empty and determineCurrentWeek would throw. So: if
+   * cache.currentYear is unset, run determineSeasonAndBoundary first to
+   * populate it, then proceed exactly as before.
    */
     syncLightCFBD: function(apiKey, callback) {
-      console.log('=== CFBD Light Sync Start ===');
-      var target = determineCurrentWeek(cache);
-      console.log('Light sync: year ' + target.year + ', week ' + target.week +
-                  (target.offseason ? ' (offseason)' : ''));
-
-      var results = {
-        year: target.year,
-        week: target.week,
-        offseason: target.offseason,
-        games: [],
-        records: [],
-        rankings: []
-      };
-
-      //var expected = target.offseason ? 2 : 3; // records+rankings, or +games
-      var expected = 3;
-      var completed = 0;
-
-      function onComplete() {
-        completed++;
-        if (completed === expected) callback(results);
-      }
-
-      fetchRecords(target.year, apiKey, function(data) {
-        results.records = data;
-        onComplete();
-      });
-
-      setTimeout(function() {
-        fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-          results.rankings = data;
-          onComplete();
+      if (cache.currentYear === null) {
+        console.log('Light sync: cache empty (no full sync this session yet) - determining season first');
+        determineSeasonAndBoundary(apiKey, function() {
+          doLightSync(apiKey, callback);
         });
-      }, constants.BATCH_DELAY);
-
-      //if (!target.offseason) {
-        setTimeout(function() {
-          //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-          fetchGames(target.year, 13, false, apiKey, function(data) {
-            results.games = data;
-            onComplete();
-          });
-        }, constants.BATCH_DELAY * 2);
-      //}
+        return;
+      }
+      doLightSync(apiKey, callback);
     }
   };
+
+  function doLightSync(apiKey, callback) {
+    console.log('=== CFBD Light Sync Start ===');
+    var target = determineCurrentWeek(cache);
+    console.log('Light sync: year ' + target.year + ', week ' + target.week +
+                (target.offseason ? ' (offseason)' : ''));
+
+    var results = {
+      year: target.year,
+      week: target.week,
+      offseason: target.offseason,
+      games: [],
+      records: [],
+      rankings: []
+    };
+
+    //var expected = target.offseason ? 2 : 3; // records+rankings, or +games
+    var expected = 3;
+    var completed = 0;
+
+    function onComplete() {
+      completed++;
+      if (completed === expected) callback(results);
+    }
+
+    fetchRecords(target.year, apiKey, function(data) {
+      results.records = data;
+      onComplete();
+    });
+
+    setTimeout(function() {
+      //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
+      fetchRankings(target.year, 13, false, apiKey, function(data) {
+        results.rankings = data;
+        onComplete();
+      });
+    }, constants.BATCH_DELAY);
+
+    // week 13 is hardcoded for now (offseason testing, so real "current
+    // week" games don't exist yet) - swap the two lines below (comment
+    // the 13 one, uncomment target.week one) once testing is done and the
+    // season's actual current week should be used instead.
+    //if (!target.offseason) {
+      setTimeout(function() {
+        //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
+        fetchGames(target.year, 13, false, apiKey, function(data) {
+          results.games = data;
+          onComplete();
+        });
+      }, constants.BATCH_DELAY * 2);
+    //}
+  }
 })();
 
 module.exports = cfbd;

@@ -148,139 +148,103 @@ function sendScoreToWatch(game) {
   );
 }
 
-function sendCFBDDataToWatch(cfbdData) {
-  console.log('sendCFBDDataToWatch called with ' + cfbdData.games.length + ' games, ' 
-    + cfbdData.records.length + ' records, ' + cfbdData.rankings.length + ' rankings');
+// Holds the most recent light sync results (games/records/rankings, all
+// already fetched from the CFBD API) so that each REQUEST_CFBD_TEAM_DATA
+// from the watch can be served by filtering this in-memory data - no new
+// API call per team, only the up-to-3 calls syncLightCFBD already made.
+var lightSyncData = null;
 
-  var gamesJson = JSON.stringify(cfbdData.games);
-  var recordsJson = JSON.stringify(cfbdData.records);
-  var rankingsJson = JSON.stringify(cfbdData.rankings);
-
-  console.log('Games: ' + gamesJson.length + ' bytes, Records: ' + recordsJson.length 
-    + ' bytes, Rankings: ' + rankingsJson.length + ' bytes');
-
-  // Chunk size for AppMessage
-  var chunkSize = 480;
-  
-  // Create chunk arrays for each data type
-  var gameChunks = chunkString(gamesJson, chunkSize);
-  var recordChunks = chunkString(recordsJson, chunkSize);
-  var rankingChunks = chunkString(rankingsJson, chunkSize);
-
-  console.log('Game chunks: ' + gameChunks.length + ', Record chunks: ' + recordChunks.length 
-    + ', Ranking chunks: ' + rankingChunks.length);
-
-  // Send metadata first (includes all three chunk counts)
+function sendCalendarToWatch(calendarData) {
   var dictionary = {
-    'CFBD_YEAR': cfbdData.year,
-    'CFBD_NEXT_SEASON_TS': cfbdData.nextSeasonFirstGameTs || 0,
-    'CFBD_GAMES_TOTAL_CHUNKS': gameChunks.length,
-    'CFBD_RECORDS_TOTAL_CHUNKS': recordChunks.length,
-    'CFBD_RANKINGS_TOTAL_CHUNKS': rankingChunks.length
+    'CFBD_YEAR': calendarData.year,
+    'CFBD_NEXT_SEASON_TS': calendarData.nextSeasonFirstGameTs || 0
   };
 
   Pebble.sendAppMessage(dictionary,
-    function(e) {
-      console.log('CFBD metadata sent');
-      // Send all three data types sequentially
-      sendGameChunks(gameChunks, 0, function() {
-        sendRecordChunks(recordChunks, 0, function() {
-          sendRankingChunks(rankingChunks, 0, function() {
-            console.log('All CFBD data sent');
-          });
-        });
-      });
-    },
-    function(e) {
-      console.log('Error sending CFBD metadata!');
-    }
+    function(e) { console.log('CFBD calendar sent'); },
+    function(e) { console.log('Error sending CFBD calendar!'); }
   );
 }
 
-// Helper to break strings into chunks
-function chunkString(str, size) {
-  var chunks = [];
-  for (var i = 0; i < str.length; i += size) {
-    chunks.push(str.substring(i, i + size));
+// Finds this team's game (if any) in the cached light-sync games array and
+// returns { opponent, teamScore, vsScore, gametime } from that team's own
+// point of view, regardless of whether it played home or away. Returns
+// nulls/zeros/empty string if the team has no game this week (bye week).
+function findTeamGame(teamName, games) {
+  for (var i = 0; i < games.length; i++) {
+    var g = games[i];
+    if (g.homeTeam === teamName) {
+      return {
+        opponent: g.awayTeam || '',
+        teamScore: g.homePoints || 0,
+        vsScore: g.awayPoints || 0,
+        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
+      };
+    }
+    if (g.awayTeam === teamName) {
+      return {
+        opponent: g.homeTeam || '',
+        teamScore: g.awayPoints || 0,
+        vsScore: g.homePoints || 0,
+        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
+      };
+    }
   }
-  return chunks;
+  return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0 };
 }
 
-// Send game chunks
-function sendGameChunks(chunks, index, callback) {
-  if (index >= chunks.length) {
-    console.log('All game chunks sent');
-    if (callback) callback();
+function findTeamRecord(teamName, records) {
+  for (var i = 0; i < records.length; i++) {
+    if (records[i].team === teamName) {
+      return {
+        wins: records[i].total.wins || 0,
+        postseasonGames: records[i].postseason.games || 0,
+        postseasonWins: records[i].postseason.wins || 0,
+        postseasonLosses: records[i].postseason.losses || 0
+      };
+    }
+  }
+  return { wins: 0, postseasonGames: 0, postseasonWins: 0, postseasonLosses: 0 };
+}
+
+function findTeamRank(teamName, rankings) {
+  for (var i = 0; i < rankings.length; i++) {
+    if (rankings[i].school === teamName) {
+      return rankings[i].rank || 0;
+    }
+  }
+  return 0;
+}
+
+// Handles one REQUEST_CFBD_TEAM_DATA from the watch: looks up teamName in
+// the already-fetched lightSyncData (no API call) and sends back a single
+// small AppMessage with everything the watch needs for that one team.
+function sendTeamData(teamIndex, teamName) {
+  if (!lightSyncData) {
+    console.log('REQUEST_CFBD_TEAM_DATA received with no light sync data cached - skipping');
     return;
   }
 
+  var game = findTeamGame(teamName, lightSyncData.games);
+  var record = findTeamRecord(teamName, lightSyncData.records);
+  var rank = findTeamRank(teamName, lightSyncData.rankings);
+
   var dictionary = {
-    'CFBD_GAMES_CHUNK_INDEX': index,
-    'CFBD_GAMES_CHUNK_DATA': chunks[index]
+    'CFBD_TEAM_INDEX': teamIndex,
+    'CFBD_TEAM_OPPONENT': game.opponent.substring(0, 31),
+    'CFBD_TEAM_SCORE': game.teamScore,
+    'CFBD_TEAM_VS_SCORE': game.vsScore,
+    'CFBD_TEAM_GAMETIME': game.gametime,
+    'CFBD_TEAM_RANK': rank,
+    'CFBD_TEAM_WINS': record.wins,
+    'CFBD_TEAM_PS_GAMES': record.postseasonGames,
+    'CFBD_TEAM_PS_WINS': record.postseasonWins,
+    'CFBD_TEAM_PS_LOSSES': record.postseasonLosses
   };
 
   Pebble.sendAppMessage(dictionary,
-    function(e) {
-      console.log('Game chunk ' + index + '/' + chunks.length + ' sent');
-      setTimeout(function() {
-        sendGameChunks(chunks, index + 1, callback);
-      }, 50);
-    },
-    function(e) {
-      console.log('Error sending game chunk ' + index + '!');
-    }
-  );
-}
-
-// Send record chunks (similar structure)
-function sendRecordChunks(chunks, index, callback) {
-  if (index >= chunks.length) {
-    console.log('All record chunks sent');
-    if (callback) callback();
-    return;
-  }
-
-  var dictionary = {
-    'CFBD_RECORDS_CHUNK_INDEX': index,
-    'CFBD_RECORDS_CHUNK_DATA': chunks[index]
-  };
-
-  Pebble.sendAppMessage(dictionary,
-    function(e) {
-      console.log('Record chunk ' + index + '/' + chunks.length + ' sent');
-      setTimeout(function() {
-        sendRecordChunks(chunks, index + 1, callback);
-      }, 50);
-    },
-    function(e) {
-      console.log('Error sending record chunk ' + index + '!');
-    }
-  );
-}
-
-// Send ranking chunks (similar structure)
-function sendRankingChunks(chunks, index, callback) {
-  if (index >= chunks.length) {
-    console.log('All ranking chunks sent');
-    if (callback) callback();
-    return;
-  }
-
-  var dictionary = {
-    'CFBD_RANKINGS_CHUNK_INDEX': index,
-    'CFBD_RANKINGS_CHUNK_DATA': chunks[index]
-  };
-
-  Pebble.sendAppMessage(dictionary,
-    function(e) {
-      console.log('Ranking chunk ' + index + '/' + chunks.length + ' sent');
-      setTimeout(function() {
-        sendRankingChunks(chunks, index + 1, callback);
-      }, 50);
-    },
-    function(e) {
-      console.log('Error sending ranking chunk ' + index + '!');
-    }
+    function(e) { console.log('Team data sent for index ' + teamIndex + ' (' + teamName + ')'); },
+    function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
   );
 }
 
@@ -308,7 +272,7 @@ Pebble.addEventListener('appmessage',
       }
     }
     */
-    // ===== NEW: CFBD Full Sync (typically on app startup or manual refresh) =====
+    // ===== CFBD Full Sync: calendar only (year, next season kickoff) =====
     if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
       var apiKey = e.payload['api_key'];
       if (!apiKey) {
@@ -316,25 +280,46 @@ Pebble.addEventListener('appmessage',
         return;
       }
 
-      cfbdModule.syncFullCFBD(apiKey, function(fullData) {
-        sendCFBDDataToWatch(fullData);
+      cfbdModule.syncFullCFBD(apiKey, function(calendarData) {
+        sendCalendarToWatch(calendarData);
       });
     }
 
-    // ===== NEW: CFBD Light Sync (weekly games + rankings refresh) =====
+    // ===== CFBD Light Sync: fetch this week's games/records/rankings ONCE,
+    // cache in memory, then tell the watch it's ready. The watch then
+    // requests one team at a time (REQUEST_CFBD_TEAM_DATA below), each
+    // served from this same cached fetch - no repeat API calls. =====
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
-      var year = e.payload['cfbd_year'];
-      var week = e.payload['cfbd_week'];
-      
-      if (!apiKey || !year || !week) {
-        console.log('REQUEST_CFBD_LIGHT_SYNC missing parameters');
+
+      if (!apiKey) {
+        console.log('REQUEST_CFBD_LIGHT_SYNC missing api_key');
         return;
       }
 
-      cfbdModule.syncLightCFBD(year, week, apiKey, function(lightData) {
-        sendCFBDDataToWatch(lightData);
+      cfbdModule.syncLightCFBD(apiKey, function(lightData) {
+        lightSyncData = lightData;
+        console.log('Light sync cached: ' + lightData.games.length + ' games, '
+          + lightData.records.length + ' records, ' + lightData.rankings.length + ' rankings');
+
+        Pebble.sendAppMessage({ 'CFBD_LIGHT_SYNC_READY': 1 },
+          function(e) { console.log('Light sync ready signal sent'); },
+          function(e) { console.log('Error sending light sync ready signal!'); }
+        );
       });
+    }
+
+    // ===== Watch requesting one team's data at a time, post-light-sync =====
+    if (e.payload['REQUEST_CFBD_TEAM_DATA']) {
+      var teamIndex = e.payload['CFBD_TEAM_INDEX'];
+      var teamName = e.payload['CFBD_TEAM_NAME'];
+
+      if (teamName === undefined || teamName === null || teamName === '') {
+        console.log('REQUEST_CFBD_TEAM_DATA missing team name for index ' + teamIndex);
+        return;
+      }
+
+      sendTeamData(teamIndex, teamName);
     }
   }
 );
