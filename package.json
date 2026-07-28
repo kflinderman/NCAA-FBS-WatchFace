@@ -173,14 +173,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/football-black.png",
-                    "memoryFormat": "Smallest",
-                    "name": "football_black",
-                    "spaceOptimization": "memory",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/football-color.png",
                     "memoryFormat": "Smallest",
                     "name": "football",
@@ -199,13 +191,6 @@
                     "file": "images/gamecockp2.png",
                     "memoryFormat": "Smallest",
                     "name": "GAMECOCK",
-                    "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/lowbatt.png",
-                    "name": "LOWBATT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -243,6 +228,13 @@
                 {
                     "file": "images/APIlow.png",
                     "name": "APILOW",
+                    "spaceOptimization": "storage",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/lowbatt.png",
+                    "name": "LOWBATT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
