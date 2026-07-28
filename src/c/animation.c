@@ -4,21 +4,21 @@
 
 
 // Animation complete handler
-static void beat_team_animation_stopped(Animation *animation, bool finished, void *context) {
+static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
   Layer *layer = (Layer *)context;
 
   if (!returning) {
     returning = true;
     // Wait 1 second, then animate back
-    app_timer_register(1000, (AppTimerCallback)animate_beat_team_layer, layer);
+    app_timer_register(1000, (AppTimerCallback)animation_beat_team_layer, layer);
   } else {
     returning = false; // Reset for next cycle
     s_animation = false;
   }
 }
 
-void animate_beat_team_layer() {
+void animation_beat_team_layer() {
   GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
   GRect beat_from, beat_to;
   GRect rect_from, rect_to;
@@ -42,7 +42,7 @@ void animate_beat_team_layer() {
   PropertyAnimation *anim_beat = property_animation_create_layer_frame(beat_team_layer, &beat_from, &beat_to);
   animation_set_duration((Animation*)anim_beat, 1000);
   animation_set_handlers((Animation*)anim_beat, (AnimationHandlers){
-    .stopped = beat_team_animation_stopped
+    .stopped = animation_beat_team_stopped
   }, beat_team_layer);
   animation_schedule((Animation*)anim_beat);
 
@@ -54,13 +54,13 @@ void animate_beat_team_layer() {
   returning = !returning;
 }
 
-static void layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
+static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
   GRect move_frame = layer_get_frame(tmp_layer);
   move_frame.origin.y = ((tmp_bounds.size.h * origin) + bump) - diff * bmp_ratio;
   layer_set_frame(tmp_layer, move_frame);
 }
 
-void prv_unobstructed_change(AnimationProgress progress, void *context) {
+void animation_prv_unobstructed_change(AnimationProgress progress, void *context) {
   Layer *root = window_get_root_layer(s_main_window);
   GRect obsBounds = layer_get_unobstructed_bounds(root);
   GRect unBounds = layer_get_bounds(root);
@@ -68,13 +68,13 @@ void prv_unobstructed_change(AnimationProgress progress, void *context) {
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  layermove(unBounds, bound_diff, text_layer_get_layer(s_time_layer), time_h, 0, 1);
-  layermove(unBounds, bound_diff, text_layer_get_layer(s_date_layer), date_h, 0, 1);
-  layermove(unBounds, bound_diff, rect_layer, rect_h, 0, 1);
-  layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_logo_layer), 0.025, 0, 0.5);
-  layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_beat_team_layer), 0.025, 0, 0.5);
-  layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bt_layer), vert_2, 3, 1);
-  layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_batt_layer), vert_2, 3, 1);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_time_layer), time_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_date_layer), date_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, rect_layer, rect_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_logo_layer), 0.025, 0, 0.5);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_beat_team_layer), 0.025, 0, 0.5);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bt_layer), vert_2, 3, 1);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_batt_layer), vert_2, 3, 1);
 
 #ifdef PBL_RECT
   LinePoints *points = (LinePoints *)layer_get_data(vertical_line);
@@ -92,7 +92,7 @@ void prv_unobstructed_change(AnimationProgress progress, void *context) {
 void animation_subscribe_unobstructed_area(void) {
   UnobstructedAreaHandlers handlers = {
     .will_change = NULL,
-    .change = prv_unobstructed_change,
+    .change = animation_prv_unobstructed_change,
     .did_change = NULL
   };
   unobstructed_area_service_subscribe(handlers, NULL);

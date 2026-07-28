@@ -1,34 +1,10 @@
 #include "communication.h"
 #include "globals.h"
+#include "weather.h"
+#include "api.h"
 
-
-// AppMessage received handler
-void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  /*
-  // Check for weather data
-  Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);
-  Tuple *conditions_tuple = dict_find(iterator, MESSAGE_KEY_CONDITIONS);
-
-  if (temp_tuple && conditions_tuple) {
-    static char temperature_buffer[8];
-    static char conditions_buffer[32];
-    static char weather_layer_buffer[32];
-
-    int temp_value = (int)temp_tuple->value->int32;
-
-    // Convert to Fahrenheit if setting is enabled
-    if (settings.TemperatureUnit) {
-      temp_value = (temp_value * 9 / 5) + 32;
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°F", temp_value);
-    } else {
-      snprintf(temperature_buffer, sizeof(temperature_buffer), "%d°C", temp_value);
-    }
-
-    snprintf(conditions_buffer, sizeof(conditions_buffer), "%s", conditions_tuple->value->cstring);
-    snprintf(weather_layer_buffer, sizeof(weather_layer_buffer), "%s %s", temperature_buffer, conditions_buffer);
-  }
-  */
-
+void configuration_callback(DictionaryIterator *iterator, void *context){
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   // Check for Clay settings data
   uint32_t claysettings_id[] = {
     MESSAGE_KEY_DisconnectVibration,
@@ -53,14 +29,42 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
     MESSAGE_KEY_hardcodeRivalBool, 
     MESSAGE_KEY_donate,
     MESSAGE_KEY_bagBool,
+    MESSAGE_KEY_animationDelay,
+    MESSAGE_KEY_countdownBool,
+    MESSAGE_KEY_countdownTime,
+    MESSAGE_KEY_countdownCustom,
+    MESSAGE_KEY_countdownDisplay,
+    MESSAGE_KEY_api,
+    MESSAGE_KEY_api_quiet,
+    MESSAGE_KEY_scoreDisplayBool,
+    MESSAGE_KEY_scoreUpdate,
+    MESSAGE_KEY_scoreLocation,
+    MESSAGE_KEY_opponentBool,
+    MESSAGE_KEY_opponentSelect,
+    MESSAGE_KEY_customOpponent,
+    MESSAGE_KEY_weatherBool,
+    MESSAGE_KEY_weatherQuiet,
+    MESSAGE_KEY_weatherUnits,
+    MESSAGE_KEY_rankingBool,
+    MESSAGE_KEY_winBool,
+    MESSAGE_KEY_confBool,
+    MESSAGE_KEY_bowlBool,
+    MESSAGE_KEY_champBool,
   };
 
   bool settings_changed = false;
+  
+  Tuple *key_tuple = dict_find(iterator, MESSAGE_KEY_api_key);
+  if (key_tuple){
+    snprintf(settings.api_key, sizeof(settings.api_key), "%s", key_tuple->value->cstring);
+    settings_changed = true;
+  }
+  
 
-  for (uint16_t x = 0; x < 22; x++) {
+  for (uint16_t x = 0; x < 43; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
+    
     if (temp_t) {
-
       int32_t value = 0;
 
       if (temp_t->type == TUPLE_CSTRING) {
@@ -100,6 +104,27 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
         case 19: settings.hardcodeRival = value; break;
         case 20: settings.donate = value; break;
         case 21: settings.bagBool = value; break;
+        case 22: settings.animationDelay = value; break;
+        case 23: settings.countdownBool = value; break;
+        case 24: settings.countdownTime = value; break;
+        case 25: settings.countdownCustom = value; break;
+        case 26: settings.countdownDisplay = value; break;
+        case 27: settings.api = value; break;
+        case 28: settings.api_quiet = value; break;
+        case 29: settings.scoreDisplayBool = value; break;
+        case 30: settings.scoreUpdate = value; break;
+        case 31: settings.scoreLocation = value; break;
+        case 32: settings.opponentBool = value; break;
+        case 33: settings.opponentSelect = value; break;
+        case 34: settings.customOpponent = value; break;
+        case 35: settings.weatherBool = value; break;
+        case 36: settings.weatherQuiet = value; break;
+        case 37: settings.weatherUnits = value; break;
+        case 38: settings.rankingBool = value; break;
+        case 39: settings.winBool = value; break;
+        case 40: settings.confBool = value; break;
+        case 41: settings.bowlBool = value; break;
+        case 42: settings.champBool = value; break;
       }
 
       settings_changed = true;
@@ -108,19 +133,17 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
 
   // Save and apply if any settings were changed
   if (settings_changed) {
-    prv_save_settings();
-    prv_update_display();
-
-    // Refetch weather if the temperature unit changed so the display updates
-    /*
-    if (temp_unit_t) {
-      DictionaryIterator *iter;
-      app_message_outbox_begin(&iter);
-      dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
-      app_message_outbox_send();
-    }
-    */
+    globals_prv_save_settings();
+    globals_prv_update_display();
   }
+}
+
+// AppMessage received handler
+void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
+  configuration_callback(iterator, context);
+  weather_callback(iterator, context);
+  api_cfbd_callback(iterator, context);
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {
