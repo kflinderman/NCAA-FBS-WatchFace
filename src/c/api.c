@@ -75,6 +75,57 @@ static const Team *teams_find_by_name(const char *name) {
   return NULL;
 }
 
+// Threshold (percent) at which api_calls_nearing_limit() reports true -
+// matches the "like the battery indicator" idea from the header comment
+// above. 90% leaves a reasonable buffer before actually hitting the cap.
+#define CFBD_API_CALLS_WARNING_PERCENT 90
+
+/**
+ * Applies CFBD_API_CALLS_USED/CFBD_API_CALLS_LIMIT from an incoming
+ * message to settings.cfbd, if present. JS is the source of truth for
+ * these - it's the one making real HTTP calls and correcting its own
+ * count against CFBD's GET /info - so the watch always just mirrors
+ * whatever JS last reported rather than estimating locally. Called from
+ * both the calendar (full sync) and light-sync-ready handlers, since JS
+ * reports current usage after every sync, not just full syncs.
+ */
+static void apply_api_usage_from_message(DictionaryIterator *iterator) {
+  Tuple *used_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_USED);
+  Tuple *limit_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_LIMIT);
+
+  if (used_tuple) {
+    settings.cfbd.api_calls_this_month = (uint16_t)used_tuple->value->int32;
+  }
+  if (limit_tuple) {
+    settings.cfbd.api_calls_monthly_limit = (uint16_t)limit_tuple->value->int32;
+  }
+
+  if (used_tuple || limit_tuple) {
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD API usage: %d/%d",
+      settings.cfbd.api_calls_this_month, settings.cfbd.api_calls_monthly_limit);
+  }
+}
+
+/**
+ * Percent of this month's call budget used so far, 0-100. Returns 0 if the
+ * limit isn't known yet (no full sync has completed since app install).
+ * For a future UI indicator (battery-style icon) to consume.
+ */
+uint8_t api_calls_percent_used(void) {
+  if (settings.cfbd.api_calls_monthly_limit == 0) return 0;
+  uint32_t percent = ((uint32_t)settings.cfbd.api_calls_this_month * 100)
+    / settings.cfbd.api_calls_monthly_limit;
+  return (uint8_t)(percent > 100 ? 100 : percent);
+}
+
+/**
+ * True once usage crosses CFBD_API_CALLS_WARNING_PERCENT of the monthly
+ * limit. For a future UI indicator to consume - see api_calls_percent_used.
+ */
+bool api_calls_nearing_limit(void) {
+  return api_calls_percent_used() >= CFBD_API_CALLS_WARNING_PERCENT;
+}
+
 
 void debug_dump_api_info(const API_Info *array, size_t count) {
   APP_LOG(APP_LOG_LEVEL_DEBUG, "=== DUMPING %u API_INFO RECORDS ===", (unsigned int)count);
@@ -144,16 +195,11 @@ static void request_team_data(uint16_t team_index) {
 static void cfbd_light_sync_complete(void) {
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync complete - all %d teams updated", (int)API_DATA_COUNT);
 
-  //debug_dump_api_info(API_DATA, API_DATA_COUNT);
+  debug_dump_api_info(API_DATA, API_DATA_COUNT);
   
   cfbd_current_team_index = -1;
   settings.cfbd.last_full_sync_ts = time(NULL);
   settings.cfbd.api_data_valid = true;
-  // Light sync makes at most 3 CFBD API calls total (records, rankings,
-  // games) regardless of how many teams are in API_DATA[] - the
-  // team-by-team exchange with the watch reuses that one fetch instead of
-  // calling the API again per team.
-  settings.cfbd.api_calls_this_month += 3;
   globals_prv_save_settings();
   globals_prv_update_display();
 }
@@ -238,6 +284,8 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD calendar received: year %d, next season ts %lu",
       settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
 
+    apply_api_usage_from_message(iterator);
+
     globals_prv_save_settings();
     return;
   }
@@ -248,6 +296,9 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (ready_tuple) {
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync ready - requesting %d teams", (int)API_DATA_COUNT);
+
+    apply_api_usage_from_message(iterator);
+    globals_prv_save_settings();
 
     if (API_DATA_COUNT == 0) {
       cfbd_light_sync_complete();

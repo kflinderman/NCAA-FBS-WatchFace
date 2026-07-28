@@ -4,7 +4,6 @@
 #include "weather.h"
 #include "display.h"
 
-
 /*******************************************
  * Definitions for all extern globals
  *******************************************/
@@ -169,6 +168,7 @@ void globals_prv_default_settings() {
   settings.cfbd.current_season_year = 0;
   settings.cfbd.last_full_sync_ts = 0;
   settings.cfbd.api_calls_this_month = 0;
+  settings.cfbd.api_calls_monthly_limit = 0; // unknown until first full sync reports it
   settings.cfbd.api_data_valid = false;
 }
 

@@ -20,3 +20,12 @@ bool api_should_full_sync(void);
 
 // Helper: check if light sync is needed (e.g., weekly refresh)
 bool api_should_light_sync(void);
+
+// Percent of this month's CFBD call budget used so far (0-100). 0 if the
+// limit isn't known yet (no full sync completed since app install).
+uint8_t api_calls_percent_used(void);
+
+// True once usage crosses the warning threshold (see
+// CFBD_API_CALLS_WARNING_PERCENT in api.c) - for a battery-style "nearing
+// limit" UI indicator.
+bool api_calls_nearing_limit(void);

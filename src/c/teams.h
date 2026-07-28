@@ -1,7 +1,7 @@
 // teams.h
 #pragma once
-#include <pebble.h>
 
+#include <pebble.h>
 
 // Struct to represent a team
 typedef struct {
@@ -30,7 +30,15 @@ typedef struct {
   uint32_t next_season_first_game_ts;
   uint16_t current_season_year;
   uint32_t last_full_sync_ts;
-  uint8_t api_calls_this_month;
+  // Both fields are set directly from what JS reports (see
+  // CFBD_API_CALLS_USED/CFBD_API_CALLS_LIMIT in api_cfbd_callback) - JS is
+  // the source of truth since it's the one actually making HTTP calls,
+  // and it tracks/corrects its own count against CFBD's GET /info. The
+  // watch just mirrors whatever JS last reported, on every full and light
+  // sync. uint16_t (not uint8_t) because the free tier alone is ~1000
+  // calls/month - uint8_t would silently wrap well before that.
+  uint16_t api_calls_this_month;
+  uint16_t api_calls_monthly_limit;
   bool api_data_valid;
 } CFBDState;
 

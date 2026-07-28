@@ -1,0 +1,251 @@
+{
+  "author": "kenny.linderman@gmail.com",
+  "dependencies": {
+    "@rebble/clay": "^1.0.8"
+  },
+  "keywords": [],
+  "name": "ncaa-fbs",
+  "pebble": {
+    "capabilities": [
+      "location",
+      "configurable",
+      "health"
+    ],
+    "displayName": "NCAA FBS Watchface",
+    "enableMultiJS": true,
+    "messageKeys": [
+      "TEMPERATURE",
+      "CONDITIONS",
+      "REQUEST_WEATHER",
+      "DisconnectVibration",
+      "ReconnectVibration",
+      "LowBatteryPercent",
+      "LowBatteryVibration",
+      "EmptyBatteryPercent",
+      "EmptyBatteryVibration",
+      "DisplayTeam",
+      "FavoriteTeam",
+      "BeatTeam",
+      "animationSensitivity",
+      "quietTimeBool",
+      "quietTimeStart",
+      "quietTimeEnd",
+      "animationsBatt",
+      "animationsCustom",
+      "stepsBool",
+      "hrBool",
+      "stepsGoalBool",
+      "stepsGoal",
+      "hardcodeRivalBool",
+      "donate",
+      "bagBool",
+      "animationDelay",
+      "countdownBool",
+      "countdownTime",
+      "countdownDisplay",
+      "api",
+      "api_key",
+      "api_quiet",
+      "api_score",
+      "scoreDisplayBool",
+      "scoreUpdate",
+      "scoreLocation",
+      "api_opponent",
+      "opponentBool",
+      "opponentSelect",
+      "customOpponent",
+      "weatherBool",
+      "weatherQuiet",
+      "weatherUnits",
+      "weatherManual",
+      "weatherLocation",
+      "countdownCustom",
+      "rankingBool",
+      "winBool",
+      "confBool",
+      "bowlBool",
+      "champBool",
+      "ScoreTeamIndex",
+      "ScoreHomeTeam",
+      "ScoreAwayTeam",
+      "ScoreHomePoints",
+      "ScoreAwayPoints",
+      "ScoreCompleted",
+      "REQUEST_CFBD_FULL_SYNC",
+      "REQUEST_CFBD_LIGHT_SYNC",
+      "cfbd_year",
+      "cfbd_week",
+      "CFBD_GAMES_TOTAL_CHUNKS",
+      "CFBD_YEAR",
+      "CFBD_NEXT_SEASON_TS",
+      "CFBD_GAMES_CHUNK_INDEX",
+      "CFBD_GAMES_CHUNK_DATA",
+      "CFBD_RECORDS_CHUNK_INDEX",
+      "CFBD_RECORDS_CHUNK_DATA",
+      "CFBD_RANKINGS_CHUNK_INDEX",
+      "CFBD_RANKINGS_CHUNK_DATA",
+      "CFBD_RECORDS_TOTAL_CHUNKS",
+      "CFBD_RANKINGS_TOTAL_CHUNKS",
+      "CFBD_GAMES_TOTAL_CHUNKS",
+      "CFBD_LIGHT_SYNC_READY",
+      "REQUEST_CFBD_TEAM_DATA",
+      "CFBD_TEAM_INDEX",
+      "CFBD_TEAM_NAME",
+      "CFBD_TEAM_OPPONENT",
+      "CFBD_TEAM_SCORE",
+      "CFBD_TEAM_VS_SCORE",
+      "CFBD_TEAM_GAMETIME",
+      "CFBD_TEAM_RANK",
+      "CFBD_TEAM_WINS",
+      "CFBD_TEAM_PS_GAMES",
+      "CFBD_TEAM_PS_WINS",
+      "CFBD_TEAM_PS_LOSSES",
+      "CFBD_API_CALLS_USED",
+      "CFBD_API_CALLS_LIMIT"
+    ],
+    "projectType": "native",
+    "resources": {
+      "media": [
+        {
+          "file": "images/lowbatt.png",
+          "name": "LOWBATT",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/bagsb.png",
+          "name": "BAGB",
+          "spaceOptimization": "storage",
+          "targetPlatforms": [
+            "aplite",
+            "diorite",
+            "flint"
+          ],
+          "type": "bitmap"
+        },
+        {
+          "file": "images/bt.png",
+          "name": "BT",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/gamecockp2.png",
+          "memoryFormat": "Smallest",
+          "name": "GAMECOCK",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/fullbatt.png",
+          "name": "FULLBATT",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/clemsonp2.png",
+          "name": "CLEMSON",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "characterRegex": "[0-9:APM ]",
+          "file": "fonts/LECO 1976 Regular.ttf",
+          "name": "LECO_CUSTOM_54",
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ],
+          "type": "font"
+        },
+        {
+          "file": "images/emptybatt.png",
+          "name": "EMPTYBATT",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/bag.png",
+          "name": "BAG",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/football-color.png",
+          "memoryFormat": "Smallest",
+          "name": "football",
+          "spaceOptimization": "memory",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/football-black.png",
+          "memoryFormat": "Smallest",
+          "name": "football_black",
+          "spaceOptimization": "memory",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "characterRegex": "[\\uF00D\\uF002\\uF003\\uF00B\\uF0B2\\uF008\\uF006\\uF00A\\uF009\\uF065\\uF010\\uF005\\uF07B]",
+          "file": "fonts/Weather Icons.ttf",
+          "name": "FONT_WEATHER_ICONS_18",
+          "targetPlatforms": [
+            "emery",
+            "gabbro"
+          ],
+          "type": "font"
+        },
+        {
+          "characterRegex": "[\\uF00D\\uF002\\uF003\\uF00B\\uF0B2\\uF008\\uF006\\uF00A\\uF009\\uF065\\uF010\\uF005\\uF07B]",
+          "file": "fonts/Weather Icons.ttf",
+          "name": "FONT_WEATHER_ICONS_12",
+          "targetPlatforms": [
+            "aplite",
+            "basalt",
+            "chalk",
+            "diorite",
+            "flint"
+          ],
+          "type": "font"
+        },
+        {
+          "file": "images/APIempty.png",
+          "name": "APIEMPTY",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        },
+        {
+          "file": "images/APIlow.png",
+          "name": "APILOW",
+          "spaceOptimization": "storage",
+          "targetPlatforms": null,
+          "type": "bitmap"
+        }
+      ]
+    },
+    "sdkVersion": "3",
+    "targetPlatforms": [
+      "aplite",
+      "basalt",
+      "chalk",
+      "diorite",
+      "emery",
+      "gabbro",
+      "flint"
+    ],
+    "uuid": "0d8ecaa4-3bc4-440b-b5a0-b4a67363e2b3",
+    "watchapp": {
+      "watchface": true
+    }
+  },
+  "version": "5.0.0"
+}
