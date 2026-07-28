@@ -21,6 +21,57 @@ var cfbd = (function() {
   };
 
   /**
+   * Persistent (localStorage-backed) tracking of API calls made this
+   * calendar month. Incremented once per real HTTP request (see
+   * trackApiCall(), called from xhrAuth below) - not derived from how
+   * many AppMessages the watch sends, since a single light/full sync can
+   * make a variable number of underlying calls. This is corrected against
+   * CFBD's own GET /info usedCalls/monthlyLimit periodically (see
+   * fetchUserInfo, called from syncFullCFBD) so any local drift gets
+   * fixed up on the next full sync.
+   */
+  var USAGE_STORAGE_KEY = 'cfbd_api_usage';
+
+  function loadUsage() {
+    try {
+      var raw = localStorage.getItem(USAGE_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.log('CFBD usage: failed to load persisted usage: ' + e);
+    }
+    return null;
+  }
+
+  function saveUsage() {
+    try {
+      localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(usage));
+    } catch (e) {
+      console.log('CFBD usage: failed to persist usage: ' + e);
+    }
+  }
+
+  var usage = loadUsage() || { year: null, month: null, used: 0, limit: 1000 };
+
+  function trackApiCall() {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth();
+
+    if (usage.year !== year || usage.month !== month) {
+      // New calendar month locally - best-effort reset. The next full
+      // sync's GET /info correction confirms this against CFBD's own
+      // records; this just keeps the watch's counter from showing a
+      // stale high number for the first day or so of a new month.
+      usage.year = year;
+      usage.month = month;
+      usage.used = 0;
+    }
+
+    usage.used++;
+    saveUsage();
+  }
+
+  /**
    * Helper: XHR with Bearer auth (from index.js, duplicated for isolation)
    */
   function xhrAuth(url, apiKey, callback, errorCallback) {
@@ -45,7 +96,25 @@ var cfbd = (function() {
     xhr.open('GET', url);
     xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
     xhr.setRequestHeader('Accept', 'application/json');
+    trackApiCall();
     xhr.send();
+  }
+
+  /**
+   * GET /info - the authenticated user's Patreon level and monthly API
+   * call usage (monthlyLimit/remainingCalls/usedCalls/resetAt). Used only
+   * during a full sync to correct the locally-tracked usage counter
+   * against CFBD's own records - NOT called on every sync, so it doesn't
+   * add to the call budget it's meant to help conserve.
+   */
+  function fetchUserInfo(apiKey, callback) {
+    var url = constants.API_BASE + '/info';
+    xhrAuth(url, apiKey, function(data) {
+      callback(data);
+    }, function(status) {
+      console.log('CFBD fetchUserInfo failed: ' + status);
+      callback(null);
+    });
   }
 
   /**
@@ -433,11 +502,34 @@ var cfbd = (function() {
 
       determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
-        callback({
-          year: year,
-          nextSeasonFirstGameTs: nextSeasonTs,
-          seasonDates: seasonDates,
-          weekDates: weekDates
+
+        // Correct the locally-tracked usage counter against CFBD's own
+        // records. Only done here (full sync), not on every light sync,
+        // so this correction call doesn't itself eat into the budget
+        // it's meant to help conserve.
+        fetchUserInfo(apiKey, function(info) {
+          if (info && typeof info.usedCalls === 'number') {
+            usage.used = info.usedCalls;
+            if (typeof info.monthlyLimit === 'number') {
+              usage.limit = info.monthlyLimit;
+            }
+            var now = new Date();
+            usage.year = now.getFullYear();
+            usage.month = now.getMonth();
+            saveUsage();
+            console.log('CFBD usage corrected: ' + usage.used + '/' + usage.limit);
+          } else {
+            console.log('CFBD usage correction skipped - GET /info unavailable or unlimited plan');
+          }
+
+          callback({
+            year: year,
+            nextSeasonFirstGameTs: nextSeasonTs,
+            seasonDates: seasonDates,
+            weekDates: weekDates,
+            apiCallsUsed: usage.used,
+            apiCallsLimit: usage.limit
+          });
         });
       });
     },
@@ -489,7 +581,15 @@ var cfbd = (function() {
 
     function onComplete() {
       completed++;
-      if (completed === expected) callback(results);
+      if (completed === expected) {
+        // Report the running local tally (not corrected against GET
+        // /info - that only happens on full sync) so the watch's counter
+        // reflects the calls this light sync just made rather than
+        // whatever it was before this sync started.
+        results.apiCallsUsed = usage.used;
+        results.apiCallsLimit = usage.limit;
+        callback(results);
+      }
     }
 
     fetchRecords(target.year, apiKey, function(data) {

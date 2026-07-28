@@ -7,7 +7,6 @@ var customClay = require('./customClay');
 // Load CFBD module
 var cfbdModule = require('./cfbd');
 
-
 // Initialize Clay
 var clay = new Clay(clayConfig, customClay);
 
@@ -158,7 +157,9 @@ var lightSyncData = null;
 function sendCalendarToWatch(calendarData) {
   var dictionary = {
     'CFBD_YEAR': calendarData.year,
-    'CFBD_NEXT_SEASON_TS': calendarData.nextSeasonFirstGameTs || 0
+    'CFBD_NEXT_SEASON_TS': calendarData.nextSeasonFirstGameTs || 0,
+    'CFBD_API_CALLS_USED': calendarData.apiCallsUsed || 0,
+    'CFBD_API_CALLS_LIMIT': calendarData.apiCallsLimit || 0
   };
 
   Pebble.sendAppMessage(dictionary,
@@ -303,7 +304,11 @@ Pebble.addEventListener('appmessage',
         console.log('Light sync cached: ' + lightData.games.length + ' games, '
           + lightData.records.length + ' records, ' + lightData.rankings.length + ' rankings');
 
-        Pebble.sendAppMessage({ 'CFBD_LIGHT_SYNC_READY': 1 },
+        Pebble.sendAppMessage({
+            'CFBD_LIGHT_SYNC_READY': 1,
+            'CFBD_API_CALLS_USED': lightData.apiCallsUsed || 0,
+            'CFBD_API_CALLS_LIMIT': lightData.apiCallsLimit || 0
+          },
           function(e) { console.log('Light sync ready signal sent'); },
           function(e) { console.log('Error sending light sync ready signal!'); }
         );
