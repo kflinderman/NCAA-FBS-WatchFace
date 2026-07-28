@@ -140,9 +140,10 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/AppSt.png",
-                    "name": "APPSTATE",
-                    "spaceOptimization": "storage",
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
