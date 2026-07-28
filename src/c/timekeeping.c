@@ -5,6 +5,7 @@
 #include "animation.h"
 #include "api.h"
 
+
 // Updates the time TextLayer
 void update_time() {
   // Get a tm structure

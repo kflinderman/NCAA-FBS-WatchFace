@@ -1,6 +1,7 @@
 // teams.c
 #include "teams.h" // Include the header to get the 'Team' type
 
+
 #if defined(PBL_COLOR)
 const Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 77, .name="PLACEHOLDER" },

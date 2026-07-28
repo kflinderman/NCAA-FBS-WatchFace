@@ -4,6 +4,7 @@
 #include "weather.h"
 #include "display.h"
 
+
 /*******************************************
  * Definitions for all extern globals
  *******************************************/

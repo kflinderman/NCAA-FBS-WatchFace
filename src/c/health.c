@@ -2,6 +2,7 @@
 #include "globals.h"
 #include "drawing.h"
 
+
 #if defined(PBL_HEALTH)
 void health_heartRateHandler() {
   if (settings.hrBool) {

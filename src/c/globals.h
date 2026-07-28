@@ -3,6 +3,7 @@
 #include "teams.h"
 #include "structure.h"
 
+
 #define SETTINGS_KEY 1
 #define NUM_TEAMS 154
 
