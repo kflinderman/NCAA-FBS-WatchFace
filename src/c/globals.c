@@ -4,6 +4,7 @@
 #include "weather.h"
 #include "display.h"
 
+
 /*******************************************
  * Definitions for all extern globals
  *******************************************/
@@ -11,6 +12,7 @@ ClaySettings settings;
 
 Window *s_main_window;
 TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
+int dummy = 0;
 
 #if defined(PBL_HEALTH)
 TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
@@ -126,8 +128,8 @@ void globals_prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 1;
+  settings.DisplayTeam = 23;
+  settings.FavoriteTeam = 108;
   settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
@@ -147,7 +149,7 @@ void globals_prv_default_settings() {
   settings.countdownTime = 0;
   settings.countdownCustom = 1200;
   settings.countdownDisplay = 1;
-  settings.api = false;
+  settings.api = true; //false;
   settings.api_quiet = false;
   settings.scoreDisplayBool = false;
   settings.scoreUpdate = 5;
@@ -182,8 +184,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 23;
 }
 
 void globals_prv_update_display() {

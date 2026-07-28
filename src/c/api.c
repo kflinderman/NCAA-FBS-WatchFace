@@ -21,6 +21,7 @@ Bowl win
 if postseason.games > 1 && postseason.loses != 1 (need to figure out other playoff teams not getting this)
 Champion
 
+Full sync takes 8s
 
 Do I make an API indicator? Like the battery level, but of # of calls in a month? Not sure how I track this
 */
@@ -29,55 +30,132 @@ Do I make an API indicator? Like the battery level, but of # of calls in a month
 #include "api.h"
 #include "globals.h"
 
-// Games, records, and rankings never need to be buffered at the same time -
-// the JS sends them fully sequentially (all game chunks, then all record
-// chunks, then all ranking chunks), and each type is parsed and cleared as
-// soon as its chunk count is reached. So one shared buffer replaces what
-// used to be three separate 2048-byte buffers, saving ~4KB of .bss - which
-// matters a lot on aplite's 24KB app RAM budget.
-#define CFBD_JSON_MAX 2048
-static char cfbd_json_buf[CFBD_JSON_MAX] = {0};
-static int cfbd_json_pos = 0;
+/**
+ * CFBD sync protocol (team-by-team)
+ * -----------------------------------------------------------------------
+ * Full sync fetches calendar data only (year, next season kickoff) - see
+ * CFBD_YEAR / CFBD_NEXT_SEASON_TS handling below.
+ *
+ * Light sync fetches this week's games/records/rankings ONCE on the JS
+ * side (three CFBD API calls total, cached in JS memory), then the two
+ * sides walk API_DATA[] together one team at a time:
+ *   1. JS finishes fetching -> sends CFBD_LIGHT_SYNC_READY.
+ *   2. C resets its team cursor to 0 and sends REQUEST_CFBD_TEAM_DATA with
+ *      CFBD_TEAM_INDEX + CFBD_TEAM_NAME for API_DATA[0].
+ *   3. JS looks team_name up in its already-fetched (not re-fetched) light
+ *      sync data and replies with one small AppMessage of that team's
+ *      opponent/score/rank/record fields.
+ *   4. C applies those fields to API_DATA[team_index], then requests the
+ *      next index, repeating until API_DATA_COUNT is reached.
+ *
+ * This means at most one small AppMessage dictionary (well under the
+ * existing 512-byte inbox/outbox) is ever in flight for CFBD data - no
+ * static JSON buffer of any size is needed, which is what actually fixes
+ * the aplite .bss overflow: the old approach's problem was trying to hold
+ * whole (or large chunks of) games/records/rankings payloads in RAM at
+ * once, and this protocol never does that at all.
+ */
 
-typedef enum {
-  CFBD_STAGE_NONE = 0,
-  CFBD_STAGE_GAMES,
-  CFBD_STAGE_RECORDS,
-  CFBD_STAGE_RANKINGS,
-  CFBD_STAGE_DONE
-} CFBDStage;
-static CFBDStage cfbd_stage = CFBD_STAGE_NONE;
+static int cfbd_current_team_index = -1; // -1 = no light sync in progress
 
-static int cfbd_total_chunks_games = 0;
-static int cfbd_total_chunks_records = 0;
-static int cfbd_total_chunks_rankings = 0;
+/**
+ * Look up a team by name in the full TEAMS[] roster (used to resolve an
+ * opponent name to a logo/color entry for drawing - separate from
+ * API_DATA[], which only holds the teams actively tracked on the watch).
+ * Returns NULL if the opponent isn't in the curated TEAMS[] roster (this
+ * is expected/common - most opponents won't be).
+ */
+static const Team *teams_find_by_name(const char *name) {
+  if (!name || !name[0]) return NULL;
+  for (size_t i = 0; i < TEAMS_COUNT; i++) {
+    if (TEAMS[i].name && strcmp(TEAMS[i].name, name) == 0) {
+      return &TEAMS[i];
+    }
+  }
+  return NULL;
+}
 
-static int cfbd_chunks_received_games = 0;
-static int cfbd_chunks_received_records = 0;
-static int cfbd_chunks_received_rankings = 0;
+
+void debug_dump_api_info(const API_Info *array, size_t count) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== DUMPING %u API_INFO RECORDS ===", (unsigned int)count);
+
+  for (size_t i = 0; i < count; i++) {
+    const API_Info *item = &array[i];
+
+    // Single line log per item to avoid log buffer overflow
+    APP_LOG(APP_LOG_LEVEL_DEBUG, 
+            "[%03u] %s | ID:%u VS:%d | Score:%u-%u | W:%u | GT:%lu | Rank:%u PS-G:%u PS-W:%u PS-L:%u",
+            (unsigned int)i,
+            item->name ? item->name : "NULL",
+            item->id,
+            item->vs_id,
+            item->score,
+            item->vs_score,
+            item->wins,
+            (unsigned long)item->gametime,
+            item->ranking, 
+            item->postseasonGames, 
+            item->postseasonWins, 
+            item->postseasonLosses);
+
+    // OPTIONAL: Add extra fields if needed
+    /*
+    APP_LOG(APP_LOG_LEVEL_DEBUG, 
+            "      -> Rank:%u PS-G:%u PS-W:%u PS-L:%u",
+            item->ranking, 
+            item->postseasonGames, 
+            item->postseasonWins, 
+            item->postseasonLosses);
+    */
+    
+    // Give the Pebble logging system breathing room every 20 records
+    if (i > 0 && i % 20 == 0) {
+      psleep(10); 
+    }
+  }
+
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== END DUMP ===");
+}
 
 
 /**
- * Debug helper: log a long string in safe-sized pieces, since APP_LOG
- * truncates long messages once you factor in its own file/line/level
- * prefix eating into the line budget.
+ * Sends REQUEST_CFBD_TEAM_DATA for API_DATA[team_index], asking JS for
+ * that one team's opponent/score/rank/record. Assumes team_index is valid
+ * (checked by the caller).
  */
-static void log_json_chunks(const char *label, const char *json) {
-  int len = strlen(json);
-  int chunk_size = 100; // conservative given APP_LOG's own prefix overhead
-  int chunk_index = 0;
+static void request_team_data(uint16_t team_index) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s)",
+    team_index + 1, (int)API_DATA_COUNT, API_DATA[team_index].name);
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "%s: %d bytes total", label, len);
-
-  for (int i = 0; i < len; i += chunk_size) {
-    char chunk_buf[101];
-    int remaining = len - i;
-    int this_chunk = remaining < chunk_size ? remaining : chunk_size;
-    memcpy(chunk_buf, json + i, this_chunk);
-    chunk_buf[this_chunk] = '\0';
-    APP_LOG(APP_LOG_LEVEL_INFO, "%s[%d]: %s", label, chunk_index, chunk_buf);
-    chunk_index++;
+  DictionaryIterator *iter;
+  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for team data request");
+    return;
   }
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
+  dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
+  dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, API_DATA[team_index].name);
+  app_message_outbox_send();
+}
+
+/**
+ * Called once all of API_DATA[] has been filled in for this light sync.
+ */
+static void cfbd_light_sync_complete(void) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync complete - all %d teams updated", (int)API_DATA_COUNT);
+
+  //debug_dump_api_info(API_DATA, API_DATA_COUNT);
+  
+  cfbd_current_team_index = -1;
+  settings.cfbd.last_full_sync_ts = time(NULL);
+  settings.cfbd.api_data_valid = true;
+  // Light sync makes at most 3 CFBD API calls total (records, rankings,
+  // games) regardless of how many teams are in API_DATA[] - the
+  // team-by-team exchange with the watch reuses that one fetch instead of
+  // calling the API again per team.
+  settings.cfbd.api_calls_this_month += 3;
+  globals_prv_save_settings();
+  globals_prv_update_display();
 }
 
 void api_request_cfbd_full_sync(void) {
@@ -86,8 +164,8 @@ void api_request_cfbd_full_sync(void) {
     return;
   }
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync");
-  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
+
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
@@ -101,393 +179,151 @@ void api_request_cfbd_light_sync(void) {
     return;
   }
 
-  // Need to know current year/week from previous sync
-  if (!settings.cfbd.api_data_valid) {
-    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: no prior data");
-    return;
-  }
+  // Need calendar data from a prior full sync so JS can determine the
+  // current week itself (it keeps season/week dates in its own cache).
+  //if (!settings.cfbd.api_data_valid) {
+    //APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: no prior data");
+    //return;
+  //}
 
-  // Calculate current week from current_season_year
-  // (This would require maintaining week state; simplified here)
-  
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
-  
+
   DictionaryIterator *iter;
   app_message_outbox_begin(&iter);
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  dict_write_uint16(iter, MESSAGE_KEY_cfbd_year, settings.cfbd.current_season_year);
-  // Note: week would need to be calculated; this is a placeholder
-  dict_write_uint8(iter, MESSAGE_KEY_cfbd_week, 1);
   app_message_outbox_send();
 }
 
 bool api_should_full_sync(void) {
   time_t now = time(NULL);
-  
+
   // Never synced, or more than 24 hours since last full sync
-  if (!settings.cfbd.api_data_valid || 
+  if (!settings.cfbd.api_data_valid ||
       (now - settings.cfbd.last_full_sync_ts > 86400)) {
     return true;
   }
-  
+
   // Also check: if we've crossed into next season, force a sync
   time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
   if (next_game_ts > 0 && now >= next_game_ts && !settings.cfbd.api_data_valid) {
     return true;
   }
-  
+
   return false;
 }
 
 bool api_should_light_sync(void) {
   time_t now = time(NULL);
-  
+
   // Light sync weekly (every 7 days)
-  if (settings.cfbd.api_data_valid && 
+  if (settings.cfbd.api_data_valid &&
       (now - settings.cfbd.last_full_sync_ts < 604800)) {
     return false;
   }
   return true;
 }
 
-/**
- * Minimal JSON helpers
- * -----------------------------------------------------------------------
- * The Pebble SDK has no bundled JSON library, and the payloads here are
- * flat, known-shape arrays of objects (no nested arrays within an object,
- * no escaped quotes in values we care about), so a small hand-rolled
- * scanner is enough - no need for a general-purpose parser or malloc.
- */
-
-// Find the start of the next "{...}" object after `from`. Returns NULL if
-// none found. Writes the object's closing '}' position into *end.
-static const char *json_next_object(const char *from, const char **end) {
-  const char *start = strchr(from, '{');
-  if (!start) return NULL;
-
-  int depth = 0;
-  const char *p = start;
-  for (; *p; p++) {
-    if (*p == '{') depth++;
-    else if (*p == '}') {
-      depth--;
-      if (depth == 0) {
-        *end = p;
-        return start;
-      }
-    }
-  }
-  return NULL; // unbalanced / truncated - treat as no object
-}
-
-// Extract a string value for "key":"value" within [obj, obj_end]. Copies
-// into out (size out_size), NUL-terminated, truncating if needed. Returns
-// true if the key was found (even if value was empty).
-static bool json_get_string(const char *obj, const char *obj_end, const char *key,
-                             char *out, size_t out_size) {
-  out[0] = '\0';
-
-  char needle[48];
-  snprintf(needle, sizeof(needle), "\"%s\"", key);
-
-  const char *key_pos = strstr(obj, needle);
-  if (!key_pos || key_pos > obj_end) return false;
-
-  const char *colon = strchr(key_pos, ':');
-  if (!colon || colon > obj_end) return false;
-
-  // Skip whitespace after the colon
-  const char *p = colon + 1;
-  while (*p == ' ' || *p == '\t') p++;
-
-  if (*p == 'n') {
-    // null
-    return true;
-  }
-  if (*p != '"') return false; // not a string value
-
-  p++; // skip opening quote
-  const char *val_start = p;
-  while (*p && *p != '"' && p <= obj_end) p++;
-  if (*p != '"') return false;
-
-  size_t len = (size_t)(p - val_start);
-  if (len >= out_size) len = out_size - 1;
-  memcpy(out, val_start, len);
-  out[len] = '\0';
-  return true;
-}
-
-// Extract an integer value for "key":123 (or "key":null -> out_present=false)
-// within [obj, obj_end]. Returns true if the key was found and had a
-// numeric value; false if missing or null.
-static bool json_get_int(const char *obj, const char *obj_end, const char *key, int *out) {
-  *out = 0;
-
-  char needle[48];
-  snprintf(needle, sizeof(needle), "\"%s\"", key);
-
-  const char *key_pos = strstr(obj, needle);
-  if (!key_pos || key_pos > obj_end) return false;
-
-  const char *colon = strchr(key_pos, ':');
-  if (!colon || colon > obj_end) return false;
-
-  const char *p = colon + 1;
-  while (*p == ' ' || *p == '\t') p++;
-
-  if (*p == 'n') return false; // null
-
-  *out = atoi(p);
-  return true;
-}
-
-// Find a team's slot in API_DATA[] by name (exact match). Returns NULL if
-// the team isn't in the current test-bed roster.
-static API_Info *api_find_team(const char *name) {
-  for (size_t i = 0; i < API_DATA_COUNT; i++) {
-    if (API_DATA[i].name && strcmp(API_DATA[i].name, name) == 0) {
-      return &API_DATA[i];
-    }
-  }
-  return NULL;
-}
-
-/**
- * Parse the games JSON array: [{startDate,homeTeam,homePoints,awayTeam,awayPoints}, ...]
- * For each game, if either side matches a team in API_DATA[], fill in that
- * team's opponent id/score/gametime fields.
- */
-static void parse_games_json(const char *json) {
-  const char *cursor = json;
-  const char *obj, *obj_end;
-  int games_matched = 0;
-
-  while ((obj = json_next_object(cursor, &obj_end)) != NULL) {
-    char home_team[64], away_team[64];
-    int home_points = 0, away_points = 0;
-    bool has_home_points = json_get_int(obj, obj_end, "homePoints", &home_points);
-    bool has_away_points = json_get_int(obj, obj_end, "awayPoints", &away_points);
-    json_get_string(obj, obj_end, "homeTeam", home_team, sizeof(home_team));
-    json_get_string(obj, obj_end, "awayTeam", away_team, sizeof(away_team));
-
-    API_Info *home_info = home_team[0] ? api_find_team(home_team) : NULL;
-    API_Info *away_info = away_team[0] ? api_find_team(away_team) : NULL;
-
-    if (home_info) {
-      API_Info *opp = away_info;
-      home_info->vs_id = opp ? opp->id : home_info->vs_id;
-      home_info->score = has_home_points ? (uint16_t)home_points : home_info->score;
-      home_info->vs_score = has_away_points ? (uint16_t)away_points : home_info->vs_score;
-      games_matched++;
-    }
-    if (away_info) {
-      API_Info *opp = home_info;
-      away_info->vs_id = opp ? opp->id : away_info->vs_id;
-      away_info->score = has_away_points ? (uint16_t)away_points : away_info->score;
-      away_info->vs_score = has_home_points ? (uint16_t)home_points : away_info->vs_score;
-      games_matched++;
-    }
-
-    cursor = obj_end + 1;
-  }
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "parse_games_json: matched %d team-sides", games_matched);
-}
-
-/**
- * Parse the records JSON array:
- * [{team, total:{games,wins}, postseason:{games,wins,losses}}, ...]
- */
-static void parse_records_json(const char *json) {
-  const char *cursor = json;
-  const char *obj, *obj_end;
-  int records_matched = 0;
-
-  while ((obj = json_next_object(cursor, &obj_end)) != NULL) {
-    char team[64];
-    json_get_string(obj, obj_end, "team", team, sizeof(team));
-
-    API_Info *info = team[0] ? api_find_team(team) : NULL;
-    if (info) {
-      int wins = 0, ps_games = 0, ps_wins = 0, ps_losses = 0;
-      // "wins" and "games" each appear twice (once under "total", once
-      // under "postseason"). json_get_string/json_get_int always return
-      // the first match in the searched range, so total.wins is read from
-      // the full object here, and the postseason.* fields are read below
-      // from a range starting at "postseason" so they can't match total's.
-      if (json_get_int(obj, obj_end, "wins", &wins)) {
-        info->wins = (uint16_t)wins;
-      }
-
-      const char *postseason_pos = strstr(obj, "\"postseason\"");
-      if (postseason_pos && postseason_pos < obj_end) {
-        if (json_get_int(postseason_pos, obj_end, "games", &ps_games)) {
-          info->postseasonGames = (uint16_t)ps_games;
-        }
-        if (json_get_int(postseason_pos, obj_end, "wins", &ps_wins)) {
-          info->postseasonWins = (uint16_t)ps_wins;
-        }
-        if (json_get_int(postseason_pos, obj_end, "losses", &ps_losses)) {
-          info->postseasonLosses = (uint16_t)ps_losses;
-        }
-      }
-      records_matched++;
-    }
-
-    cursor = obj_end + 1;
-  }
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "parse_records_json: matched %d teams", records_matched);
-}
-
-/**
- * Parse the rankings JSON array: [{rank, school}, ...]
- */
-static void parse_rankings_json(const char *json) {
-  const char *cursor = json;
-  const char *obj, *obj_end;
-  int rankings_matched = 0;
-
-  while ((obj = json_next_object(cursor, &obj_end)) != NULL) {
-    char school[64];
-    json_get_string(obj, obj_end, "school", school, sizeof(school));
-
-    API_Info *info = school[0] ? api_find_team(school) : NULL;
-    if (info) {
-      int rank = 0;
-      if (json_get_int(obj, obj_end, "rank", &rank)) {
-        info->ranking = (uint16_t)rank;
-      }
-      rankings_matched++;
-    }
-
-    cursor = obj_end + 1;
-  }
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "parse_rankings_json: matched %d teams", rankings_matched);
-}
-
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Metadata
-  Tuple *metadata_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_TOTAL_CHUNKS);
-  if (metadata_tuple) {
-    cfbd_total_chunks_games = metadata_tuple->value->uint16;
-    
-    Tuple *records_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_TOTAL_CHUNKS);
-    Tuple *rankings_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_TOTAL_CHUNKS);
-    
-    if (records_tuple) cfbd_total_chunks_records = records_tuple->value->uint16;
-    if (rankings_tuple) cfbd_total_chunks_rankings = rankings_tuple->value->uint16;
-    
-    // Reset stage tracking and the shared buffer. Start at whichever stage
-    // actually has chunks coming (a type with 0 chunks is skipped entirely
-    // rather than waiting on a chunk count that will never arrive).
-    cfbd_chunks_received_games = 0;
-    cfbd_chunks_received_records = 0;
-    cfbd_chunks_received_rankings = 0;
-    cfbd_json_pos = 0;
-    memset(cfbd_json_buf, 0, CFBD_JSON_MAX);
+  // Full sync response: calendar data only (year, next season kickoff).
+  Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
+  if (year_tuple) {
+    settings.cfbd.current_season_year = year_tuple->value->uint16;
 
-    if (cfbd_total_chunks_games > 0) {
-      cfbd_stage = CFBD_STAGE_GAMES;
-    } else if (cfbd_total_chunks_records > 0) {
-      cfbd_stage = CFBD_STAGE_RECORDS;
-    } else if (cfbd_total_chunks_rankings > 0) {
-      cfbd_stage = CFBD_STAGE_RANKINGS;
-    } else {
-      cfbd_stage = CFBD_STAGE_DONE;
+    Tuple *next_season_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_NEXT_SEASON_TS);
+    if (next_season_tuple) {
+      settings.cfbd.next_season_first_game_ts = next_season_tuple->value->uint32;
     }
-    
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD metadata: %d game chunks, %d record chunks, %d ranking chunks",
-      cfbd_total_chunks_games, cfbd_total_chunks_records, cfbd_total_chunks_rankings);
+
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD calendar received: year %d, next season ts %lu",
+      settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
+
+    globals_prv_save_settings();
     return;
   }
 
-  // Game chunks - only meaningful while we're in the games stage
-  Tuple *game_index = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_INDEX);
-  Tuple *game_data = dict_find(iterator, MESSAGE_KEY_CFBD_GAMES_CHUNK_DATA);
-  
-  if (cfbd_stage == CFBD_STAGE_GAMES && game_index && game_data) {
-    const char *chunk = game_data->value->cstring;
-    int len = strlen(chunk);
-    if (cfbd_json_pos + len < CFBD_JSON_MAX - 1) {
-      strcat(cfbd_json_buf, chunk);
-      cfbd_json_pos += len;
-      cfbd_chunks_received_games++;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Game chunk %d/%d", cfbd_chunks_received_games, cfbd_total_chunks_games);
-    } else {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD games buffer overflow - truncating");
+  // Light sync: JS has fetched (once) and cached games/records/rankings
+  // for the current week and is ready to serve per-team lookups. Kick off
+  // the team-by-team walk starting at API_DATA[0].
+  Tuple *ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
+  if (ready_tuple) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync ready - requesting %d teams", (int)API_DATA_COUNT);
+
+    if (API_DATA_COUNT == 0) {
+      cfbd_light_sync_complete();
+      return;
     }
 
-    if (cfbd_chunks_received_games >= cfbd_total_chunks_games) {
-      parse_games_json(cfbd_json_buf);
-      memset(cfbd_json_buf, 0, CFBD_JSON_MAX);
-      cfbd_json_pos = 0;
-      cfbd_stage = (cfbd_total_chunks_records > 0) ? CFBD_STAGE_RECORDS
-                 : (cfbd_total_chunks_rankings > 0) ? CFBD_STAGE_RANKINGS
-                 : CFBD_STAGE_DONE;
-    }
+    cfbd_current_team_index = 0;
+    request_team_data(0);
+    return;
   }
 
-  // Record chunks - only meaningful while we're in the records stage
-  Tuple *record_index = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_CHUNK_INDEX);
-  Tuple *record_data = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_CHUNK_DATA);
-  
-  if (cfbd_stage == CFBD_STAGE_RECORDS && record_index && record_data) {
-    const char *chunk = record_data->value->cstring;
-    int len = strlen(chunk);
-    if (cfbd_json_pos + len < CFBD_JSON_MAX - 1) {
-      strcat(cfbd_json_buf, chunk);
-      cfbd_json_pos += len;
-      cfbd_chunks_received_records++;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Record chunk %d/%d", cfbd_chunks_received_records, cfbd_total_chunks_records);
+  // Per-team response: apply this team's data to API_DATA[team_index],
+  // then move on to the next team (or finish).
+  Tuple *team_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_INDEX);
+  Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
+  if (team_index_tuple && team_opponent_tuple) {
+    uint16_t team_index = team_index_tuple->value->uint16;
+
+    if (cfbd_current_team_index < 0 || team_index != (uint16_t)cfbd_current_team_index) {
+      APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD team data for index %d ignored - expected %d",
+        team_index, cfbd_current_team_index);
+      return;
+    }
+
+    if (team_index >= API_DATA_COUNT) {
+      APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team data index %d out of range", team_index);
+      cfbd_light_sync_complete();
+      return;
+    }
+
+    API_Info *info = &API_DATA[team_index];
+    const char *opponent_name = team_opponent_tuple->value->cstring;
+
+    Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
+    Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
+    Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
+    Tuple *rank_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
+    Tuple *wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
+    Tuple *ps_games_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
+    Tuple *ps_wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
+    Tuple *ps_losses_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_LOSSES);
+
+    if (opponent_name && opponent_name[0]) {
+      const Team *opp = teams_find_by_name(opponent_name);
+      // vs_id only means something if the opponent is itself in the
+      // curated TEAMS[] roster (needed to draw their logo/colors) - most
+      // opponents won't be, and that's fine; score/record fields below
+      // still apply regardless. Falls through to the sentinel below if
+      // not found, so a stale opponent from a prior week's data can't
+      // linger. -1 (not 0) is the "no opponent" sentinel, since 0 is a
+      // real, valid TEAMS[] index (Clemson).
+      info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
     } else {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD records buffer overflow - truncating");
+      // Bye week - no game this week, so no opponent to show.
+      info->vs_id = -1;
     }
 
-    if (cfbd_chunks_received_records >= cfbd_total_chunks_records) {
-      parse_records_json(cfbd_json_buf);
-      memset(cfbd_json_buf, 0, CFBD_JSON_MAX);
-      cfbd_json_pos = 0;
-      cfbd_stage = (cfbd_total_chunks_rankings > 0) ? CFBD_STAGE_RANKINGS : CFBD_STAGE_DONE;
-    }
-  }
+    if (score_tuple) info->score = (uint16_t)score_tuple->value->int32;
+    if (vs_score_tuple) info->vs_score = (uint16_t)vs_score_tuple->value->int32;
+    if (gametime_tuple) info->gametime = (uint32_t)gametime_tuple->value->int32;
+    if (rank_tuple) info->ranking = (uint16_t)rank_tuple->value->int32;
+    if (wins_tuple) info->wins = (uint16_t)wins_tuple->value->int32;
+    if (ps_games_tuple) info->postseasonGames = (uint16_t)ps_games_tuple->value->int32;
+    if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
+    if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
 
-  // Ranking chunks - only meaningful while we're in the rankings stage
-  Tuple *ranking_index = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_CHUNK_INDEX);
-  Tuple *ranking_data = dict_find(iterator, MESSAGE_KEY_CFBD_RANKINGS_CHUNK_DATA);
-  
-  if (cfbd_stage == CFBD_STAGE_RANKINGS && ranking_index && ranking_data) {
-    const char *chunk = ranking_data->value->cstring;
-    int len = strlen(chunk);
-    if (cfbd_json_pos + len < CFBD_JSON_MAX - 1) {
-      strcat(cfbd_json_buf, chunk);
-      cfbd_json_pos += len;
-      cfbd_chunks_received_rankings++;
-      APP_LOG(APP_LOG_LEVEL_DEBUG, "Ranking chunk %d/%d", cfbd_chunks_received_rankings, cfbd_total_chunks_rankings);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) updated: opp=%s score=%d-%d rank=%d wins=%d",
+      team_index, info->name, opponent_name ? opponent_name : "", info->score, info->vs_score,
+      info->ranking, info->wins);
+
+    uint16_t next_index = team_index + 1;
+    if (next_index < API_DATA_COUNT) {
+      cfbd_current_team_index = next_index;
+      request_team_data(next_index);
     } else {
-      APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD rankings buffer overflow - truncating");
+      cfbd_light_sync_complete();
     }
-
-    if (cfbd_chunks_received_rankings >= cfbd_total_chunks_rankings) {
-      parse_rankings_json(cfbd_json_buf);
-      memset(cfbd_json_buf, 0, CFBD_JSON_MAX);
-      cfbd_json_pos = 0;
-      cfbd_stage = CFBD_STAGE_DONE;
-    }
-  }
-
-  if (cfbd_stage == CFBD_STAGE_DONE) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "All CFBD data received and parsed!");
-
-    settings.cfbd.last_full_sync_ts = time(NULL);
-    settings.cfbd.api_data_valid = true;
-    settings.cfbd.api_calls_this_month += 3;
-    globals_prv_save_settings();
-    globals_prv_update_display();
-
-    cfbd_stage = CFBD_STAGE_NONE; // avoid re-firing on stray follow-up messages
   }
 }

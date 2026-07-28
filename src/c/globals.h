@@ -3,6 +3,7 @@
 #include "teams.h"
 #include "structure.h"
 
+
 #define SETTINGS_KEY 1
 #define NUM_TEAMS 154
 
@@ -65,6 +66,7 @@ extern ClaySettings settings;
  *******************************************/
 extern Window *s_main_window;
 extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
+extern int dummy;
 
 #if defined(PBL_HEALTH)
 extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;

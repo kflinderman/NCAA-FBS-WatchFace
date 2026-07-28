@@ -1,5 +1,4 @@
 // FYI https://github.com/pebble-dev/clay#showing-items-for-specific-platforms-and-features
-
 module.exports = [
   {
     "type": "heading",

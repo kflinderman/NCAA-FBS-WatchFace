@@ -5,6 +5,7 @@
 #include "animation.h"
 #include "api.h"
 
+
 // Updates the time TextLayer
 void update_time() {
   // Get a tm structure
@@ -49,7 +50,28 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     }
   }
   
-  api_request_cfbd_full_sync();
+  
+  if (dummy % 2 == 0 && dummy > 0){
+    APP_LOG(APP_LOG_LEVEL_INFO, "3. Full Sync Try");
+    api_request_cfbd_full_sync();
+    dummy++;
+  }
+  else{
+    if (dummy > 0){
+      APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
+      api_request_cfbd_light_sync();
+      dummy++;
+    }
+    else{
+      strncpy(settings.api_key, "B5t4zQKeB5kqsq7QHg/htU+PUdD72h/fRin8RLeJOhdWP88BalCKoRmcot2yUOTs", sizeof(settings.api_key) - 1);
+      settings.api_key[sizeof(settings.api_key) - 1] = '\0'; // Ensure null-termination
+      APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
+      api_request_cfbd_full_sync();
+      dummy++;
+    }
+  }
+
+ 
   
   // Check if we should sync CFBD data (e.g., once daily at 2 AM)
   if (tick_time->tm_hour == 2 && tick_time->tm_min == 0) {

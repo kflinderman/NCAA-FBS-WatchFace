@@ -1,7 +1,7 @@
 // teams.h
 #pragma once
-
 #include <pebble.h>
+
 
 typedef struct {
   uint16_t x1, y1, x2, y2, width;
