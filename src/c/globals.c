@@ -128,8 +128,8 @@ void globals_prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 23;
-  settings.FavoriteTeam = 108;
+  settings.DisplayTeam = 0;
+  settings.FavoriteTeam = 1;
   settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
@@ -184,8 +184,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 23;
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
 }
 
 void globals_prv_update_display() {
