@@ -1,6 +1,7 @@
 #include "animation.h"
 #include "globals.h"
 #include "structure.h"
+#include "timekeeping.h"
 
 
 // Animation complete handler
@@ -18,6 +19,16 @@ static void animation_beat_team_stopped(Animation *animation, bool finished, voi
   }
 }
 
+void animation_hide_text(bool count, bool score, bool time){
+  layer_set_hidden(text_layer_get_layer(s_day_layer), count);
+  layer_set_hidden(text_layer_get_layer(s_hr_layer), count);
+  layer_set_hidden(text_layer_get_layer(s_countdown_layer), count);
+  layer_set_hidden(text_layer_get_layer(s_home_layer), score);
+  layer_set_hidden(text_layer_get_layer(s_away_layer), score);
+  layer_set_hidden(text_layer_get_layer(s_score_layer), score);
+  layer_set_hidden(text_layer_get_layer(s_time_layer), time);
+}
+
 void animation_beat_team_layer() {
   GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
   GRect beat_from, beat_to;
@@ -30,12 +41,53 @@ void animation_beat_team_layer() {
 
     rect_from = GRect(beat_spot, -40 + beat_primary, 44, 40);
     rect_to   = GRect(beat_spot, -10 - beat_primary, 44, 40);
+    
+    if (settings.countdownBool){
+      if ((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool){
+        if (settings.countdownDisplay != 2){
+          animation_hide_text(false, true, true);
+        }
+        else{
+          animation_hide_text(true, true, false);
+        }
+      }
+    }
+
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time)){
+        if (settings.scoreLocation != 2){
+          animation_hide_text(true, false, true);
+        }
+      else{
+          animation_hide_text(true, true, false);
+      }
+    }
+    
   } else {
     beat_from = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
     beat_to   = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
 
     rect_from = GRect(beat_spot, -10 - beat_primary, 44, 40);
     rect_to   = GRect(beat_spot, -40 + beat_primary, 44, 40);
+    
+    if (settings.countdownBool){
+      if ((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool){
+        if (settings.countdownDisplay != 1){
+          animation_hide_text(false, true, true);
+        }
+        else{
+          animation_hide_text(true, true, false);
+        }
+      }
+    }
+
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time)){
+        if (settings.scoreLocation != 1){
+          animation_hide_text(true, false, true);
+        }
+      else{
+          animation_hide_text(true, true, false);
+      }
+    }
   }
 
   // Animate beat_team_layer

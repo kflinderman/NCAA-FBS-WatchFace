@@ -65,7 +65,7 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_countdown_layer, *s_score_layer;
+extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hr_layer, *s_countdown_layer, *s_score_layer;
 extern int dummy;
 
 #if defined(PBL_HEALTH)
@@ -92,6 +92,7 @@ extern GFont s_font, s_wIcon;
 extern int16_t s_prev_y;
 extern bool s_bt_connected;
 extern bool s_animation;
+extern bool after_time;
 extern BatteryChargeState s_battery_state;
 extern bool s_bt_history;
 extern int16_t s_batt_history;

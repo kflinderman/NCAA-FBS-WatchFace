@@ -1,17 +1,3 @@
-/*
-Task List:
----Release---
--Football API Integration
-  - Code
--Champ Designation
-  - Icons
-    - Nat Champ
-    - Conf Champ
-    - Winning Season
-    - Bowl Win
-  - Code
-*/
-
 #include <pebble.h>
 #include "globals.h"
 #include "health.h"
@@ -35,7 +21,7 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
   
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
-  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
   s_logo_layer = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
   s_bag_layerf = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_bag_bitmap, bitmap_layer_get_layer(s_logo_layer));
 
@@ -92,6 +78,8 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_conditions_layer);
   text_layer_destroy(s_home_layer);
   text_layer_destroy(s_away_layer);
+  text_layer_destroy(s_day_layer);
+  text_layer_destroy(s_hr_layer);
   text_layer_destroy(s_countdown_layer);
   text_layer_destroy(s_score_layer);
   #if defined(PBL_HEALTH)

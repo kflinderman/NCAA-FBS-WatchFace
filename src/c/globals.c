@@ -4,6 +4,7 @@
 #include "weather.h"
 #include "display.h"
 #include "timekeeping.h"
+#include "animation.h"
 #include "api.h"
 
 /*******************************************
@@ -12,7 +13,7 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_countdown_layer, *s_score_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hr_layer, *s_countdown_layer, *s_score_layer;
 int dummy = 0;
 
 #if defined(PBL_HEALTH)
@@ -35,6 +36,7 @@ GFont s_font, s_wIcon;
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
+bool after_time = true;
 BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
@@ -274,16 +276,18 @@ void globals_prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
-  if(settings.countdownBool){
-    bool afterTime = timekeeping_countdown();
+  if (settings.countdownBool){
+    after_time = timekeeping_countdown();
+    if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+      animation_hide_text(false, true, true);
+    }
   }
   
-  if (settings.scoreDisplayBool){
+  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
     api_score_display();
-  }
-  else{
-    layer_set_hidden(text_layer_get_layer(s_home_layer), true);
-    layer_set_hidden(text_layer_get_layer(s_away_layer), true);
+    if (settings.scoreLocation != 1){
+      animation_hide_text(true, false, true);
+    }
   }
   
   #if defined(PBL_HEALTH)

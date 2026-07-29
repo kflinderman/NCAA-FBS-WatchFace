@@ -63,7 +63,19 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     dummy++;
   }
 
- 
+  if (settings.countdownBool){
+    after_time = timekeeping_countdown();
+    if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+      animation_hide_text(false, true, true);
+    }
+  }
+  
+  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+    api_score_display();
+    if (settings.scoreLocation != 1){
+      animation_hide_text(true, false, true);
+    }
+  }
   
   // Check if we should sync CFBD data (e.g., once daily at 2 AM)
   if (tick_time->tm_hour == 2 && tick_time->tm_min == 0) {
@@ -73,8 +85,6 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       api_request_cfbd_light_sync();
     }
   }
-
-  
 }
 
 void timer_callback(void *data) {
@@ -91,7 +101,10 @@ bool timekeeping_countdown() {
 
   int current_wday = tick_time->tm_wday;
   int days_to_time;
+  bool after_time = false;
   
+  
+  // This still needs to be fixed, currently it all points to Sat noon
   if (settings.countdownTime == 1){
     days_to_time = 6 - current_wday;
     countdown_time.tm_mday += days_to_time;
@@ -137,6 +150,7 @@ bool timekeeping_countdown() {
     snprintf(s_temp_time2, sizeof(s_temp_time2), "Mins");
     firstplace = 0;
     secondplace = 0;
+    after_time = true;
   }
   else if(days > 0){
     snprintf(s_temp_time1, sizeof(s_temp_time1), "Days");
@@ -152,13 +166,13 @@ bool timekeeping_countdown() {
   }
 
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", s_temp_time1);
-  text_layer_set_text(s_home_layer, s_temp_buffer);
+  text_layer_set_text(s_day_layer, s_temp_buffer);
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", s_temp_time2);
-  text_layer_set_text(s_away_layer, s_temp_buffer);
+  text_layer_set_text(s_hr_layer, s_temp_buffer);
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d:%d", firstplace, secondplace);
   text_layer_set_text(s_countdown_layer, s_temp_buffer);
   
-  return false;
+  return after_time;
 }
 
 void timeDate_draw(Layer *window_layer, GRect bounds){
@@ -169,16 +183,22 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
     s_score_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00-00", s_font, GTextAlignmentCenter, window_layer);
     s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     s_away_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+    s_day_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+    s_hr_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "Hours", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
   #else
     s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
     s_countdown_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
     s_score_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00-00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
     s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     s_away_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+    s_day_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+    s_hr_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "Hours", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #endif
 
   layer_set_hidden(text_layer_get_layer(s_home_layer), true);
   layer_set_hidden(text_layer_get_layer(s_away_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_day_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_hr_layer), true);
   layer_set_hidden(text_layer_get_layer(s_countdown_layer), true);
   layer_set_hidden(text_layer_get_layer(s_score_layer), true);
   
