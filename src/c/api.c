@@ -1,15 +1,4 @@
 /*
-GET /calendar current year
-if within any dates
-GET /games current week
-else
-GET /calendar last year
-if within dates
-GET /games current week
-else
-GET /games postseason week 1
-
-
 Champ stuff
 GET /records
 if total.wins > 6
@@ -22,13 +11,13 @@ if postseason.games > 1 && postseason.loses != 1 (need to figure out other playo
 Champion
 
 Full sync takes 8s
-
-Do I make an API indicator? Like the battery level, but of # of calls in a month? Not sure how I track this
 */
+
 // src/c/api_cfbd.c
 #include <pebble.h>
 #include "api.h"
 #include "globals.h"
+#include "drawing.h"
 
 /**
  * CFBD sync protocol (team-by-team)
@@ -78,7 +67,8 @@ static const Team *teams_find_by_name(const char *name) {
 // Threshold (percent) at which api_calls_nearing_limit() reports true -
 // matches the "like the battery indicator" idea from the header comment
 // above. 90% leaves a reasonable buffer before actually hitting the cap.
-#define CFBD_API_CALLS_WARNING_PERCENT 90
+#define CFBD_API_CALLS_WARNING_PERCENT 20
+//#define CFBD_API_CALLS_WARNING_PERCENT 90
 
 /**
  * Applies CFBD_API_CALLS_USED/CFBD_API_CALLS_LIMIT from an incoming
@@ -195,7 +185,7 @@ static void request_team_data(uint16_t team_index) {
 static void cfbd_light_sync_complete(void) {
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync complete - all %d teams updated", (int)API_DATA_COUNT);
 
-  debug_dump_api_info(API_DATA, API_DATA_COUNT);
+  //debug_dump_api_info(API_DATA, API_DATA_COUNT);
   
   cfbd_current_team_index = -1;
   settings.cfbd.last_full_sync_ts = time(NULL);
@@ -207,7 +197,23 @@ static void cfbd_light_sync_complete(void) {
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
     return;
+  }
+  else if (api_calls_percent_used() >= 99){
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
+    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    return;
+  }
+  else{
+    if (api_calls_nearing_limit()){
+      bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
+      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    }
+    else{
+      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    }
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
@@ -222,7 +228,24 @@ void api_request_cfbd_full_sync(void) {
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
     return;
+  }
+  else if (api_calls_percent_used() >= 99){
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
+    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    s_batt_history = 0;
+    return;
+  }
+  else{
+    if (api_calls_nearing_limit()){
+      bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
+      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    }
+    else{
+      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    }
   }
 
   // Need calendar data from a prior full sync so JS can determine the
@@ -377,4 +400,29 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       cfbd_light_sync_complete();
     }
   }
+}
+
+void api_score_display() {
+  static char s_temp_buffer[8];
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", TEAMS[settings.FavoriteTeam].name);
+  text_layer_set_text(s_home_layer, s_temp_buffer);
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].name);
+  text_layer_set_text(s_away_layer, s_temp_buffer);
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d-%d", API_DATA[settings.FavoriteTeam].score, API_DATA[settings.FavoriteTeam].vs_score);
+  text_layer_set_text(s_countdown_layer, s_temp_buffer);
+}
+
+void api_icon_draw(Layer *window_layer, GRect bounds){
+  // Create Battery GBitmap from resource
+  s_api_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
+  s_api_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+  
+  #if PBL_DISPLAY_HEIGHT > 180
+    //168
+    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump - 4), bounds.size.h * vert_2 + 3, 8, 14, s_api_low_bitmap, window_layer);
+  #else
+    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 2), bounds.size.h * vert_2 + 3, 4, 7, s_api_low_bitmap, window_layer);
+  #endif
+    
+  layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
 }

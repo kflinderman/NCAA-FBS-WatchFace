@@ -50,25 +50,17 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     }
   }
   
-  
-  if (dummy % 2 == 0 && dummy > 0){
-    APP_LOG(APP_LOG_LEVEL_INFO, "3. Full Sync Try");
-    api_request_cfbd_full_sync();
+  if (dummy == 1){
+    APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
+    api_request_cfbd_light_sync();
     dummy++;
   }
-  else{
-    if (dummy > 0){
-      APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
-      api_request_cfbd_light_sync();
-      dummy++;
-    }
-    else{
-      strncpy(settings.api_key, "B5t4zQKeB5kqsq7QHg/htU+PUdD72h/fRin8RLeJOhdWP88BalCKoRmcot2yUOTs", sizeof(settings.api_key) - 1);
-      settings.api_key[sizeof(settings.api_key) - 1] = '\0'; // Ensure null-termination
-      APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
-      api_request_cfbd_full_sync();
-      dummy++;
-    }
+  else if (dummy == 0){
+    strncpy(settings.api_key, "B5t4zQKeB5kqsq7QHg/htU+PUdD72h/fRin8RLeJOhdWP88BalCKoRmcot2yUOTs", sizeof(settings.api_key) - 1);
+    settings.api_key[sizeof(settings.api_key) - 1] = '\0'; // Ensure null-termination
+    APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
+    api_request_cfbd_full_sync();
+    dummy++;
   }
 
  
@@ -89,14 +81,107 @@ void timer_callback(void *data) {
   animation_beat_team_layer();
 }
 
+bool timekeeping_countdown() {
+  static char s_temp_buffer[8];
+  char s_temp_time1[8], s_temp_time2[8];
+  time_t temp = time(NULL);
+  struct tm *tick_time = localtime(&temp);
+  struct tm countdown_time = *tick_time;
+  int firstplace, secondplace;
+
+  int current_wday = tick_time->tm_wday;
+  int days_to_time;
+  
+  if (settings.countdownTime == 1){
+    days_to_time = 6 - current_wday;
+    countdown_time.tm_mday += days_to_time;
+    countdown_time.tm_hour = 12;
+    countdown_time.tm_min = 0;
+    countdown_time.tm_sec = 0;
+    countdown_time.tm_isdst = -1;
+  }
+  else if (settings.countdownTime == 2){
+    days_to_time = 6 - current_wday;
+    countdown_time.tm_mday += days_to_time;
+    countdown_time.tm_hour = 12;
+    countdown_time.tm_min = 0;
+    countdown_time.tm_sec = 0;
+    countdown_time.tm_isdst = -1;
+  }
+  else {
+    days_to_time = 6 - current_wday;
+    countdown_time.tm_mday += days_to_time;
+    countdown_time.tm_hour = 12;
+    countdown_time.tm_min = 0;
+    countdown_time.tm_sec = 0;
+    countdown_time.tm_isdst = -1;
+  }
+  
+  time_t the_time = mktime(&countdown_time);
+  double seconds_diff = difftime(the_time, temp);
+  int minutes_diff = (int)(seconds_diff / 60.0);
+  int total_mins = abs(minutes_diff);
+
+  // 1 day = 1440 minutes (24 * 60)
+  int days = total_mins / 1440;          
+  
+  // Remaining minutes after full days are removed
+  int mins_after_days = total_mins % 1440; 
+  
+  // Extract remaining hours and minutes from the remainder
+  int hours = mins_after_days / 60;
+  int minutes = mins_after_days % 60;
+
+  if (minutes_diff < 0){
+    snprintf(s_temp_time1, sizeof(s_temp_time1), "Hours");
+    snprintf(s_temp_time2, sizeof(s_temp_time2), "Mins");
+    firstplace = 0;
+    secondplace = 0;
+  }
+  else if(days > 0){
+    snprintf(s_temp_time1, sizeof(s_temp_time1), "Days");
+    snprintf(s_temp_time2, sizeof(s_temp_time2), "Hours");
+    firstplace = days;
+    secondplace = hours;
+  }
+  else{
+    snprintf(s_temp_time1, sizeof(s_temp_time1), "Hours");
+    snprintf(s_temp_time2, sizeof(s_temp_time2), "Mins");
+    firstplace = hours;
+    secondplace = minutes;
+  }
+
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", s_temp_time1);
+  text_layer_set_text(s_home_layer, s_temp_buffer);
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", s_temp_time2);
+  text_layer_set_text(s_away_layer, s_temp_buffer);
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d:%d", firstplace, secondplace);
+  text_layer_set_text(s_countdown_layer, s_temp_buffer);
+  
+  return false;
+}
+
 void timeDate_draw(Layer *window_layer, GRect bounds){
   #if PBL_DISPLAY_HEIGHT > 180
     s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
     s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+    s_countdown_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+    s_score_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00-00", s_font, GTextAlignmentCenter, window_layer);
+    s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+    s_away_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
   #else
     s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
+    s_countdown_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
+    s_score_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00-00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
+    s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h * time_h, 70, 22, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+    s_away_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #endif
 
+  layer_set_hidden(text_layer_get_layer(s_home_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_away_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_countdown_layer), true);
+  layer_set_hidden(text_layer_get_layer(s_score_layer), true);
+  
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date
     #if PBL_DISPLAY_HEIGHT > 180

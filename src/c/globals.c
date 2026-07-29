@@ -3,6 +3,8 @@
 #include "drawing.h"
 #include "weather.h"
 #include "display.h"
+#include "timekeeping.h"
+#include "api.h"
 
 /*******************************************
  * Definitions for all extern globals
@@ -10,7 +12,7 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_countdown_layer, *s_score_layer;
 int dummy = 0;
 
 #if defined(PBL_HEALTH)
@@ -21,8 +23,8 @@ Layer *hr_icon, *step_ladder;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
+GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap, *s_api_low_bitmap, *s_api_empty_bitmap;
+BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb, *s_api_layer;
 Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
 #ifdef PBL_RECT
   Layer *vertical_line;
@@ -218,6 +220,7 @@ void globals_prv_update_display() {
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color});
     s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
     s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    display_setupBag((GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
 
     #if defined(PBL_HEALTH)
     text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
@@ -242,6 +245,7 @@ void globals_prv_update_display() {
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
     s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
     s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    display_setupBag((GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
     #if defined(PBL_HEALTH)
     text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
@@ -270,8 +274,17 @@ void globals_prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
+  if(settings.countdownBool){
+    bool afterTime = timekeeping_countdown();
+  }
   
-  display_setupBag();
+  if (settings.scoreDisplayBool){
+    api_score_display();
+  }
+  else{
+    layer_set_hidden(text_layer_get_layer(s_home_layer), true);
+    layer_set_hidden(text_layer_get_layer(s_away_layer), true);
+  }
   
   #if defined(PBL_HEALTH)
     health_handler();

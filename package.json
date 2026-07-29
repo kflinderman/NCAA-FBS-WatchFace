@@ -110,7 +110,9 @@
             "CFBD_TEAM_WINS",
             "CFBD_TEAM_PS_GAMES",
             "CFBD_TEAM_PS_WINS",
-            "CFBD_TEAM_PS_LOSSES"
+            "CFBD_TEAM_PS_LOSSES",
+            "CFBD_API_CALLS_USED",
+            "CFBD_API_CALLS_LIMIT"
         ],
         "projectType": "native",
         "resources": {
@@ -253,7 +255,7 @@
         ],
         "uuid": "0d8ecaa4-3bc4-440b-b5a0-b4a67363e2b3",
         "watchapp": {
-            "watchface": false
+            "watchface": true
         }
     },
     "version": "5.0.0"

@@ -9,7 +9,7 @@ const Team TEAMS[] = {
 };
 #else
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 108, .name="Clemson" },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 108, .name="Clemson" },
   { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 26, .name="South Carolina" },
 };
 #endif

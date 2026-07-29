@@ -599,7 +599,7 @@ var cfbd = (function() {
 
     setTimeout(function() {
       //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-      fetchRankings(target.year, 13, false, apiKey, function(data) {
+      fetchRankings(target.year, 14, false, apiKey, function(data) {
         results.rankings = data;
         onComplete();
       });
@@ -612,7 +612,7 @@ var cfbd = (function() {
     //if (!target.offseason) {
       setTimeout(function() {
         //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-        fetchGames(target.year, 13, false, apiKey, function(data) {
+        fetchGames(target.year, 14, false, apiKey, function(data) {
           results.games = data;
           onComplete();
         });

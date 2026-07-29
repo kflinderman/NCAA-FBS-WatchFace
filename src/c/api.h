@@ -29,3 +29,7 @@ uint8_t api_calls_percent_used(void);
 // CFBD_API_CALLS_WARNING_PERCENT in api.c) - for a battery-style "nearing
 // limit" UI indicator.
 bool api_calls_nearing_limit(void);
+
+void api_score_display(void);
+
+void api_icon_draw(Layer *window_layer, GRect bounds);

@@ -1,10 +1,7 @@
 /*
 Task List:
 ---Release---
--Weather
-  - Code
 -Football API Integration
-  - API
   - Code
 -Champ Designation
   - Icons
@@ -25,6 +22,7 @@ Task List:
 #include "communication.h"
 #include "weather.h"
 #include "display.h"
+#include "api.h"
 
 /***********************************/
 /* NCAA FBS Watchface              */
@@ -66,6 +64,9 @@ static void main_window_load(Window *window) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
   sensor_battery_draw(window_layer, bounds);
+  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
+  api_icon_draw(window_layer, bounds);
 
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
   // Apply saved settings
@@ -89,6 +90,10 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_beat_layer);
   text_layer_destroy(s_weather_layer);
   text_layer_destroy(s_conditions_layer);
+  text_layer_destroy(s_home_layer);
+  text_layer_destroy(s_away_layer);
+  text_layer_destroy(s_countdown_layer);
+  text_layer_destroy(s_score_layer);
   #if defined(PBL_HEALTH)
     text_layer_destroy(s_hr_layer);
     text_layer_destroy(s_step_layer);
@@ -101,6 +106,8 @@ static void main_window_unload(Window *window) {
   gbitmap_destroy(s_batt_crg_bitmap);
   gbitmap_destroy(s_batt_empty_bitmap);
   gbitmap_destroy(s_batt_low_bitmap);
+  gbitmap_destroy(s_api_empty_bitmap);
+  gbitmap_destroy(s_api_low_bitmap);
   if(s_bag_bitmap) {
     gbitmap_destroy(s_bag_bitmap);
     s_bag_bitmap = NULL; 
@@ -118,6 +125,7 @@ static void main_window_unload(Window *window) {
   bitmap_layer_destroy(s_batt_layer);
   bitmap_layer_destroy(s_bag_layerf);
   bitmap_layer_destroy(s_bag_layerb);
+  bitmap_layer_destroy(s_api_layer);
 
   // Destroy Layers
   layer_destroy(rect_layer);

@@ -76,9 +76,9 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
     //182
-    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 9), bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
   #else
-    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
+    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 9), bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
   #endif
   layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
 }
@@ -134,8 +134,8 @@ void sensor_battery_draw(Layer *window_layer, GRect bounds){
   
   #if PBL_DISPLAY_HEIGHT > 180
     //168
-    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 20), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
   #else
-    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
+    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 15), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
   #endif
 }
