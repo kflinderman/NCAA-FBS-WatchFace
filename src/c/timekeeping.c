@@ -97,10 +97,10 @@ bool timekeeping_countdown() {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
   struct tm countdown_time = *tick_time;
-  int firstplace, secondplace;
+  uint8_t firstplace, secondplace;
 
-  int current_wday = tick_time->tm_wday;
-  int days_to_time;
+  uint8_t current_wday = tick_time->tm_wday;
+  uint8_t days_to_time;
   bool after_time = false;
   
   
@@ -132,18 +132,18 @@ bool timekeeping_countdown() {
   
   time_t the_time = mktime(&countdown_time);
   double seconds_diff = difftime(the_time, temp);
-  int minutes_diff = (int)(seconds_diff / 60.0);
-  int total_mins = abs(minutes_diff);
+  int32_t minutes_diff = (int)(seconds_diff / 60.0);
+  uint32_t total_mins = abs(minutes_diff);
 
   // 1 day = 1440 minutes (24 * 60)
-  int days = total_mins / 1440;          
+  uint16_t days = total_mins / 1440;          
   
   // Remaining minutes after full days are removed
-  int mins_after_days = total_mins % 1440; 
+  uint16_t mins_after_days = total_mins % 1440; 
   
   // Extract remaining hours and minutes from the remainder
-  int hours = mins_after_days / 60;
-  int minutes = mins_after_days % 60;
+  uint8_t hours = mins_after_days / 60;
+  uint8_t minutes = mins_after_days % 60;
 
   if (minutes_diff < 0){
     snprintf(s_temp_time1, sizeof(s_temp_time1), "Hours");

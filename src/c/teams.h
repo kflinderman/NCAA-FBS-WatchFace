@@ -16,14 +16,14 @@ typedef struct {
   const char *name;
   uint16_t id;
   int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
-  uint16_t score;
-  uint16_t vs_score;
+  uint8_t score;
+  uint8_t vs_score;
   uint32_t gametime;
-  uint16_t ranking;
-  uint16_t wins;
-  uint16_t postseasonGames;
-  uint16_t postseasonWins;
-  uint16_t postseasonLosses;
+  uint8_t ranking;
+  uint8_t wins;
+  uint8_t postseasonGames;
+  uint8_t postseasonWins;
+  uint8_t postseasonLosses;
 } API_Info;
 	
 typedef struct {
