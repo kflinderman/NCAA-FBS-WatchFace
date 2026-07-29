@@ -53,7 +53,7 @@ void animation_beat_team_layer() {
       }
     }
 
-    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time)){
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
         if (settings.scoreLocation != 2){
           animation_hide_text(true, false, true);
         }
@@ -80,7 +80,7 @@ void animation_beat_team_layer() {
       }
     }
 
-    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time)){
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
         if (settings.scoreLocation != 1){
           animation_hide_text(true, false, true);
         }

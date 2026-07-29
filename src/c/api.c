@@ -408,7 +408,16 @@ void api_score_display() {
   text_layer_set_text(s_home_layer, s_temp_buffer);
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].name);
   text_layer_set_text(s_away_layer, s_temp_buffer);
-  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d-%d", API_DATA[settings.FavoriteTeam].score, API_DATA[settings.FavoriteTeam].vs_score);
+  
+  int score1, score2;
+  
+  if (API_DATA[settings.FavoriteTeam].score > 99) score1 = 99;
+  else score1 = API_DATA[settings.FavoriteTeam].score;
+  
+  if (API_DATA[settings.FavoriteTeam].vs_score > 99) score2 = 99;
+  else score2 = API_DATA[settings.FavoriteTeam].vs_score;
+  
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%02d:%02d", score1, score2);
   text_layer_set_text(s_countdown_layer, s_temp_buffer);
 }
 

@@ -153,6 +153,9 @@ bool timekeeping_countdown() {
     after_time = true;
   }
   else if(days > 0){
+    if (days > 99){
+      days = 99;
+    }
     snprintf(s_temp_time1, sizeof(s_temp_time1), "Days");
     snprintf(s_temp_time2, sizeof(s_temp_time2), "Hours");
     firstplace = days;
@@ -169,7 +172,7 @@ bool timekeeping_countdown() {
   text_layer_set_text(s_day_layer, s_temp_buffer);
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", s_temp_time2);
   text_layer_set_text(s_hr_layer, s_temp_buffer);
-  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d:%d", firstplace, secondplace);
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%02d:%02d", firstplace, secondplace);
   text_layer_set_text(s_countdown_layer, s_temp_buffer);
   
   return after_time;
@@ -195,12 +198,7 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
     s_hr_layer = drawing_text_set(bounds.size.w / 2 - (time_w + 20), bounds.size.h -20 , 70, 22, GColorBlack, "Hours", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #endif
 
-  layer_set_hidden(text_layer_get_layer(s_home_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_away_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_day_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_hr_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_countdown_layer), true);
-  layer_set_hidden(text_layer_get_layer(s_score_layer), true);
+  animation_hide_text(true, true, false);
   
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date
