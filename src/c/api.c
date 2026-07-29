@@ -428,10 +428,11 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   
   #if PBL_DISPLAY_HEIGHT > 180
     //168
-    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump - 4), bounds.size.h * vert_2 + 3, 8, 14, s_api_low_bitmap, window_layer);
+    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_api_low_bitmap, window_layer);
   #else
-    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 2), bounds.size.h * vert_2 + 3, 4, 7, s_api_low_bitmap, window_layer);
+    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2 + 3, 4, 7, s_api_low_bitmap, window_layer);
   #endif
+  
     
   layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
 }
