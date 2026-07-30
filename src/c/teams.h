@@ -10,6 +10,7 @@ typedef struct {
   uint8_t icon_color;
   uint8_t rival;
   const char *name;
+  const char *shortname;
 } Team;
 
 typedef struct {
