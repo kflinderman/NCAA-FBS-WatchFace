@@ -101,9 +101,7 @@ static void main_window_unload(Window *window) {
     s_bag_bitmap = NULL; 
   }
 
-  #if PBL_DISPLAY_HEIGHT > 180
-    fonts_unload_custom_font(s_font);
-  #endif
+  fonts_unload_custom_font(s_font);
   fonts_unload_custom_font(s_wIcon);
 
   // Destroy BitmapLayer

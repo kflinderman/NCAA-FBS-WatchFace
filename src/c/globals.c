@@ -85,7 +85,7 @@ uint16_t beat_primary;
 #else
   float rect_h = 0.72;
   float date_w = 0.81;
-  uint16_t icon_bump = 4;//5
+  //uint16_t icon_bump = 4;//5
   float time_h = 0.70;
   #if PBL_DISPLAY_HEIGHT > 180
     float date_h = 0.72;
@@ -101,6 +101,7 @@ uint16_t beat_primary;
     uint16_t stepx1 = 16;
     uint16_t stepx2 = 95;
     uint16_t stepy = 50;
+    uint16_t icon_bump = 1;
   #else
     float date_h = 0.74;
     uint16_t time_w = 72;
@@ -115,6 +116,7 @@ uint16_t beat_primary;
     uint16_t stepx1 = 12;
     uint16_t stepx2 = 67;
     uint16_t stepy = 37;
+    uint16_t icon_bump = 4;
   #endif
 #endif
 
