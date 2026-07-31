@@ -2,7 +2,6 @@
 #include "globals.h"
 #include "weather.h"
 #include "api.h"
-#include "outbox_queue.h"
 
 void configuration_callback(DictionaryIterator *iterator, void *context){
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
@@ -155,10 +154,8 @@ void inbox_dropped_callback(AppMessageResult reason, void *context) {
 
 void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
-  outbox_queue_on_result();
 }
 
 void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
-  outbox_queue_on_result();
 }

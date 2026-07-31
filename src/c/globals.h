@@ -36,8 +36,8 @@ typedef struct ClaySettings {
   bool animationDelay;
   bool countdownBool;
   uint8_t countdownTime;
-  unsigned long countdownCustomDate;
-  unsigned long countdownCustomTime;
+  uint32_t countdownCustomDate;
+  uint16_t countdownCustomTime;
   uint8_t countdownDisplay;
   bool api;
   char api_key[128];

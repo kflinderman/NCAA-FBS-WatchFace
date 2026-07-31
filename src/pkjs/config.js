@@ -347,7 +347,16 @@ module.exports = [
       // I need to figure out how to get date and time.
       {
         "type": "input",
-        "messageKey": "countdownCustom",
+        "messageKey": "countdownCustomDate",
+        "label": "Custom Countdown Date",
+        "defaultValue": "",
+        "attributes": {
+          "type": "date"
+        }
+      },
+      {
+        "type": "input",
+        "messageKey": "countdownCustomTime",
         "label": "Custom Countdown Time",
         "defaultValue": "",
         "attributes": {

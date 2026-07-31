@@ -88,7 +88,8 @@ module.exports = function (minified) {
                     key: 'countdownTime',
                     condition: eq(1), // display below on 1
                     children: [
-                        { key: 'countdownCustom' }
+                        { key: 'countdownCustomDate' },
+                        { key: 'countdownCustomTime' }
                     ]
                 },
                 { key: 'countdownDisplay' }

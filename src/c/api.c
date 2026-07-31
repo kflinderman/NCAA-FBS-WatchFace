@@ -125,10 +125,10 @@ void debug_dump_api_info(const API_Info *array, size_t count) {
 
     // Single line log per item to avoid log buffer overflow
     APP_LOG(APP_LOG_LEVEL_DEBUG, 
-            "[%03u] %s | ID:%u VS:%d | Score:%u-%u | W:%u | GT:%lu | Rank:%u PS-G:%u PS-W:%u PS-L:%u",
+            "[%03u] %s | VS:%d | Score:%u-%u | W:%u | GT:%lu | Rank:%u PS-G:%u PS-W:%u PS-L:%u",
             (unsigned int)i,
             item->name ? item->name : "NULL",
-            item->id,
+            //item->id,
             item->vs_id,
             item->score,
             item->vs_score,
@@ -273,7 +273,7 @@ bool api_should_full_sync(void) {
 
   // Never synced, or more than 24 hours since last full sync
   if (!settings.cfbd.api_data_valid ||
-      (now - settings.cfbd.last_full_sync_ts > 86400)) {
+      (now - settings.cfbd.last_full_sync_ts >= 86400)) {
     return true;
   }
 
