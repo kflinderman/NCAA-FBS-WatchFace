@@ -1,4 +1,49 @@
 // src/pkjs/index.js
+
+/**
+ * Pebble's AppMessage outbox only allows one message in flight at a time -
+ * calling sendAppMessage again before the previous call's success/error
+ * callback has fired can silently fail or drop a message. During an ~8s
+ * CFBD light sync (many small team-by-team round trips), that collision
+ * window is wide open, so anything else that sends a message in that
+ * window - a weather push, or Clay pushing new settings after its config
+ * webview closes - can interrupt the sync.
+ *
+ * This wraps Pebble.sendAppMessage with a FIFO queue: every call (ours or
+ * Clay's own internal one) goes through the same queue and only the head
+ * of the queue is ever actually in flight. Placed here, before Clay is
+ * even required below, so Clay's internal sendAppMessage calls go through
+ * this wrapped version too - not just this file's own calls.
+ */
+(function() {
+  var originalSendAppMessage = Pebble.sendAppMessage.bind(Pebble);
+  var sendQueue = [];
+  var sending = false;
+
+  function processQueue() {
+    if (sending || sendQueue.length === 0) return;
+    sending = true;
+    var next = sendQueue.shift();
+    originalSendAppMessage(next.dict,
+      function(e) {
+        sending = false;
+        if (next.onSuccess) next.onSuccess(e);
+        processQueue();
+      },
+      function(e) {
+        sending = false;
+        if (next.onError) next.onError(e);
+        processQueue();
+      }
+    );
+  }
+
+  Pebble.sendAppMessage = function(dict, onSuccess, onError) {
+    sendQueue.push({ dict: dict, onSuccess: onSuccess, onError: onError });
+    processQueue();
+  };
+})();
+
 // Import the Clay package
 var Clay = require('@rebble/clay');
 // Load our Clay configuration file
