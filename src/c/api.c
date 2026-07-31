@@ -67,8 +67,7 @@ static const Team *teams_find_by_name(const char *name) {
 // Threshold (percent) at which api_calls_nearing_limit() reports true -
 // matches the "like the battery indicator" idea from the header comment
 // above. 90% leaves a reasonable buffer before actually hitting the cap.
-#define CFBD_API_CALLS_WARNING_PERCENT 20
-//#define CFBD_API_CALLS_WARNING_PERCENT 90
+#define CFBD_API_CALLS_WARNING_PERCENT 90
 
 /**
  * Applies CFBD_API_CALLS_USED/CFBD_API_CALLS_LIMIT from an incoming
@@ -403,11 +402,11 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
 }
 
 void api_score_display() {
-  static char s_temp_buffer[8];
-  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", TEAMS[settings.FavoriteTeam].name);
-  text_layer_set_text(s_home_layer, s_temp_buffer);
-  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].name);
-  text_layer_set_text(s_away_layer, s_temp_buffer);
+  static char s_temp_buffer1[8], s_temp_buffer2[8], s_temp_buffer3[8];
+  snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "%s", TEAMS[settings.FavoriteTeam].shortname);
+  text_layer_set_text(s_home_layer, s_temp_buffer1);
+  snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname);
+  text_layer_set_text(s_away_layer, s_temp_buffer2);
   
   int score1, score2;
   
@@ -417,8 +416,8 @@ void api_score_display() {
   if (API_DATA[settings.FavoriteTeam].vs_score > 99) score2 = 99;
   else score2 = API_DATA[settings.FavoriteTeam].vs_score;
   
-  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%02d|%02d", score1, score2);
-  text_layer_set_text(s_countdown_layer, s_temp_buffer);
+  snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);
+  text_layer_set_text(s_score_layer, s_temp_buffer3);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){

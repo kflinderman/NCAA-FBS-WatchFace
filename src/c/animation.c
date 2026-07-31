@@ -21,7 +21,7 @@ static void animation_beat_team_stopped(Animation *animation, bool finished, voi
 
 void animation_hide_text(bool count, bool score, bool time){
   layer_set_hidden(text_layer_get_layer(s_day_layer), count);
-  layer_set_hidden(text_layer_get_layer(s_hr_layer), count);
+  layer_set_hidden(text_layer_get_layer(s_hour_layer), count);
   layer_set_hidden(text_layer_get_layer(s_countdown_layer), count);
   layer_set_hidden(text_layer_get_layer(s_home_layer), score);
   layer_set_hidden(text_layer_get_layer(s_away_layer), score);

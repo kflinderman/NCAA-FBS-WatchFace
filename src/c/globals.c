@@ -13,7 +13,7 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hr_layer, *s_countdown_layer, *s_score_layer;
+TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hour_layer, *s_countdown_layer, *s_score_layer;
 int dummy = 0;
 
 #if defined(PBL_HEALTH)
@@ -152,7 +152,8 @@ void globals_prv_default_settings() {
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
-  settings.countdownCustom = 1200;
+  settings.countdownCustomDate = 0;
+  settings.countdownCustomTime = 0;
   settings.countdownDisplay = 1;
   settings.api = true; //false;
   settings.api_quiet = false;
@@ -278,10 +279,12 @@ void globals_prv_update_display() {
     bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
   }
   
+  bool timeTrue = true;
   if (settings.countdownBool){
     after_time = timekeeping_countdown();
     if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
       animation_hide_text(false, true, true);
+      timeTrue = false;
     }
   }
   
@@ -289,7 +292,12 @@ void globals_prv_update_display() {
     api_score_display();
     if (settings.scoreLocation != 1){
       animation_hide_text(true, false, true);
+      timeTrue = false;
     }
+  }
+  
+  if (timeTrue){
+    animation_hide_text(true, true, false);
   }
   
   #if defined(PBL_HEALTH)

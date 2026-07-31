@@ -4,19 +4,21 @@
 
 #if defined(PBL_COLOR)
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8, .rival = 108, .name="Clemson", .shortname="CLEM" },
-  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 26, .name="South Carolina", .shortname="SC" },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8, .rival = 1, .name="Clemson", .shortname="CLEM" },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 0, .name="South Carolina", .shortname="SC" },
 };
 #else
 const Team TEAMS[] = {
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 108, .name="Clemson", .shortname="CLEM" },
-  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 26, .name="South Carolina", .shortname="SC" },
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 1, .name="Clemson", .shortname="CLEM" },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .icon_color = GColorWhiteARGB8, .rival = 0, .name="South Carolina", .shortname="SC" },
 };
 #endif
 
 
 API_Info API_DATA[] = {
-  { .name = "Air Force", .id = 1, .vs_id = 10, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  //{ .name = "Air Force", .id = 1, .vs_id = 10, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  { .name = "Clemson", .id = 0, .vs_id = 1, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  { .name = "South Carolina", .id = 1, .vs_id = 0, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Akron", .id = 2, .vs_id = 54, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Alabama", .id = 3, .vs_id = 11, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "App State", .id = 5, .vs_id = 40, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
@@ -36,7 +38,7 @@ API_Info API_DATA[] = {
   { .name = "California", .id = 21, .vs_id = 111, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Central Michigan", .id = 22, .vs_id = 148, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Cincinnati", .id = 25, .vs_id = 66, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
-  { .name = "Clemson", .id = 26, .vs_id = 108, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  //{ .name = "Clemson", .id = 26, .vs_id = 108, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Coastal Carolina", .id = 27, .vs_id = 58, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Colorado", .id = 28, .vs_id = 29, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Colorado State", .id = 29, .vs_id = 28, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
@@ -110,7 +112,7 @@ API_Info API_DATA[] = {
   { .name = "San José State", .id = 105, .vs_id = 38, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "SMU", .id = 106, .vs_id = 114, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "South Alabama", .id = 107, .vs_id = 122, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
-  { .name = "South Carolina", .id = 108, .vs_id = 26, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  //{ .name = "South Carolina", .id = 108, .vs_id = 26, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "USC", .id = 109, .vs_id = 86, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Southern Miss", .id = 110, .vs_id = 57, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   { .name = "Stanford", .id = 111, .vs_id = 21, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },

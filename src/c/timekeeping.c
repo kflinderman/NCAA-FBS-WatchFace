@@ -98,6 +98,7 @@ bool timekeeping_countdown() {
   struct tm *tick_time = localtime(&temp);
   struct tm countdown_time = *tick_time;
   uint8_t firstplace, secondplace;
+  time_t timestamp;
 
   uint8_t current_wday = tick_time->tm_wday;
   uint8_t days_to_time;
@@ -113,7 +114,15 @@ bool timekeeping_countdown() {
     countdown_time.tm_sec = 0;
     countdown_time.tm_isdst = -1;
   }
+  //Custom time
   else if (settings.countdownTime == 2){
+    if (settings.countdownCustomDate < 10){}
+    if (settings.countdownCustomTime < 10){}
+    
+    //timestamp = (time_t)settings.countdownCustom;
+    //countdown_time  = *localtime(&timestamp);
+    
+    
     days_to_time = 6 - current_wday;
     countdown_time.tm_mday += days_to_time;
     countdown_time.tm_hour = 12;
@@ -121,7 +130,11 @@ bool timekeeping_countdown() {
     countdown_time.tm_sec = 0;
     countdown_time.tm_isdst = -1;
   }
+  //API Time
   else {
+    timestamp = (time_t)API_DATA[settings.FavoriteTeam].gametime;
+    countdown_time  = *localtime(&timestamp);
+    
     days_to_time = 6 - current_wday;
     countdown_time.tm_mday += days_to_time;
     countdown_time.tm_hour = 12;
@@ -170,7 +183,7 @@ bool timekeeping_countdown() {
   snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "%s", s_temp_time1);
   text_layer_set_text(s_day_layer, s_temp_buffer1);
   snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "%s", s_temp_time2);
-  text_layer_set_text(s_hr_layer, s_temp_buffer2);
+  text_layer_set_text(s_hour_layer, s_temp_buffer2);
   snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d:%02d", firstplace, secondplace);
   text_layer_set_text(s_countdown_layer, s_temp_buffer3);
   
@@ -186,7 +199,7 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
     s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w-25), bounds.size.h - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     s_away_layer = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     s_day_layer = drawing_text_set(bounds.size.w / 2 - (time_w-25), bounds.size.h - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-    s_hr_layer = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+    s_hour_layer = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #else
     s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_42));
     s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
@@ -195,10 +208,10 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
     s_home_layer = drawing_text_set(bounds.size.w / 2 - (time_w-10), bounds.size.h - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     s_away_layer = drawing_text_set(bounds.size.w / 2, bounds.size.h - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     s_day_layer = drawing_text_set(bounds.size.w / 2 - (time_w-10), bounds.size.h - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-    s_hr_layer = drawing_text_set(bounds.size.w / 2, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+    s_hour_layer = drawing_text_set(bounds.size.w / 2, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #endif
 
-  animation_hide_text(false, true, true);
+  animation_hide_text(true, true, false);
   
   #ifdef PBL_RECT
     // Create the TextLayer for the time and date

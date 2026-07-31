@@ -36,7 +36,8 @@ typedef struct ClaySettings {
   bool animationDelay;
   bool countdownBool;
   uint8_t countdownTime;
-  uint16_t countdownCustom;
+  unsigned long countdownCustomDate;
+  unsigned long countdownCustomTime;
   uint8_t countdownDisplay;
   bool api;
   char api_key[128];
@@ -65,7 +66,7 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hr_layer, *s_countdown_layer, *s_score_layer;
+extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hour_layer, *s_countdown_layer, *s_score_layer;
 extern int dummy;
 
 #if defined(PBL_HEALTH)

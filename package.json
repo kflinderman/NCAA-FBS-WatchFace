@@ -59,7 +59,7 @@
             "weatherUnits",
             "weatherManual",
             "weatherLocation",
-            "countdownCustom",
+            "countdownCustomDate",
             "rankingBool",
             "winBool",
             "confBool",
@@ -112,7 +112,8 @@
             "CFBD_TEAM_PS_WINS",
             "CFBD_TEAM_PS_LOSSES",
             "CFBD_API_CALLS_USED",
-            "CFBD_API_CALLS_LIMIT"
+            "CFBD_API_CALLS_LIMIT",
+            "countdownCustomTime"
         ],
         "projectType": "native",
         "resources": {

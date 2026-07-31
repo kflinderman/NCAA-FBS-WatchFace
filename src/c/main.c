@@ -79,7 +79,7 @@ static void main_window_unload(Window *window) {
   text_layer_destroy(s_home_layer);
   text_layer_destroy(s_away_layer);
   text_layer_destroy(s_day_layer);
-  text_layer_destroy(s_hr_layer);
+  text_layer_destroy(s_hour_layer);
   text_layer_destroy(s_countdown_layer);
   text_layer_destroy(s_score_layer);
   #if defined(PBL_HEALTH)
@@ -101,7 +101,9 @@ static void main_window_unload(Window *window) {
     s_bag_bitmap = NULL; 
   }
 
-  fonts_unload_custom_font(s_font);
+  #if PBL_DISPLAY_HEIGHT > 180
+    fonts_unload_custom_font(s_font);
+  #endif
   fonts_unload_custom_font(s_wIcon);
 
   // Destroy BitmapLayer

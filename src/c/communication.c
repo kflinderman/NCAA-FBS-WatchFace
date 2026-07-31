@@ -32,7 +32,8 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
     MESSAGE_KEY_animationDelay,
     MESSAGE_KEY_countdownBool,
     MESSAGE_KEY_countdownTime,
-    MESSAGE_KEY_countdownCustom,
+    MESSAGE_KEY_countdownCustomDate,
+    MESSAGE_KEY_countdownCustomTime,
     MESSAGE_KEY_countdownDisplay,
     MESSAGE_KEY_api,
     MESSAGE_KEY_api_quiet,
@@ -61,7 +62,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
   }
   
 
-  for (uint16_t x = 0; x < 43; x++) {
+  for (uint16_t x = 0; x < 44; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     
     if (temp_t) {
@@ -107,24 +108,25 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
         case 22: settings.animationDelay = value; break;
         case 23: settings.countdownBool = value; break;
         case 24: settings.countdownTime = value; break;
-        case 25: settings.countdownCustom = value; break;
-        case 26: settings.countdownDisplay = value; break;
-        case 27: settings.api = value; break;
-        case 28: settings.api_quiet = value; break;
-        case 29: settings.scoreDisplayBool = value; break;
-        case 30: settings.scoreUpdate = value; break;
-        case 31: settings.scoreLocation = value; break;
-        case 32: settings.opponentBool = value; break;
-        case 33: settings.opponentSelect = value; break;
-        case 34: settings.customOpponent = value; break;
-        case 35: settings.weatherBool = value; break;
-        case 36: settings.weatherQuiet = value; break;
-        case 37: settings.weatherUnits = value; break;
-        case 38: settings.rankingBool = value; break;
-        case 39: settings.winBool = value; break;
-        case 40: settings.confBool = value; break;
-        case 41: settings.bowlBool = value; break;
-        case 42: settings.champBool = value; break;
+        case 25: settings.countdownCustomDate = value; break;
+        case 26: settings.countdownCustomTime = value; break;
+        case 27: settings.countdownDisplay = value; break;
+        case 28: settings.api = value; break;
+        case 29: settings.api_quiet = value; break;
+        case 30: settings.scoreDisplayBool = value; break;
+        case 31: settings.scoreUpdate = value; break;
+        case 32: settings.scoreLocation = value; break;
+        case 33: settings.opponentBool = value; break;
+        case 34: settings.opponentSelect = value; break;
+        case 35: settings.customOpponent = value; break;
+        case 36: settings.weatherBool = value; break;
+        case 37: settings.weatherQuiet = value; break;
+        case 38: settings.weatherUnits = value; break;
+        case 39: settings.rankingBool = value; break;
+        case 40: settings.winBool = value; break;
+        case 41: settings.confBool = value; break;
+        case 42: settings.bowlBool = value; break;
+        case 43: settings.champBool = value; break;
       }
 
       settings_changed = true;
