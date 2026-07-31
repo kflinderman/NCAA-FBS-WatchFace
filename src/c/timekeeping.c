@@ -4,7 +4,12 @@
 #include "drawing.h"
 #include "animation.h"
 #include "api.h"
+#include "outbox_queue.h"
 
+
+static void build_request_weather(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
+}
 
 // Updates the time TextLayer
 void update_time() {
@@ -43,10 +48,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     // Get weather update every 30 minutes
     if (tick_time->tm_min % 30 == 0) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
-      DictionaryIterator *iter;
-      app_message_outbox_begin(&iter);
-      dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
-      app_message_outbox_send();
+      outbox_queue_send(build_request_weather);
     }
   }
   

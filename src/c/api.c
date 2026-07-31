@@ -18,6 +18,7 @@ Full sync takes 8s
 #include "api.h"
 #include "globals.h"
 #include "drawing.h"
+#include "outbox_queue.h"
 
 /**
  * CFBD sync protocol (team-by-team)
@@ -159,23 +160,27 @@ void debug_dump_api_info(const API_Info *array, size_t count) {
 
 
 /**
- * Sends REQUEST_CFBD_TEAM_DATA for API_DATA[team_index], asking JS for
- * that one team's opponent/score/rank/record. Assumes team_index is valid
- * (checked by the caller).
+ * Builds the REQUEST_CFBD_TEAM_DATA message for whichever team
+ * cfbd_current_team_index currently points at.
  */
-static void request_team_data(uint16_t team_index) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s)",
-    team_index + 1, (int)API_DATA_COUNT, API_DATA[team_index].name);
-
-  DictionaryIterator *iter;
-  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for team data request");
-    return;
-  }
+static void build_request_team_data(DictionaryIterator *iter) {
+  uint16_t team_index = (uint16_t)cfbd_current_team_index;
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
   dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
   dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, API_DATA[team_index].name);
-  app_message_outbox_send();
+}
+
+/**
+ * Queues REQUEST_CFBD_TEAM_DATA for API_DATA[cfbd_current_team_index],
+ * asking JS for that one team's opponent/score/rank/record. Assumes
+ * cfbd_current_team_index is valid (checked by the caller before setting
+ * it).
+ */
+static void request_team_data(void) {
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s)",
+    cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name);
+
+  outbox_queue_send(build_request_team_data);
 }
 
 /**
@@ -191,6 +196,11 @@ static void cfbd_light_sync_complete(void) {
   settings.cfbd.api_data_valid = true;
   globals_prv_save_settings();
   globals_prv_update_display();
+}
+
+static void build_request_full_sync(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
+  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
 void api_request_cfbd_full_sync(void) {
@@ -216,12 +226,12 @@ void api_request_cfbd_full_sync(void) {
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
+  outbox_queue_send(build_request_full_sync);
+}
 
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
+static void build_request_light_sync(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  app_message_outbox_send();
 }
 
 void api_request_cfbd_light_sync(void) {
@@ -255,12 +265,7 @@ void api_request_cfbd_light_sync(void) {
   //}
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
-
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
-  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  app_message_outbox_send();
+  outbox_queue_send(build_request_light_sync);
 }
 
 bool api_should_full_sync(void) {
@@ -328,7 +333,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     }
 
     cfbd_current_team_index = 0;
-    request_team_data(0);
+    request_team_data();
     return;
   }
 
@@ -394,7 +399,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     uint16_t next_index = team_index + 1;
     if (next_index < API_DATA_COUNT) {
       cfbd_current_team_index = next_index;
-      request_team_data(next_index);
+      request_team_data();
     } else {
       cfbd_light_sync_complete();
     }
