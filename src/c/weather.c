@@ -60,8 +60,6 @@ void weather_update(){
 }
 
 void weather_callback(DictionaryIterator *iterator, void *context){
-  APP_LOG(APP_LOG_LEVEL_INFO, "Weather - Dict size: %d", dict_size(iterator));
-  
   bool weather_changed = false;
   
   Tuple *temp_tuple = dict_find(iterator, MESSAGE_KEY_TEMPERATURE);

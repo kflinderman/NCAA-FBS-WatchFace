@@ -693,20 +693,6 @@ module.exports = [
       }
     ]
   },
-//  {
-//    "type": "section",
-//    "items": [
-//      {
-//        "type": "heading",
-//        "defaultValue": "API Opponent",
-//        "id": "api_opponent"
-//      },
-//      {
-//        "type": "toggle",
-//        "label": "Auto Pull Opponent",
-//        "defaultValue": false,
-//        "messageKey": "opponentBool"
-//      }
   {
     "type": "section",
     "items": [

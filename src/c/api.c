@@ -290,14 +290,13 @@ void api_request_cfbd_full_sync(void) {
     layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
     return;
   }
+  
+  if (api_calls_nearing_limit()){
+    bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+  }
   else{
-    if (api_calls_nearing_limit()){
-      bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
-      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
-    }
-    else{
-      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
-    }
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
@@ -371,11 +370,11 @@ bool api_should_light_sync(void) {
   // (e.g. on game day), so this interval may want to come down now that
   // it's decoupled - left at 7 days for now since that wasn't explicitly
   // asked to change.
-  if (settings.api && settings.cfbd.api_data_valid &&
-      (now - settings.cfbd.last_light_sync_ts <= (settings.scoreUpdate * 60))) {
-    return false;
+  if (settings.api && (!settings.cfbd.api_data_valid ||
+      (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60)))) {
+    return true;
   }
-  return true;
+  return false;
 }
 
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {

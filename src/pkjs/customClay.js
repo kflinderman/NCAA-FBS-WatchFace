@@ -132,20 +132,6 @@ module.exports = function (minified) {
                         { key: 'scoreLocation' }
                     ]
                 },
-                //{ key: 'api_opponent' },
-                //{
-                //    key: 'opponentBool',
-                //    condition: isTrue, // display below on true
-                //    children: [
-                //        {
-                //            key: 'opponentSelect',
-                //            condition: eq(2), // display below on 2
-                //            children: [
-                //                { key: 'customOpponent' }
-                //            ]
-                //        }
-                //    ]
-                //},
                 { key: 'api_extras' },
                 { key: 'superlatives'},
                 { key: 'rankingBool' },

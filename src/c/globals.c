@@ -203,8 +203,8 @@ void globals_prv_update_display() {
   if (!s_main_window) return;
   
   // API Check if empty
+  APP_LOG(APP_LOG_LEVEL_INFO, "API Sync");
   if (api_should_full_sync()) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "API Sync");
     api_request_cfbd_full_sync();
   }
   
