@@ -37,9 +37,22 @@ module.exports = function (minified) {
         { key: 'FavoriteTeam' },
         {
             key: 'hardcodeRivalBool',
-            condition: isFalse, // display below on false
+            condition: eq(0), // display below on 0
             children: [
                 { key: 'BeatTeam' }
+            ]
+        },
+        {
+            key: 'hardcodeRivalBool',
+            condition: eq(2), // display below on 2
+            children: [
+              {
+                key: 'opponentSelect',
+                condition: eq(2), // display below on 2
+                children: [
+                  { key: 'customOpponent' }
+                ]
+              }
             ]
         },
         { key: 'DisconnectVibration' },
@@ -119,20 +132,20 @@ module.exports = function (minified) {
                         { key: 'scoreLocation' }
                     ]
                 },
-                { key: 'api_opponent' },
-                {
-                    key: 'opponentBool',
-                    condition: isTrue, // display below on true
-                    children: [
-                        {
-                            key: 'opponentSelect',
-                            condition: eq(2), // display below on 2
-                            children: [
-                                { key: 'customOpponent' }
-                            ]
-                        }
-                    ]
-                },
+                //{ key: 'api_opponent' },
+                //{
+                //    key: 'opponentBool',
+                //    condition: isTrue, // display below on true
+                //    children: [
+                //        {
+                //            key: 'opponentSelect',
+                //            condition: eq(2), // display below on 2
+                //            children: [
+                //                { key: 'customOpponent' }
+                //            ]
+                //        }
+                //    ]
+                //},
                 { key: 'api_extras' },
                 { key: 'superlatives'},
                 { key: 'rankingBool' },

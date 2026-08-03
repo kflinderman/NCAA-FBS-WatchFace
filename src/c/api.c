@@ -347,8 +347,8 @@ bool api_should_full_sync(void) {
   time_t now = time(NULL);
 
   // Never synced, or more than 24 hours since last full sync
-  if (!settings.cfbd.api_data_valid ||
-      (now - settings.cfbd.last_full_sync_ts >= 86400)) {
+  if (settings.api && (!settings.cfbd.api_data_valid ||
+      (now - settings.cfbd.last_full_sync_ts >= 86400))) {
     return true;
   }
 
@@ -371,8 +371,8 @@ bool api_should_light_sync(void) {
   // (e.g. on game day), so this interval may want to come down now that
   // it's decoupled - left at 7 days for now since that wasn't explicitly
   // asked to change.
-  if (settings.cfbd.api_data_valid &&
-      (now - settings.cfbd.last_light_sync_ts < 604800)) {
+  if (settings.api && settings.cfbd.api_data_valid &&
+      (now - settings.cfbd.last_light_sync_ts <= (settings.scoreUpdate * 60))) {
     return false;
   }
   return true;
@@ -508,21 +508,29 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
 
 void api_score_display() {
   static char s_temp_buffer1[8], s_temp_buffer2[8], s_temp_buffer3[8];
-  snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "%s", TEAMS[settings.FavoriteTeam].shortname);
-  text_layer_set_text(s_home_layer, s_temp_buffer1);
-  snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname);
-  text_layer_set_text(s_away_layer, s_temp_buffer2);
+  if (API_DATA[settings.FavoriteTeam].vs_id == -1){
+    snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "BYE");
+    snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "WEEK");
+    snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "00|00");
+  }
+  else{
+    snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "%s", TEAMS[settings.FavoriteTeam].shortname);
+    snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname);
+
+    int score1, score2;
+
+    if (API_DATA[settings.FavoriteTeam].score > 99) score1 = 99;
+    else score1 = API_DATA[settings.FavoriteTeam].score;
+
+    if (API_DATA[settings.FavoriteTeam].vs_score > 99) score2 = 99;
+    else score2 = API_DATA[settings.FavoriteTeam].vs_score;
+
+    snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);
+  }
   
-  int score1, score2;
-  
-  if (API_DATA[settings.FavoriteTeam].score > 99) score1 = 99;
-  else score1 = API_DATA[settings.FavoriteTeam].score;
-  
-  if (API_DATA[settings.FavoriteTeam].vs_score > 99) score2 = 99;
-  else score2 = API_DATA[settings.FavoriteTeam].vs_score;
-  
-  snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);
-  text_layer_set_text(s_score_layer, s_temp_buffer3);
+    text_layer_set_text(s_home_layer, s_temp_buffer1);
+    text_layer_set_text(s_away_layer, s_temp_buffer2);
+    text_layer_set_text(s_score_layer, s_temp_buffer3);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){

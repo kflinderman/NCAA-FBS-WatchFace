@@ -113,7 +113,9 @@
             "CFBD_TEAM_PS_LOSSES",
             "CFBD_API_CALLS_USED",
             "CFBD_API_CALLS_LIMIT",
-            "countdownCustomTime"
+            "countdownCustomTime",
+            "CFBD_RECORDS_SYNC_READY",
+            "CFBD_TEAM_DATA_TYPE"
         ],
         "projectType": "native",
         "resources": {

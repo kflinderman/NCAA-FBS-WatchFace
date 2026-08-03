@@ -29,15 +29,15 @@ void update_time() {
   // Convert current time to HHMM format
   // tick_time->tm_hour is 0-23
   current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
-
-  #if defined(PBL_HEALTH)
-    health_handler();
-  #endif
 }
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
+  
+  #if defined(PBL_HEALTH)
+    health_handler();
+  #endif
 
   if (settings.weatherBool && (!settings.weatherQuiet || (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd))){
     // Get weather update every 30 minutes
@@ -50,6 +50,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     }
   }
   
+  /*
   if (dummy == 1){
     APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
     api_request_cfbd_light_sync();
@@ -61,6 +62,12 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
     api_request_cfbd_full_sync();
     dummy++;
+  }
+  */
+  
+  // Check if we should sync CFBD data (e.g., once daily at 2 AM)
+  if (tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) {
+      api_request_cfbd_full_sync();
   }
 
   if (settings.countdownBool){
@@ -80,20 +87,16 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       gametime = true;
     }
     
+    //This seems wonky, and I need to figure out if this will still work if there's no countdown then it should just always display the score of the last game if it's not in an active game
     if (gametime && (!settings.countdownBool || (settings.countdownBool && after_time))){
+      if (api_should_light_sync()) {
+        api_request_cfbd_light_sync();
+      }
+      
       api_score_display();
       if (settings.scoreLocation != 1){
         animation_hide_text(true, false, true);
       }
-    }
-  }
-  
-  // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-  if (tick_time->tm_hour == 2 && tick_time->tm_min == 0) {
-    if (api_should_full_sync()) {
-      api_request_cfbd_full_sync();
-    } else if (api_should_light_sync()) {
-      api_request_cfbd_light_sync();
     }
   }
 }

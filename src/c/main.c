@@ -192,6 +192,7 @@ static void init() {
   const int inbox_size = 512;
   const int outbox_size = 256;
   app_message_open(inbox_size, outbox_size);
+  
 }
 
 // Deinitializes the app

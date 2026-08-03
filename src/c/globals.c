@@ -146,7 +146,7 @@ void globals_prv_default_settings() {
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
-  settings.hardcodeRival = false;
+  settings.hardcodeRival = 0;
   settings.donate = false;
   settings.bagBool = false;
   settings.animationDelay = false;
@@ -155,7 +155,7 @@ void globals_prv_default_settings() {
   settings.countdownCustomDate = 0;
   settings.countdownCustomTime = 0;
   settings.countdownDisplay = 1;
-  settings.api = true; //false;
+  settings.api = false;
   settings.api_quiet = false;
   settings.scoreDisplayBool = false;
   settings.scoreUpdate = 5;
@@ -200,6 +200,11 @@ void globals_prv_update_display() {
   // Only update if window exists
   if (!s_main_window) return;
   
+  // API Check if empty
+  if (api_should_full_sync()) {
+      api_request_cfbd_full_sync();
+  }
+  
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
@@ -218,8 +223,24 @@ void globals_prv_update_display() {
     gbitmap_destroy(s_beat_team_bitmap);
   }
   
-  if (settings.hardcodeRival){
+  if (settings.hardcodeRival == 1){
     settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
+  }
+  else if (settings.hardcodeRival == 2){
+    if (API_DATA[settings.FavoriteTeam].vs_id == -1){
+      if (settings.opponentSelect == 1){
+        settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
+      }
+      else if (settings.opponentSelect == 2){
+        settings.BeatTeam = settings.customOpponent;
+      }
+      else{
+        settings.BeatTeam = 1; //77
+      }
+    }
+    else{
+      settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
+    }
   }
 
   if (settings.DisplayTeam > 1) {
