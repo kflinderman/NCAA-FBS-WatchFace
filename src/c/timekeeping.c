@@ -4,7 +4,11 @@
 #include "drawing.h"
 #include "animation.h"
 #include "api.h"
+#include "outbox_queue.h"
 
+static void build_request_weather(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
+}
 
 // Updates the time TextLayer
 void update_time() {
@@ -43,10 +47,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     // Get weather update every 30 minutes
     if (tick_time->tm_min % 30 == 0) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
-      DictionaryIterator *iter;
-      app_message_outbox_begin(&iter);
-      dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
-      app_message_outbox_send();
+      outbox_queue_send(build_request_weather);
     }
   }
   
@@ -161,7 +162,7 @@ bool timekeeping_countdown() {
     struct tm *now_tm = localtime(&now);
 
     time_t target_time = 0;
-    bool after_time = false;
+    bool afterwards = false;
 
     // 1. Custom Time
     if (settings.countdownTime == 1) {
@@ -200,7 +201,7 @@ bool timekeeping_countdown() {
         snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "Mins");
         firstplace = 0;
         secondplace = 0;
-        after_time = true;
+        afterwards = true;
     } else {
         uint32_t total_mins = (uint32_t)minutes_diff;
         uint16_t days = total_mins / 1440;          
@@ -227,7 +228,7 @@ bool timekeeping_countdown() {
     snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d:%02d", firstplace, secondplace);
     text_layer_set_text(s_countdown_layer, s_temp_buffer3);
 
-    return after_time;
+    return afterwards;
 }
 
 void timeDate_draw(Layer *window_layer, GRect bounds){

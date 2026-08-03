@@ -139,6 +139,7 @@ static void main_window_unload(Window *window) {
 // Initializes the app
 static void init() {
   // Load settings before creating UI
+  APP_LOG(APP_LOG_LEVEL_INFO, "-------- LOAD SETTINGS --------");
   globals_prv_load_settings();
 
   // Create main Window element
@@ -153,7 +154,6 @@ static void init() {
   // Show the Window on the watch, with animated=true
   window_stack_push(s_main_window, true);
 
-  
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- SUBSCRIBE --------");
   
   // Subscribe to unobstructed area events
