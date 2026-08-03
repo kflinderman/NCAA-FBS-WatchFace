@@ -490,15 +490,14 @@ var cfbd = (function() {
     cache: cache,
 
     /**
-     * Full workflow: determine season + boundary only. Calendar data
-     * (year, next season kickoff, season/week date ranges) is all the
-     * watch needs from a full sync - games/records/rankings are fetched
-     * separately by syncLightCFBD, on its own trigger, for whatever the
-     * current week turns out to be.
+     * Full workflow: calendar + records + rankings. Records/rankings moved
+     * here from the (now games-only) light sync - they don't change fast
+     * enough within a week to need their own sync cadence, so they ride
+     * along with the daily full sync instead.
      * Call on app launch and periodically (e.g., daily).
      */
     syncFullCFBD: function(apiKey, callback) {
-      console.log('=== CFBD Full Sync Start (calendar only) ===');
+      console.log('=== CFBD Full Sync Start ===');
 
       determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
@@ -522,22 +521,59 @@ var cfbd = (function() {
             console.log('CFBD usage correction skipped - GET /info unavailable or unlimited plan');
           }
 
-          callback({
-            year: year,
-            nextSeasonFirstGameTs: nextSeasonTs,
-            seasonDates: seasonDates,
-            weekDates: weekDates,
-            apiCallsUsed: usage.used,
-            apiCallsLimit: usage.limit
+          // cache is populated by determineSeasonAndBoundary above, so
+          // determineCurrentWeek can run now - rankings are week-scoped,
+          // records aren't, but both are fetched here together.
+          var target = determineCurrentWeek(cache);
+
+          var expected = 2;
+          var completed = 0;
+          var records = [];
+          var rankings = [];
+
+          function onFetchComplete() {
+            completed++;
+            if (completed !== expected) return;
+
+            callback({
+              year: year,
+              nextSeasonFirstGameTs: nextSeasonTs,
+              seasonDates: seasonDates,
+              weekDates: weekDates,
+              records: records,
+              rankings: rankings,
+              apiCallsUsed: usage.used,
+              apiCallsLimit: usage.limit
+            });
+          }
+
+          fetchRecords(target.year, apiKey, function(data) {
+            records = data;
+            onFetchComplete();
           });
+
+          setTimeout(function() {
+            // week 14 is hardcoded for now (offseason testing, so real
+            // "current week" rankings don't exist yet) - swap the two
+            // lines below (comment the 14 one, uncomment target.week one)
+            // once testing is done, matching the same toggle used for
+            // games in doLightSync.
+            //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
+            fetchRankings(target.year, 14, false, apiKey, function(data) {
+              rankings = data;
+              onFetchComplete();
+            });
+          }, constants.BATCH_DELAY);
         });
       });
     },
 
     /**
    * Lighter refresh: uses cached season info from syncFullCFBD to determine
-   * the correct year/week, then fetches games+records+rankings (or just
-   * records+rankings if we're in the offseason).
+   * the correct year/week, then fetches just this week's games.
+   * Records/rankings are no longer fetched here - they moved to
+   * syncFullCFBD since they don't change fast enough within a week to
+   * need their own sync cadence.
    *
    * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates to
    * already be populated (normally true after a prior syncFullCFBD call in
@@ -561,7 +597,7 @@ var cfbd = (function() {
   };
 
   function doLightSync(apiKey, callback) {
-    console.log('=== CFBD Light Sync Start ===');
+    console.log('=== CFBD Light Sync Start (games only) ===');
     var target = determineCurrentWeek(cache);
     console.log('Light sync: year ' + target.year + ', week ' + target.week +
                 (target.offseason ? ' (offseason)' : ''));
@@ -570,54 +606,24 @@ var cfbd = (function() {
       year: target.year,
       week: target.week,
       offseason: target.offseason,
-      games: [],
-      records: [],
-      rankings: []
+      games: []
     };
 
-    //var expected = target.offseason ? 2 : 3; // records+rankings, or +games
-    var expected = 3;
-    var completed = 0;
-
-    function onComplete() {
-      completed++;
-      if (completed === expected) {
-        // Report the running local tally (not corrected against GET
-        // /info - that only happens on full sync) so the watch's counter
-        // reflects the calls this light sync just made rather than
-        // whatever it was before this sync started.
-        results.apiCallsUsed = usage.used;
-        results.apiCallsLimit = usage.limit;
-        callback(results);
-      }
-    }
-
-    fetchRecords(target.year, apiKey, function(data) {
-      results.records = data;
-      onComplete();
-    });
-
-    setTimeout(function() {
-      //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-      fetchRankings(target.year, 14, false, apiKey, function(data) {
-        results.rankings = data;
-        onComplete();
-      });
-    }, constants.BATCH_DELAY);
-
-    // week 13 is hardcoded for now (offseason testing, so real "current
+    // week 14 is hardcoded for now (offseason testing, so real "current
     // week" games don't exist yet) - swap the two lines below (comment
-    // the 13 one, uncomment target.week one) once testing is done and the
+    // the 14 one, uncomment target.week one) once testing is done and the
     // season's actual current week should be used instead.
-    //if (!target.offseason) {
-      setTimeout(function() {
-        //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-        fetchGames(target.year, 14, false, apiKey, function(data) {
-          results.games = data;
-          onComplete();
-        });
-      }, constants.BATCH_DELAY * 2);
-    //}
+    //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
+    fetchGames(target.year, 14, false, apiKey, function(data) {
+      results.games = data;
+      // Report the running local tally (not corrected against GET /info -
+      // that only happens on full sync) so the watch's counter reflects
+      // the call this light sync just made rather than whatever it was
+      // before this sync started.
+      results.apiCallsUsed = usage.used;
+      results.apiCallsLimit = usage.limit;
+      callback(results);
+    });
   }
 })();
 
