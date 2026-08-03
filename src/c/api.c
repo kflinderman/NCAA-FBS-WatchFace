@@ -21,22 +21,35 @@ Full sync takes 8s
 #include "outbox_queue.h"
 
 /**
- * CFBD sync protocol (team-by-team)
+ * CFBD sync protocol (team-by-team, split by sync type)
  * -----------------------------------------------------------------------
- * Full sync fetches calendar data only (year, next season kickoff) - see
- * CFBD_YEAR / CFBD_NEXT_SEASON_TS handling below.
+ * Full sync (every 24h) fetches calendar (year, next season kickoff) PLUS
+ * records + rankings for the current week - records/rankings don't change
+ * fast enough to need their own more-frequent sync, so they ride along
+ * with the daily full sync instead of the (now games-only) light sync.
  *
- * Light sync fetches this week's games/records/rankings ONCE on the JS
- * side (three CFBD API calls total, cached in JS memory), then the two
- * sides walk API_DATA[] together one team at a time:
- *   1. JS finishes fetching -> sends CFBD_LIGHT_SYNC_READY.
- *   2. C resets its team cursor to 0 and sends REQUEST_CFBD_TEAM_DATA with
- *      CFBD_TEAM_INDEX + CFBD_TEAM_NAME for API_DATA[0].
- *   3. JS looks team_name up in its already-fetched (not re-fetched) light
- *      sync data and replies with one small AppMessage of that team's
- *      opponent/score/rank/record fields.
- *   4. C applies those fields to API_DATA[team_index], then requests the
- *      next index, repeating until API_DATA_COUNT is reached.
+ * Light sync fetches only this week's games, on its own cadence
+ * (settings.cfbd.last_light_sync_ts, independent of full sync's timing).
+ *
+ * Each sync type, once JS has fetched its data, walks API_DATA[] one team
+ * at a time exactly like before - but now there are two independent walk
+ * types (CFBD_TEAM_DATA_GAMES, CFBD_TEAM_DATA_RECORDS), each updating only
+ * the fields it's responsible for:
+ *   1. JS finishes fetching -> sends CFBD_LIGHT_SYNC_READY (games) or
+ *      CFBD_RECORDS_SYNC_READY (records+rankings).
+ *   2. C starts (or, if a walk of the other type is already running,
+ *      defers) a walk of that type: team cursor to 0, sends
+ *      REQUEST_CFBD_TEAM_DATA with CFBD_TEAM_INDEX + CFBD_TEAM_NAME +
+ *      CFBD_TEAM_DATA_TYPE for API_DATA[0].
+ *   3. JS looks team_name up in whichever cache matches the requested
+ *      type (already-fetched, not re-fetched) and replies with just that
+ *      type's fields - opponent/score/gametime for games, or
+ *      rank/wins/postseason for records.
+ *   4. C applies whichever fields are present (their presence alone
+ *      tells it what to apply - no separate branch needed) to
+ *      API_DATA[team_index], then requests the next index, repeating
+ *      until API_DATA_COUNT is reached, then starts whatever walk was
+ *      deferred in step 2, if any.
  *
  * This means at most one small AppMessage dictionary (well under the
  * existing 512-byte inbox/outbox) is ever in flight for CFBD data - no
@@ -46,7 +59,21 @@ Full sync takes 8s
  * once, and this protocol never does that at all.
  */
 
-static int cfbd_current_team_index = -1; // -1 = no light sync in progress
+typedef enum {
+  CFBD_TEAM_DATA_GAMES = 0,
+  CFBD_TEAM_DATA_RECORDS = 1
+} CFBDTeamDataType;
+
+static int cfbd_current_team_index = -1; // -1 = no team walk in progress
+static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
+
+// If a sync-type's "ready" signal arrives while the OTHER type's walk is
+// still running, it's remembered here and started once the running walk
+// finishes, rather than corrupting the in-progress walk's state.
+static bool cfbd_pending_games_walk = false;
+static bool cfbd_pending_records_walk = false;
+
+static void cfbd_team_walk_complete(CFBDTeamDataType type);
 
 /**
  * Look up a team by name in the full TEAMS[] roster (used to resolve an
@@ -161,41 +188,89 @@ void debug_dump_api_info(const API_Info *array, size_t count) {
 
 /**
  * Builds the REQUEST_CFBD_TEAM_DATA message for whichever team
- * cfbd_current_team_index currently points at.
+ * cfbd_current_team_index currently points at, tagged with
+ * cfbd_current_sync_type so JS knows whether to compute games fields or
+ * records/rankings fields for this team.
  */
 static void build_request_team_data(DictionaryIterator *iter) {
   uint16_t team_index = (uint16_t)cfbd_current_team_index;
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
   dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
   dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, API_DATA[team_index].name);
+  dict_write_uint8(iter, MESSAGE_KEY_CFBD_TEAM_DATA_TYPE, (uint8_t)cfbd_current_sync_type);
 }
 
 /**
  * Queues REQUEST_CFBD_TEAM_DATA for API_DATA[cfbd_current_team_index],
- * asking JS for that one team's opponent/score/rank/record. Assumes
- * cfbd_current_team_index is valid (checked by the caller before setting
- * it).
+ * asking JS for that one team's data (games or records/rankings,
+ * depending on cfbd_current_sync_type). Assumes cfbd_current_team_index
+ * is valid (checked by the caller before setting it).
  */
 static void request_team_data(void) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s)",
-    cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name);
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
+    cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name,
+    cfbd_current_sync_type);
 
   outbox_queue_send(build_request_team_data);
 }
 
 /**
- * Called once all of API_DATA[] has been filled in for this light sync.
+ * Starts a team walk of the given type, unless one is already running -
+ * in that case the request is remembered and started once the running
+ * walk completes (see cfbd_team_walk_complete), rather than clobbering
+ * its in-progress state.
  */
-static void cfbd_light_sync_complete(void) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync complete - all %d teams updated", (int)API_DATA_COUNT);
+static void start_team_walk(CFBDTeamDataType type) {
+  if (cfbd_current_team_index >= 0) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk (type %d) deferred - type %d walk in progress",
+      type, cfbd_current_sync_type);
+    if (type == CFBD_TEAM_DATA_GAMES) {
+      cfbd_pending_games_walk = true;
+    } else {
+      cfbd_pending_records_walk = true;
+    }
+    return;
+  }
+
+  if (API_DATA_COUNT == 0) {
+    cfbd_team_walk_complete(type);
+    return;
+  }
+
+  cfbd_current_sync_type = type;
+  cfbd_current_team_index = 0;
+  request_team_data();
+}
+
+/**
+ * Called once all of API_DATA[] has been walked for the given sync type.
+ * Updates whichever timestamp that type owns, then starts any walk that
+ * got deferred while this one was running.
+ */
+static void cfbd_team_walk_complete(CFBDTeamDataType type) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
+    type, (int)API_DATA_COUNT);
 
   //debug_dump_api_info(API_DATA, API_DATA_COUNT);
-  
+
   cfbd_current_team_index = -1;
-  settings.cfbd.last_full_sync_ts = time(NULL);
+
+  if (type == CFBD_TEAM_DATA_GAMES) {
+    settings.cfbd.last_light_sync_ts = time(NULL);
+  } else {
+    settings.cfbd.last_full_sync_ts = time(NULL);
+  }
   settings.cfbd.api_data_valid = true;
   globals_prv_save_settings();
   globals_prv_update_display();
+
+  if (cfbd_pending_games_walk) {
+    cfbd_pending_games_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_GAMES);
+  } else if (cfbd_pending_records_walk) {
+    cfbd_pending_records_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_RECORDS);
+  }
 }
 
 static void build_request_full_sync(DictionaryIterator *iter) {
@@ -289,16 +364,22 @@ bool api_should_full_sync(void) {
 bool api_should_light_sync(void) {
   time_t now = time(NULL);
 
-  // Light sync weekly (every 7 days)
+  // Light sync (games only) currently weekly, same as before the
+  // records/rankings split - now tracked against its own timestamp
+  // instead of full sync's, since the two are no longer coupled. Worth
+  // revisiting: games likely need fresher data than records/rankings did
+  // (e.g. on game day), so this interval may want to come down now that
+  // it's decoupled - left at 7 days for now since that wasn't explicitly
+  // asked to change.
   if (settings.cfbd.api_data_valid &&
-      (now - settings.cfbd.last_full_sync_ts < 604800)) {
+      (now - settings.cfbd.last_light_sync_ts < 604800)) {
     return false;
   }
   return true;
 }
 
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Full sync response: calendar data only (year, next season kickoff).
+  // Full sync response: calendar data (year, next season kickoff).
   Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
   if (year_tuple) {
     settings.cfbd.current_season_year = year_tuple->value->uint16;
@@ -317,31 +398,43 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
-  // Light sync: JS has fetched (once) and cached games/records/rankings
-  // for the current week and is ready to serve per-team lookups. Kick off
-  // the team-by-team walk starting at API_DATA[0].
-  Tuple *ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
-  if (ready_tuple) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync ready - requesting %d teams", (int)API_DATA_COUNT);
+  // Light sync: JS has fetched (once) and cached this week's games and is
+  // ready to serve per-team lookups. Kick off (or defer, if a records
+  // walk is already running) a games-type team-by-team walk.
+  Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
+  if (games_ready_tuple) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)API_DATA_COUNT);
 
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
 
-    if (API_DATA_COUNT == 0) {
-      cfbd_light_sync_complete();
-      return;
-    }
+    start_team_walk(CFBD_TEAM_DATA_GAMES);
+    return;
+  }
 
-    cfbd_current_team_index = 0;
-    request_team_data();
+  // Full sync also fetches records+rankings (moved here from light sync -
+  // they don't change fast enough to need their own cadence, so they ride
+  // along with the daily full sync instead). Same pattern as above, just
+  // a records-type walk instead of games-type.
+  Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
+  if (records_ready_tuple) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - requesting %d teams", (int)API_DATA_COUNT);
+
+    apply_api_usage_from_message(iterator);
+    globals_prv_save_settings();
+
+    start_team_walk(CFBD_TEAM_DATA_RECORDS);
     return;
   }
 
   // Per-team response: apply this team's data to API_DATA[team_index],
-  // then move on to the next team (or finish).
+  // then move on to the next team (or finish). Which fields are present
+  // depends on which walk type is running - a games-type response won't
+  // include rank/wins/postseason, and a records-type response won't
+  // include opponent/score/gametime - so we just apply whatever's
+  // actually there rather than branching on type explicitly.
   Tuple *team_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_INDEX);
-  Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
-  if (team_index_tuple && team_opponent_tuple) {
+  if (team_index_tuple) {
     uint16_t team_index = team_index_tuple->value->uint16;
 
     if (cfbd_current_team_index < 0 || team_index != (uint16_t)cfbd_current_team_index) {
@@ -352,13 +445,13 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
 
     if (team_index >= API_DATA_COUNT) {
       APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team data index %d out of range", team_index);
-      cfbd_light_sync_complete();
+      cfbd_team_walk_complete(cfbd_current_sync_type);
       return;
     }
 
     API_Info *info = &API_DATA[team_index];
-    const char *opponent_name = team_opponent_tuple->value->cstring;
 
+    Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
     Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
     Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
     Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
@@ -368,19 +461,26 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     Tuple *ps_wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
     Tuple *ps_losses_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_LOSSES);
 
-    if (opponent_name && opponent_name[0]) {
-      const Team *opp = teams_find_by_name(opponent_name);
-      // vs_id only means something if the opponent is itself in the
-      // curated TEAMS[] roster (needed to draw their logo/colors) - most
-      // opponents won't be, and that's fine; score/record fields below
-      // still apply regardless. Falls through to the sentinel below if
-      // not found, so a stale opponent from a prior week's data can't
-      // linger. -1 (not 0) is the "no opponent" sentinel, since 0 is a
-      // real, valid TEAMS[] index (Clemson).
-      info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
-    } else {
-      // Bye week - no game this week, so no opponent to show.
-      info->vs_id = -1;
+    // Only a games-type response includes the opponent field at all (even
+    // an empty-string opponent for a bye week) - a records-type response
+    // has no game to report, so vs_id is left untouched rather than wiped
+    // by a records-only sync.
+    if (team_opponent_tuple) {
+      const char *opponent_name = team_opponent_tuple->value->cstring;
+      if (opponent_name && opponent_name[0]) {
+        const Team *opp = teams_find_by_name(opponent_name);
+        // vs_id only means something if the opponent is itself in the
+        // curated TEAMS[] roster (needed to draw their logo/colors) -
+        // most opponents won't be, and that's fine; score/record fields
+        // below still apply regardless. Falls through to the sentinel
+        // below if not found, so a stale opponent from a prior week's
+        // data can't linger. -1 (not 0) is the "no opponent" sentinel,
+        // since 0 is a real, valid TEAMS[] index (Clemson).
+        info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
+      } else {
+        // Bye week - no game this week, so no opponent to show.
+        info->vs_id = -1;
+      }
     }
 
     if (score_tuple) info->score = (uint16_t)score_tuple->value->int32;
@@ -392,8 +492,8 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) updated: opp=%s score=%d-%d rank=%d wins=%d",
-      team_index, info->name, opponent_name ? opponent_name : "", info->score, info->vs_score,
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: score=%d-%d rank=%d wins=%d",
+      team_index, info->name, cfbd_current_sync_type, info->score, info->vs_score,
       info->ranking, info->wins);
 
     uint16_t next_index = team_index + 1;
@@ -401,7 +501,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       cfbd_current_team_index = next_index;
       request_team_data();
     } else {
-      cfbd_light_sync_complete();
+      cfbd_team_walk_complete(cfbd_current_sync_type);
     }
   }
 }

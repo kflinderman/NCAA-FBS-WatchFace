@@ -30,7 +30,8 @@ typedef struct {
 typedef struct {
   uint32_t next_season_first_game_ts;
   uint16_t current_season_year;
-  uint32_t last_full_sync_ts;
+  uint32_t last_full_sync_ts; // full sync: calendar + records + rankings
+  uint32_t last_light_sync_ts; // light sync: games only - own cadence, no longer tied to last_full_sync_ts
   // Both fields are set directly from what JS reports (see
   // CFBD_API_CALLS_USED/CFBD_API_CALLS_LIMIT in api_cfbd_callback) - JS is
   // the source of truth since it's the one actually making HTTP calls,
