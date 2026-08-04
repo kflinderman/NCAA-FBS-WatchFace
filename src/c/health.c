@@ -7,7 +7,7 @@
 #if defined(PBL_HEALTH)
 void health_heartRateHandler() {
   if (settings.hrBool) {
-    if (!settings.healthQuiet || (settings.healthQuiet && !timekeeping_is_quiet_time())) {
+    if (!settings.healthQuiet || !timekeeping_is_quiet_time()) {
       static char s_hr_buffer[12];
       HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
       if (hrvalue > 0) {
@@ -34,7 +34,7 @@ void health_heartRateHandler() {
 }
 
 void health_stepHandler(){
-  if (!settings.healthQuiet || (settings.healthQuiet && !timekeeping_is_quiet_time())){
+  if (!settings.healthQuiet || !timekeeping_is_quiet_time()){
     HealthValue stepvalue = 0;
     if(settings.stepsBool || settings.stepsGoalBool){
       stepvalue = health_service_sum_today(HealthMetricStepCount);

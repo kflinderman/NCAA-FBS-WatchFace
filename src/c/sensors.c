@@ -14,15 +14,14 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
 
-  if (abs(delta) > settings.animationSensitivity &&
+  if (settings.animationSensitivity != 0 &&
       !s_animation &&
-      settings.animationSensitivity != 0 &&
-      (settings.animationsBatt == 0 ||
-        (settings.animationsBatt == 1 && s_batt_history < 1) ||
-        (settings.animationsBatt == 2 && s_batt_history < 2) ||
-        (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)
-      ) &&
-      (!settings.quietTimeBool || !timekeeping_is_quiet_time() )
+      abs(delta) > settings.animationSensitivity &&
+      (settings.animationsBatt == 0 || 
+       (settings.animationsBatt == 1 && s_batt_history < 1) ||
+       (settings.animationsBatt == 2 && s_batt_history < 2) ||
+       (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)) &&
+      (!settings.quietTimeBool || !timekeeping_is_quiet_time())
      ) {
       // Detected sudden Y movement and play animation
       s_animation = true;

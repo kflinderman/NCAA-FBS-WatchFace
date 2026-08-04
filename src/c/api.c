@@ -59,10 +59,7 @@ Full sync takes 8s
  * once, and this protocol never does that at all.
  */
 
-typedef enum {
-  CFBD_TEAM_DATA_GAMES = 0,
-  CFBD_TEAM_DATA_RECORDS = 1
-} CFBDTeamDataType;
+#define MAX_DISPLAYABLE_SCORE 99
 
 static int cfbd_current_team_index = -1; // -1 = no team walk in progress
 static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
@@ -143,49 +140,6 @@ bool api_calls_nearing_limit(void) {
   return api_calls_percent_used() >= CFBD_API_CALLS_WARNING_PERCENT;
 }
 
-
-void debug_dump_api_info(const API_Info *array, size_t count) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== DUMPING %u API_INFO RECORDS ===", (unsigned int)count);
-
-  for (size_t i = 0; i < count; i++) {
-    const API_Info *item = &array[i];
-
-    // Single line log per item to avoid log buffer overflow
-    APP_LOG(APP_LOG_LEVEL_DEBUG, 
-            "[%03u] %s | VS:%d | Score:%u-%u | W:%u | GT:%lu | Rank:%u PS-G:%u PS-W:%u PS-L:%u",
-            (unsigned int)i,
-            item->name ? item->name : "NULL",
-            //item->id,
-            item->vs_id,
-            item->score,
-            item->vs_score,
-            item->wins,
-            (unsigned long)item->gametime,
-            item->ranking, 
-            item->postseasonGames, 
-            item->postseasonWins, 
-            item->postseasonLosses);
-
-    // OPTIONAL: Add extra fields if needed
-    /*
-    APP_LOG(APP_LOG_LEVEL_DEBUG, 
-            "      -> Rank:%u PS-G:%u PS-W:%u PS-L:%u",
-            item->ranking, 
-            item->postseasonGames, 
-            item->postseasonWins, 
-            item->postseasonLosses);
-    */
-    
-    // Give the Pebble logging system breathing room every 20 records
-    if (i > 0 && i % 20 == 0) {
-      psleep(10); 
-    }
-  }
-
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== END DUMP ===");
-}
-
-
 /**
  * Builds the REQUEST_CFBD_TEAM_DATA message for whichever team
  * cfbd_current_team_index currently points at, tagged with
@@ -251,8 +205,6 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
     type, (int)API_DATA_COUNT);
 
-  //debug_dump_api_info(API_DATA, API_DATA_COUNT);
-
   cfbd_current_team_index = -1;
 
   if (type == CFBD_TEAM_DATA_GAMES) {
@@ -278,25 +230,30 @@ static void build_request_full_sync(DictionaryIterator *iter) {
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
+uint8_t api_update_status_indicator() {
+  if (api_calls_percent_used() >= 99) {
+    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    return 0;
+  } else if (api_calls_nearing_limit()) {
+    bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    return 1;
+  } else {
+    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    return 2;
+  }
+}
+
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
     layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
     return;
   }
-  else if (api_calls_percent_used() >= 99){
+  else if (api_update_status_indicator() == 0){
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
-    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
     return;
-  }
-  
-  if (api_calls_nearing_limit()){
-    bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
-  }
-  else{
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
   }
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
@@ -314,21 +271,9 @@ void api_request_cfbd_light_sync(void) {
     layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
     return;
   }
-  else if (api_calls_percent_used() >= 99){
-    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
-    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
-    s_batt_history = 0;
+  else if (api_update_status_indicator() == 0){
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API calls used for the month");
     return;
-  }
-  else{
-    if (api_calls_nearing_limit()){
-      bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
-      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
-    }
-    else{
-      layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
-    }
   }
 
   // Need calendar data from a prior full sync so JS can determine the
@@ -520,10 +465,10 @@ void api_score_display() {
 
     int score1, score2;
 
-    if (API_DATA[settings.FavoriteTeam].score > 99) score1 = 99;
+    if (API_DATA[settings.FavoriteTeam].score > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
     else score1 = API_DATA[settings.FavoriteTeam].score;
 
-    if (API_DATA[settings.FavoriteTeam].vs_score > 99) score2 = 99;
+    if (API_DATA[settings.FavoriteTeam].vs_score > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
     else score2 = API_DATA[settings.FavoriteTeam].vs_score;
 
     snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);

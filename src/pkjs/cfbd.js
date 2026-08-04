@@ -131,9 +131,6 @@ var cfbd = (function() {
         return;
       }
 
-      //for (let i = 0; i < data.length; i++) {
-        //console.log("Calendar output: " + JSON.stringify(data[i], null, 2));
-      //}
       var now = new Date();
       var startEntry = data[0];
       var endEntry = data[data.length - 1];
@@ -152,14 +149,6 @@ var cfbd = (function() {
       
       var inSeason = now >= startDate && now <= endDate;
       var postSeason = now > endDate;
-      //let  weeks = [];
-      //for (let i = 0; i < data.length; i++) {
-        //weeks.push([
-          //data[i].week,
-          //data[i].startDate,
-          //data[i].endDate
-        //]);
-      //}
       
       const weeks = data.map(item => [
         item.week, 
@@ -241,7 +230,11 @@ var cfbd = (function() {
         return;
       }
       console.log('Fetched ' + data.length + ' total games for ' + year);
-      cache.games = data;
+      if (data && Array.isArray(data)) {
+        cache.games = data;
+      } else {
+        console.log('Warning: games data invalid, cache not updated');
+      }
       callback(data);
     }, function(status) {
       console.log('fetchAllGamesForYear failed: ' + status);

@@ -11,13 +11,8 @@ static void build_request_weather(DictionaryIterator *iter) {
 }
 
 //Returns true if it is quiet time
-bool timekeeping_is_quiet_time(){  
-  if (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd){
-    return true;
-  }
-  else{
-    return false;
-  }
+bool timekeeping_is_quiet_time() {
+  return current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd;
 }
 
 // Updates the time TextLayer
@@ -53,28 +48,13 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     health_handler();
   #endif
 
-  if (settings.weatherBool && (!settings.weatherQuiet || timekeeping_is_quiet_time())){
+  if (settings.weatherBool && (!settings.weatherQuiet || !timekeeping_is_quiet_time())){
     // Get weather update every 30 minutes
     if (tick_time->tm_min % 30 == 0) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
       outbox_queue_send(build_request_weather);
     }
   }
-  
-  /*
-  if (dummy == 1){
-    APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
-    api_request_cfbd_light_sync();
-    dummy++;
-  }
-  else if (dummy == 0){
-    strncpy(settings.api_key, "B5t4zQKeB5kqsq7QHg/htU+PUdD72h/fRin8RLeJOhdWP88BalCKoRmcot2yUOTs", sizeof(settings.api_key) - 1);
-    settings.api_key[sizeof(settings.api_key) - 1] = '\0'; // Ensure null-termination
-    APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
-    api_request_cfbd_full_sync();
-    dummy++;
-  }
-  */
   
   time_t now = time(NULL);
   

@@ -328,17 +328,6 @@ Pebble.addEventListener('appmessage',
     if (e.payload['REQUEST_WEATHER']) {
       getWeather();
     }
-    /*
-    if (e.payload['REQUEST_SCORE']) {
-      var apiKey = e.payload['api_key'];
-      var teamIndex = e.payload['ScoreTeamIndex'];
-      if (!apiKey) {
-        console.log('REQUEST_SCORE received with no api_key - skipping');
-      } else {
-        getScore(apiKey, teamIndex);
-      }
-    }
-    */
     // ===== CFBD Full Sync: calendar + records + rankings =====
     if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
       var apiKey = e.payload['api_key'];

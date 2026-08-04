@@ -68,7 +68,6 @@ extern ClaySettings settings;
  *******************************************/
 extern Window *s_main_window;
 extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hour_layer, *s_countdown_layer, *s_score_layer;
-extern int dummy;
 
 #if defined(PBL_HEALTH)
 extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;

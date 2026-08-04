@@ -2,6 +2,11 @@
 #pragma once
 #include <pebble.h>
 
+typedef enum {
+  CFBD_TEAM_DATA_GAMES = 0,
+  CFBD_TEAM_DATA_RECORDS = 1
+} CFBDTeamDataType;
+
 // Request full CFBD sync (calendar only: year, next season kickoff)
 // Typically called on app launch or manual user refresh
 void api_request_cfbd_full_sync(void);
