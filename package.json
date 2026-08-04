@@ -115,7 +115,9 @@
             "CFBD_API_CALLS_LIMIT",
             "countdownCustomTime",
             "CFBD_RECORDS_SYNC_READY",
-            "CFBD_TEAM_DATA_TYPE"
+            "CFBD_TEAM_DATA_TYPE",
+            "CFBD_TEAM_COMPLETED",
+            "healthQuiet"
         ],
         "projectType": "native",
         "resources": {

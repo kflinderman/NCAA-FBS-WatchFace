@@ -22,9 +22,7 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
         (settings.animationsBatt == 2 && s_batt_history < 2) ||
         (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)
       ) &&
-      (!settings.quietTimeBool ||
-        (current_time_integer <= settings.quietTimeStart && current_time_integer >= settings.quietTimeEnd)
-      )
+      (!settings.quietTimeBool || !timekeeping_is_quiet_time() )
      ) {
       // Detected sudden Y movement and play animation
       s_animation = true;

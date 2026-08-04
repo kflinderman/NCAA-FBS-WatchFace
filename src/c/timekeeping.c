@@ -10,6 +10,16 @@ static void build_request_weather(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
 }
 
+//Returns true if it is quiet time
+bool timekeeping_is_quiet_time(){  
+  if (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd){
+    return true;
+  }
+  else{
+    return false;
+  }
+}
+
 // Updates the time TextLayer
 void update_time() {
   // Get a tm structure
@@ -43,7 +53,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     health_handler();
   #endif
 
-  if (settings.weatherBool && (!settings.weatherQuiet || (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd))){
+  if (settings.weatherBool && (!settings.weatherQuiet || timekeeping_is_quiet_time())){
     // Get weather update every 30 minutes
     if (tick_time->tm_min % 30 == 0) {
       APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
@@ -89,7 +99,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     else gametime = false;
     //I need to find out if the game is completed.
 
-    if (api_should_light_sync() && gametime) {
+    if (api_should_light_sync() && gametime && !API_DATA[settings.FavoriteTeam].completed) {
       api_request_cfbd_light_sync();
     }
 

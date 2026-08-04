@@ -26,6 +26,7 @@ typedef struct ClaySettings {
   uint16_t quietTimeEnd;
   uint8_t animationsBatt;
   uint8_t animationsCustom;
+  bool healthQuiet;
   bool stepsBool;
   bool hrBool;
   bool stepsGoalBool;

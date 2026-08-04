@@ -14,7 +14,6 @@ typedef struct {
 } Team;
 
 typedef struct {
-  bool completed;
   int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
   uint8_t score;
   uint8_t vs_score;
@@ -23,6 +22,7 @@ typedef struct {
   uint8_t postseasonGames;
   uint8_t postseasonWins;
   uint8_t postseasonLosses;
+  bool completed;
   unsigned long gametime;
   const char *name;
 } API_Info;

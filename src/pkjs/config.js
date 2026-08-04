@@ -583,6 +583,12 @@ module.exports = [
       },
       {
         "type": "toggle",
+        "label": "Pause Watchface Health Display During Quiet Time",
+        "messageKey": "healthQuiet",
+        "defaultValue": false,
+      },
+      {
+        "type": "toggle",
         "messageKey": "hrBool",
         "label": "Show Heart Rate",
   	    "description": "It will not show even if toggled if no heart rate is detected",

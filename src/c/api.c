@@ -454,6 +454,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
     Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
     Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
+    Tuple *completed_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_COMPLETED);
     Tuple *rank_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
     Tuple *wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
     Tuple *ps_games_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
@@ -485,6 +486,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (score_tuple) info->score = (uint16_t)score_tuple->value->int32;
     if (vs_score_tuple) info->vs_score = (uint16_t)vs_score_tuple->value->int32;
     if (gametime_tuple) info->gametime = (uint32_t)gametime_tuple->value->int32;
+    if (completed_tuple) info->completed = (completed_tuple->value->int32 != 0);
     if (rank_tuple) info->ranking = (uint16_t)rank_tuple->value->int32;
     if (wins_tuple) info->wins = (uint16_t)wins_tuple->value->int32;
     if (ps_games_tuple) info->postseasonGames = (uint16_t)ps_games_tuple->value->int32;

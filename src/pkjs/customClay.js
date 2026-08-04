@@ -108,6 +108,7 @@ module.exports = function (minified) {
                 { key: 'countdownDisplay' }
             ]
         },
+        { key: 'healthQuiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
         { key: 'hrBool' },
         { key: 'stepsBool' },
         {

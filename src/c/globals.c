@@ -143,6 +143,7 @@ void globals_prv_default_settings() {
   settings.quietTimeEnd = 630;
   settings.animationsBatt = 0;
   settings.animationsCustom = 30;
+  settings.healthQuiet = false;
   settings.stepsBool = false;
   settings.hrBool = false;
   settings.stepsGoalBool = false;

@@ -214,7 +214,8 @@ var cfbd = (function() {
           homeTeam: game.homeTeam,
           homePoints: game.homePoints,
           awayTeam: game.awayTeam,
-          awayPoints: game.awayPoints
+          awayPoints: game.awayPoints,
+          completed: game.completed
         };
       });
 

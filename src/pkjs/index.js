@@ -233,7 +233,8 @@ function findTeamGame(teamName, games) {
         opponent: g.awayTeam || '',
         teamScore: g.homePoints || 0,
         vsScore: g.awayPoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
+        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0,
+        completed: !!g.completed
       };
     }
     if (g.awayTeam === teamName) {
@@ -241,11 +242,12 @@ function findTeamGame(teamName, games) {
         opponent: g.homeTeam || '',
         teamScore: g.awayPoints || 0,
         vsScore: g.homePoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
+        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0,
+        completed: !!g.completed
       };
     }
   }
-  return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0 };
+  return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
 }
 
 function findTeamRecord(teamName, records) {
@@ -292,6 +294,7 @@ function sendTeamData(teamIndex, teamName, dataType) {
     dictionary['CFBD_TEAM_SCORE'] = game.teamScore;
     dictionary['CFBD_TEAM_VS_SCORE'] = game.vsScore;
     dictionary['CFBD_TEAM_GAMETIME'] = game.gametime;
+    dictionary['CFBD_TEAM_COMPLETED'] = game.completed ? 1 : 0;
   } else {
     if (!recordsRankingsData) {
       console.log('REQUEST_CFBD_TEAM_DATA (records) received with no records/rankings data cached - skipping');

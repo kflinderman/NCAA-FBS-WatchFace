@@ -23,6 +23,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
     MESSAGE_KEY_quietTimeEnd,
     MESSAGE_KEY_animationsBatt,
     MESSAGE_KEY_animationsCustom,
+    MESSAGE_KEY_healthQuiet,
     MESSAGE_KEY_stepsBool,
     MESSAGE_KEY_hrBool,
     MESSAGE_KEY_stepsGoalBool,
@@ -63,7 +64,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
   }
   
 
-  for (uint16_t x = 0; x < 44; x++) {
+  for (uint16_t x = 0; x < 45; x++) {
     Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
     
     if (temp_t) {
@@ -99,35 +100,36 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
         case 12: settings.quietTimeEnd = value; break;
         case 13: settings.animationsBatt = value; break;
         case 14: settings.animationsCustom = value; break;
-        case 15: settings.stepsBool = value; break;
-        case 16: settings.hrBool = value; break;
-        case 17: settings.stepsGoalBool = value; break;
-        case 18: settings.stepsGoal = value; break;
-        case 19: settings.hardcodeRival = value; break;
-        case 20: settings.donate = value; break;
-        case 21: settings.bagBool = value; break;
-        case 22: settings.animationDelay = value; break;
-        case 23: settings.countdownBool = value; break;
-        case 24: settings.countdownTime = value; break;
-        case 25: settings.countdownCustomDate = value; break;
-        case 26: settings.countdownCustomTime = value; break;
-        case 27: settings.countdownDisplay = value; break;
-        case 28: settings.api = value; break;
-        case 29: settings.api_quiet = value; break;
-        case 30: settings.scoreDisplayBool = value; break;
-        case 31: settings.scoreUpdate = value; break;
-        case 32: settings.scoreLocation = value; break;
-        case 33: settings.opponentBool = value; break;
-        case 34: settings.opponentSelect = value; break;
-        case 35: settings.customOpponent = value; break;
-        case 36: settings.weatherBool = value; break;
-        case 37: settings.weatherQuiet = value; break;
-        case 38: settings.weatherUnits = value; break;
-        case 39: settings.rankingBool = value; break;
-        case 40: settings.winBool = value; break;
-        case 41: settings.confBool = value; break;
-        case 42: settings.bowlBool = value; break;
-        case 43: settings.champBool = value; break;
+        case 15: settings.healthQuiet = value; break;
+        case 16: settings.stepsBool = value; break;
+        case 17: settings.hrBool = value; break;
+        case 18: settings.stepsGoalBool = value; break;
+        case 19: settings.stepsGoal = value; break;
+        case 20: settings.hardcodeRival = value; break;
+        case 21: settings.donate = value; break;
+        case 22: settings.bagBool = value; break;
+        case 23: settings.animationDelay = value; break;
+        case 24: settings.countdownBool = value; break;
+        case 25: settings.countdownTime = value; break;
+        case 26: settings.countdownCustomDate = value; break;
+        case 27: settings.countdownCustomTime = value; break;
+        case 28: settings.countdownDisplay = value; break;
+        case 29: settings.api = value; break;
+        case 30: settings.api_quiet = value; break;
+        case 31: settings.scoreDisplayBool = value; break;
+        case 32: settings.scoreUpdate = value; break;
+        case 33: settings.scoreLocation = value; break;
+        case 34: settings.opponentBool = value; break;
+        case 35: settings.opponentSelect = value; break;
+        case 36: settings.customOpponent = value; break;
+        case 37: settings.weatherBool = value; break;
+        case 38: settings.weatherQuiet = value; break;
+        case 39: settings.weatherUnits = value; break;
+        case 40: settings.rankingBool = value; break;
+        case 41: settings.winBool = value; break;
+        case 42: settings.confBool = value; break;
+        case 43: settings.bowlBool = value; break;
+        case 44: settings.champBool = value; break;
       }
 
       settings_changed = true;
