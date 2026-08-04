@@ -14,9 +14,10 @@ const Team TEAMS[] = {
 };
 #endif
 
+//I need to add .completed = true to even team
 API_Info API_DATA[] = {
-  { .name = "Clemson", .vs_id = 1, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
-  { .name = "South Carolina", .vs_id = 0, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  { .name = "Clemson", .vs_id = 1, .score = 0, .vs_score = 0, .gametime = 0, .completed = true, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
+  { .name = "South Carolina", .vs_id = 0, .score = 0, .vs_score = 0, .gametime = 0, .completed = true, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0 },
   
   
   { .ranking = 26 },

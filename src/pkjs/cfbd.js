@@ -566,6 +566,8 @@ var cfbd = (function() {
           }, constants.BATCH_DELAY);
         });
       });
+      
+      console.log('=== CFBD Full Sync End ===');
     },
 
     /**
@@ -597,7 +599,7 @@ var cfbd = (function() {
   };
 
   function doLightSync(apiKey, callback) {
-    console.log('=== CFBD Light Sync Start (games only) ===');
+    console.log('=== CFBD Light Sync Start ===');
     var target = determineCurrentWeek(cache);
     console.log('Light sync: year ' + target.year + ', week ' + target.week +
                 (target.offseason ? ' (offseason)' : ''));
@@ -624,6 +626,9 @@ var cfbd = (function() {
       results.apiCallsLimit = usage.limit;
       callback(results);
     });
+    
+    
+    console.log('=== CFBD Light Sync End ===');
   }
 })();
 

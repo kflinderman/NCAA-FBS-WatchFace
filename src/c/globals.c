@@ -37,6 +37,7 @@ int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
 bool after_time = true;
+bool gametime = false;
 BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
@@ -329,6 +330,7 @@ void globals_prv_update_display() {
   
   if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
+    //OK This is the only time I'm not confident in after_time.  I also need to make a new variable for when it's checked the gametime since I should have that information.
     if (api_should_light_sync() && after_time) {
       api_request_cfbd_light_sync();
     }

@@ -94,6 +94,7 @@ extern int16_t s_prev_y;
 extern bool s_bt_connected;
 extern bool s_animation;
 extern bool after_time;
+extern bool gametime;
 extern BatteryChargeState s_battery_state;
 extern bool s_bt_history;
 extern int16_t s_batt_history;

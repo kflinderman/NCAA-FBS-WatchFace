@@ -14,7 +14,7 @@ typedef struct {
 } Team;
 
 typedef struct {
-  //uint16_t id;
+  bool completed;
   int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
   uint8_t score;
   uint8_t vs_score;

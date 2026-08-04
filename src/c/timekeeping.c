@@ -66,8 +66,10 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   }
   */
   
+  time_t now = time(NULL);
+  
   // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-  if (tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) {
+  if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
       api_request_cfbd_full_sync();
   }
 
@@ -78,26 +80,22 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     }
   }
   
-  if (settings.scoreDisplayBool){
-    time_t now = time(NULL);
+  // I might need to look into if both countdown and scores are chosen + they're on different screens
+  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
     time_t target_time = (time_t)API_DATA[settings.FavoriteTeam].gametime;
     double seconds_diff = difftime(target_time, now);
     int32_t minutes_diff = (int32_t)(seconds_diff / 60.0);
-    bool gametime = false;
-    if (minutes_diff <= 0){
-      gametime = true;
+    if (minutes_diff <= 0) gametime = true;
+    else gametime = false;
+    //I need to find out if the game is completed.
+
+    if (api_should_light_sync() && gametime) {
+      api_request_cfbd_light_sync();
     }
-    
-    //This seems wonky, and I need to figure out if this will still work if there's no countdown then it should just always display the score of the last game if it's not in an active game
-    if (gametime && (!settings.countdownBool || (settings.countdownBool && after_time))){
-      if (api_should_light_sync()) {
-        api_request_cfbd_light_sync();
-      }
-      
-      api_score_display();
-      if (settings.scoreLocation != 1){
-        animation_hide_text(true, false, true);
-      }
+
+    api_score_display();
+    if (settings.scoreLocation != 1){
+      animation_hide_text(true, false, true);
     }
   }
 }
