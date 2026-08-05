@@ -4,135 +4,130 @@
 #include "api.h"
 #include "outbox_queue.h"
 
-void configuration_callback(DictionaryIterator *iterator, void *context){
-  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
-  // Check for Clay settings data
-  uint32_t claysettings_id[] = {
-    MESSAGE_KEY_DisconnectVibration,
-    MESSAGE_KEY_ReconnectVibration,
-    MESSAGE_KEY_LowBatteryPercent,
-    MESSAGE_KEY_LowBatteryVibration,
-    MESSAGE_KEY_EmptyBatteryPercent,
-    MESSAGE_KEY_EmptyBatteryVibration,
-    MESSAGE_KEY_DisplayTeam,
-    MESSAGE_KEY_FavoriteTeam,
-    MESSAGE_KEY_BeatTeam,
-    MESSAGE_KEY_animationSensitivity,
-    MESSAGE_KEY_quietTimeBool,
-    MESSAGE_KEY_quietTimeStart,
-    MESSAGE_KEY_quietTimeEnd,
-    MESSAGE_KEY_animationsBatt,
-    MESSAGE_KEY_animationsCustom,
-    MESSAGE_KEY_healthQuiet,
-    MESSAGE_KEY_stepsBool,
-    MESSAGE_KEY_hrBool,
-    MESSAGE_KEY_stepsGoalBool,
-    MESSAGE_KEY_stepsGoal,
-    MESSAGE_KEY_hardcodeRivalBool, 
-    MESSAGE_KEY_donate,
-    MESSAGE_KEY_bagBool,
-    MESSAGE_KEY_animationDelay,
-    MESSAGE_KEY_countdownBool,
-    MESSAGE_KEY_countdownTime,
-    MESSAGE_KEY_countdownCustomDate,
-    MESSAGE_KEY_countdownCustomTime,
-    MESSAGE_KEY_countdownDisplay,
-    MESSAGE_KEY_api,
-    MESSAGE_KEY_api_quiet,
-    MESSAGE_KEY_scoreDisplayBool,
-    MESSAGE_KEY_scoreUpdate,
-    MESSAGE_KEY_scoreLocation,
-    MESSAGE_KEY_opponentBool,
-    MESSAGE_KEY_opponentSelect,
-    MESSAGE_KEY_customOpponent,
-    MESSAGE_KEY_weatherBool,
-    MESSAGE_KEY_weatherQuiet,
-    MESSAGE_KEY_weatherUnits,
-    MESSAGE_KEY_rankingBool,
-    MESSAGE_KEY_winBool,
-    MESSAGE_KEY_confBool,
-    MESSAGE_KEY_bowlBool,
-    MESSAGE_KEY_champBool,
-  };
+// Stored in Flash/ROM — 0 bytes of RAM usage
+static const uint32_t * const CLAY_KEYS[] = {
+  &MESSAGE_KEY_DisconnectVibration,   // 0
+  &MESSAGE_KEY_ReconnectVibration,    // 1
+  &MESSAGE_KEY_LowBatteryPercent,     // 2
+  &MESSAGE_KEY_LowBatteryVibration,   // 3
+  &MESSAGE_KEY_EmptyBatteryPercent,   // 4
+  &MESSAGE_KEY_EmptyBatteryVibration, // 5
+  &MESSAGE_KEY_DisplayTeam,           // 6
+  &MESSAGE_KEY_FavoriteTeam,          // 7
+  &MESSAGE_KEY_BeatTeam,              // 8
+  &MESSAGE_KEY_animationSensitivity,  // 9
+  &MESSAGE_KEY_quietTimeBool,         // 10
+  &MESSAGE_KEY_quietTimeStart,        // 11
+  &MESSAGE_KEY_quietTimeEnd,          // 12
+  &MESSAGE_KEY_animationsBatt,        // 13
+  &MESSAGE_KEY_animationsCustom,      // 14
+  &MESSAGE_KEY_healthQuiet,           // 15
+  &MESSAGE_KEY_stepsBool,             // 16
+  &MESSAGE_KEY_hrBool,                // 17
+  &MESSAGE_KEY_stepsGoalBool,         // 18
+  &MESSAGE_KEY_stepsGoal,             // 19
+  &MESSAGE_KEY_hardcodeRivalBool,     // 20
+  &MESSAGE_KEY_donate,                // 21
+  &MESSAGE_KEY_bagBool,               // 22
+  &MESSAGE_KEY_animationDelay,        // 23
+  &MESSAGE_KEY_countdownBool,         // 24
+  &MESSAGE_KEY_countdownTime,         // 25
+  &MESSAGE_KEY_countdownCustomDate,   // 26
+  &MESSAGE_KEY_countdownCustomTime,   // 27
+  &MESSAGE_KEY_countdownDisplay,      // 28
+  &MESSAGE_KEY_api,                   // 29
+  &MESSAGE_KEY_api_quiet,             // 30
+  &MESSAGE_KEY_scoreDisplayBool,      // 31
+  &MESSAGE_KEY_scoreUpdate,           // 32
+  &MESSAGE_KEY_scoreLocation,         // 33
+  &MESSAGE_KEY_opponentBool,          // 34
+  &MESSAGE_KEY_opponentSelect,        // 35
+  &MESSAGE_KEY_customOpponent,        // 36
+  &MESSAGE_KEY_weatherBool,           // 37
+  &MESSAGE_KEY_weatherQuiet,          // 38
+  &MESSAGE_KEY_weatherUnits,          // 39
+  &MESSAGE_KEY_rankingBool,           // 40
+  &MESSAGE_KEY_winBool,               // 41
+  &MESSAGE_KEY_confBool,              // 42
+  &MESSAGE_KEY_bowlBool,              // 43
+  &MESSAGE_KEY_champBool              // 44
+};
 
-  bool settings_changed = false;
-  
-  Tuple *key_tuple = dict_find(iterator, MESSAGE_KEY_api_key);
-  if (key_tuple){
-    snprintf(settings.api_key, sizeof(settings.api_key), "%s", key_tuple->value->cstring);
-    settings_changed = true;
+#define CLAY_KEYS_COUNT (sizeof(CLAY_KEYS) / sizeof(CLAY_KEYS[0]))
+
+static int prv_get_key_index(uint32_t key) {
+  for (uint32_t i = 0; i < CLAY_KEYS_COUNT; i++) {
+    if (key == *CLAY_KEYS[i]) return (int)i;
   }
-  
+  return -1;
+}
 
-  for (uint16_t x = 0; x < 45; x++) {
-    Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
-    
-    if (temp_t) {
-      int32_t value = 0;
+void configuration_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
+  bool settings_changed = false;
 
-      if (temp_t->type == TUPLE_CSTRING) {
-        // Manual, safer string-to-int conversion instead of strtol
-        const char *str = temp_t->value->cstring;
-        value = 0;
-        for (int i = 0; str[i] != '\0'; i++) {
-          if (str[i] >= '0' && str[i] <= '9') {
-            value = value * 10 + (str[i] - '0');
-          }
-        }
-      } else if (temp_t->type == TUPLE_INT) {
-        value = temp_t->value->int32;
-      }
-
-      // Directly assign to settings struct
-      switch (x) {
-        case 0: settings.DisconnectVibration = value; break;
-        case 1: settings.ReconnectVibration = value; break;
-        case 2: settings.LowBatteryPercent = value; break;
-        case 3: settings.LowBatteryVibration = value; break;
-        case 4: settings.EmptyBatteryPercent = value; break;
-        case 5: settings.EmptyBatteryVibration = value; break;
-        case 6: settings.DisplayTeam = value; break;
-        case 7: settings.FavoriteTeam = value; break;
-        case 8: settings.BeatTeam = value; break;
-        case 9: settings.animationSensitivity = value; break;
-        case 10: settings.quietTimeBool = value; break;
-        case 11: settings.quietTimeStart = value; break;
-        case 12: settings.quietTimeEnd = value; break;
-        case 13: settings.animationsBatt = value; break;
-        case 14: settings.animationsCustom = value; break;
-        case 15: settings.healthQuiet = value; break;
-        case 16: settings.stepsBool = value; break;
-        case 17: settings.hrBool = value; break;
-        case 18: settings.stepsGoalBool = value; break;
-        case 19: settings.stepsGoal = value; break;
-        case 20: settings.hardcodeRival = value; break;
-        case 21: settings.donate = value; break;
-        case 22: settings.bagBool = value; break;
-        case 23: settings.animationDelay = value; break;
-        case 24: settings.countdownBool = value; break;
-        case 25: settings.countdownTime = value; break;
-        case 26: settings.countdownCustomDate = value; break;
-        case 27: settings.countdownCustomTime = value; break;
-        case 28: settings.countdownDisplay = value; break;
-        case 29: settings.api = value; break;
-        case 30: settings.api_quiet = value; break;
-        case 31: settings.scoreDisplayBool = value; break;
-        case 32: settings.scoreUpdate = value; break;
-        case 33: settings.scoreLocation = value; break;
-        case 34: settings.opponentBool = value; break;
-        case 35: settings.opponentSelect = value; break;
-        case 36: settings.customOpponent = value; break;
-        case 37: settings.weatherBool = value; break;
-        case 38: settings.weatherQuiet = value; break;
-        case 39: settings.weatherUnits = value; break;
-        case 40: settings.rankingBool = value; break;
-        case 41: settings.winBool = value; break;
-        case 42: settings.confBool = value; break;
-        case 43: settings.bowlBool = value; break;
-        case 44: settings.champBool = value; break;
-      }
-
+  for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
+    // 1. API key string assignment
+    if (t->key == MESSAGE_KEY_api_key) {
+      snprintf(settings.api_key, sizeof(settings.api_key), "%s", t->value->cstring);
       settings_changed = true;
+      continue;
+    }
+
+    // 2. Map dynamic key pointer to an integer index (0-44)
+    int idx = prv_get_key_index(t->key);
+    if (idx < 0) continue;
+
+    int32_t value = (t->type == TUPLE_CSTRING) ? atoi(t->value->cstring) : t->value->int32;
+    settings_changed = true;
+
+    // 3. Switch using valid integer constant expressions
+    switch (idx) {
+      case 0:  settings.DisconnectVibration = value; break;
+      case 1:  settings.ReconnectVibration = value; break;
+      case 2:  settings.LowBatteryPercent = value; break;
+      case 3:  settings.LowBatteryVibration = value; break;
+      case 4:  settings.EmptyBatteryPercent = value; break;
+      case 5:  settings.EmptyBatteryVibration = value; break;
+      case 6:  settings.DisplayTeam = value; break;
+      case 7:  settings.FavoriteTeam = value; break;
+      case 8:  settings.BeatTeam = value; break;
+      case 9:  settings.animationSensitivity = value; break;
+      case 10: settings.quietTimeBool = value; break;
+      case 11: settings.quietTimeStart = value; break;
+      case 12: settings.quietTimeEnd = value; break;
+      case 13: settings.animationsBatt = value; break;
+      case 14: settings.animationsCustom = value; break;
+      case 15: settings.healthQuiet = value; break;
+      case 16: settings.stepsBool = value; break;
+      case 17: settings.hrBool = value; break;
+      case 18: settings.stepsGoalBool = value; break;
+      case 19: settings.stepsGoal = value; break;
+      case 20: settings.hardcodeRival = value; break;
+      case 21: settings.donate = value; break;
+      case 22: settings.bagBool = value; break;
+      case 23: settings.animationDelay = value; break;
+      case 24: settings.countdownBool = value; break;
+      case 25: settings.countdownTime = value; break;
+      case 26: settings.countdownCustomDate = value; break;
+      case 27: settings.countdownCustomTime = value; break;
+      case 28: settings.countdownDisplay = value; break;
+      case 29: settings.api = value; break;
+      case 30: settings.api_quiet = value; break;
+      case 31: settings.scoreDisplayBool = value; break;
+      case 32: settings.scoreUpdate = value; break;
+      case 33: settings.scoreLocation = value; break;
+      case 34: settings.opponentBool = value; break;
+      case 35: settings.opponentSelect = value; break;
+      case 36: settings.customOpponent = value; break;
+      case 37: settings.weatherBool = value; break;
+      case 38: settings.weatherQuiet = value; break;
+      case 39: settings.weatherUnits = value; break;
+      case 40: settings.rankingBool = value; break;
+      case 41: settings.winBool = value; break;
+      case 42: settings.confBool = value; break;
+      case 43: settings.bowlBool = value; break;
+      case 44: settings.champBool = value; break;
     }
   }
 
@@ -146,6 +141,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
   api_cfbd_callback(iterator, context);
