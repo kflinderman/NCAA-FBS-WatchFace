@@ -20,30 +20,28 @@ static const char* const WEATHER_ICONS[] = {
 };
 
 void weather_temp_update(){
-  if (settings.weatherBool) {
-    int tempTemperature = 0;
-    char unit = 'F';
-    
-    if (settings.weatherUnits){
-      tempTemperature = temperatureValue;
-      unit = 'C';
-    }
-    else{
-      tempTemperature = ((temperatureValue * 9) / 5) + 32;
-      unit = 'F';
-    }
-    
-    static char s_temp_buffer[8];
-    snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d%c", tempTemperature, unit);
-    text_layer_set_text(s_text_layers[TEXT_LAYER_WEATHER], s_temp_buffer);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), !settings.weatherBool);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), !settings.weatherBool);
+  
+  if (!settings.weatherBool) {
+    return;
+  }
+  
+  uint8_t tempTemperature = temperatureValue;
+  char unit = 'F';
 
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), false);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), false);
+  if (settings.weatherUnits){
+    unit = 'C';
   }
-  else {
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), true);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), true);
+  else{
+    tempTemperature = ((temperatureValue * 9) / 5) + 32;
+    unit = 'F';
   }
+
+  static char s_temp_buffer[5];
+  snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d%c", tempTemperature, unit);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_WEATHER], s_temp_buffer);
+  
 }
 
 void weather_conditions_update() {

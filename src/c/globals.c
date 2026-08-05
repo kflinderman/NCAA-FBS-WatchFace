@@ -39,12 +39,12 @@ int32_t current_time_integer;
 int16_t temperatureValue = 0;
 int16_t conditionValue = 0;
 
-char scoreHomeTeam[32] = "";
-char scoreAwayTeam[32] = "";
-int16_t scoreHomePoints = 0;
-int16_t scoreAwayPoints = 0;
-bool scoreCompleted = false;
-bool scoreValid = false;
+//char scoreHomeTeam[32] = "";
+//char scoreAwayTeam[32] = "";
+//int16_t scoreHomePoints = 0;
+//int16_t scoreAwayPoints = 0;
+//bool scoreCompleted = false;
+//bool scoreValid = false;
 
 uint16_t beat_spot;
 uint16_t beat_primary;
@@ -249,60 +249,49 @@ void globals_prv_update_display() {
     }
   }
 
-  if (settings.DisplayTeam > 1) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - BEAT");
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color});
-    s_gbitmap_layers[GBITMAP_LAYER_LOGO] = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    display_setupBag((GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+  // 1. Resolve primary (displayed) and secondary team indices
+  uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
 
-    #if defined(PBL_HEALTH)
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    
-    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    #endif
-    
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    
-    if (s_layers[LAYER_BEAT_TEAM]) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
-      if (beat_data) {
-        beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color};
-        layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
-      }
-    }
-  } 
-  else {
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - Favorite");
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
-    s_gbitmap_layers[GBITMAP_LAYER_LOGO] = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    display_setupBag((GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    #if defined(PBL_HEALTH)
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    #endif
-    
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    if (s_layers[LAYER_BEAT_TEAM]) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
-      if (beat_data) {
-        beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
-        layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
-      }
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
+
+  // 2. Main Window Background
+  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
+
+  // 3. Update Logos
+  if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
+  }
+  if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
+  }
+
+  s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
+  s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
+
+  // 4. Setup Accent / Icon Colors
+  GColor primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
+  display_setupBag(primary_icon_color);
+
+  #if defined(PBL_HEALTH)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], primary_icon_color);
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], primary_icon_color);
+
+  drawing_multiline_set_all_colors(hr_icon, primary_icon_color);
+  drawing_multiline_set_all_colors(step_ladder, primary_icon_color);
+  #endif
+
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], primary_icon_color);
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], primary_icon_color);
+
+  // 5. Update Secondary Badge Fill
+  if (s_layers[LAYER_BEAT_TEAM]) {
+    RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
+    if (beat_data) {
+      beat_data->fill_color = (GColor){.argb = TEAMS[secondary_idx].color};
+      layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
     }
   }
 

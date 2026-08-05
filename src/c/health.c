@@ -5,97 +5,86 @@
 
 
 #if defined(PBL_HEALTH)
-void health_heartRateHandler() {
-  if (settings.hrBool) {
-    if (!settings.healthQuiet || !timekeeping_is_quiet_time()) {
-      static char s_hr_buffer[12];
-      HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-      if (hrvalue > 0) {
-        snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
-        text_layer_set_text(s_text_layers[TEXT_LAYER_HR], s_hr_buffer);
-
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), false);
-        layer_set_hidden(hr_icon, false);
-        noHR = false;
-      } else {
-        noHR = true;
-      }
-    }
-    else {
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), false);
-      layer_set_hidden(hr_icon, false);
-    }
-  }
-
-  if (!settings.hrBool || noHR) {
+void health_heartRateHandler(void) {
+  // Early Return: If HR is disabled in settings, hide elements and exit immediately
+  if (!settings.hrBool) {
     layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), true);
     layer_set_hidden(hr_icon, true);
+    return;
   }
+
+  // Poll Heart Rate Sensor
+  if (!settings.healthQuiet && timekeeping_is_quiet_time()) {
+    HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
+    
+    if (hrvalue > 0) {
+      static char s_hr_buffer[4];
+      snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_HR], s_hr_buffer);
+      noHR = false;
+    } else {
+      noHR = true;
+    }
+  }
+
+  // Set Final Visibility
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), noHR);
+  layer_set_hidden(hr_icon, noHR);
 }
 
 void health_stepHandler(){
-  if (!settings.healthQuiet || !timekeeping_is_quiet_time()){
-    HealthValue stepvalue = 0;
-    if(settings.stepsBool || settings.stepsGoalBool){
-      stepvalue = health_service_sum_today(HealthMetricStepCount);
-      //stepvalue = 4000;
-    }
-
-    if (settings.stepsBool) {
-      static char s_step_buffer[8];
-      snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_STEP], s_step_buffer);
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), false);
-    }
-    else {
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), true);
-    }
-
-    if (settings.stepsGoalBool) {
-      Layer *window_layer = window_get_root_layer(s_main_window);
-      GRect bounds = layer_get_bounds(window_layer);
-      float stepDiff = (float)stepvalue / settings.stepsGoal;
-      #if PBL_DISPLAY_HEIGHT > 180
-      uint16_t top_y = stepy - 14;
-      #else
-      uint16_t top_y = stepy - 10;
-      #endif
-      uint16_t bottom_y = (bounds.size.h * time_h) - 25;
-      if (stepDiff >= 1){
-        stepDiff = 1;
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), false);
-      }
-      else{
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
-      }
-
-      GRect frame = layer_get_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]));
-      frame.origin.y = bottom_y - (bottom_y - top_y) * stepDiff;
-
-      layer_set_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), frame);
-
-      layer_set_hidden(step_ladder, false);
-      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), false);
-    }
-    else {
-      layer_set_hidden(step_ladder, true);
-      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), true);
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
-    }
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), !settings.stepsBool);
+  layer_set_hidden(step_ladder, !settings.stepsGoalBool);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), !settings.stepsGoalBool);
+  // This one is this way because we only want to hide it without the setting in case it's not been met yet
+  if (!settings.stepsGoalBool) {
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
   }
-  else{
-    if (settings.stepsBool) layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), false);
-    else layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), true);
-    
-    if (settings.stepsGoalBool) {
-      layer_set_hidden(step_ladder, false);
-      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), false);
+
+  // Early Exit during Quiet Time or if features are toggled off
+  if ((settings.healthQuiet && timekeeping_is_quiet_time()) || (!settings.stepsBool && !settings.stepsGoalBool)) {
+    return;
+  }
+
+  // Fetch Step Metrics
+  HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
+  //HealthValue stepvalue = 4000;
+
+  // Update Step Text
+  if (settings.stepsBool) {
+    static char s_step_buffer[8];
+    snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_STEP], s_step_buffer);
+  }
+
+  // Update Goal Progress & Football Position
+  if (settings.stepsGoalBool) {
+    // Calculate progress (safely handles zero to avoid div-by-zero crashes)
+    float stepDiff = (settings.stepsGoal > 0) ? ((float)stepvalue / settings.stepsGoal) : 0.0f;
+
+    // Check goal status and clamp at 100%
+    //bool goal_reached = (stepDiff >= 1.0f);
+    if (stepDiff > 1.0f) {
+      stepDiff = 1.0f;
     }
-    else {
-      layer_set_hidden(step_ladder, true);
-      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), true);
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
-    }
+
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), !(stepDiff >= 1.0f));
+
+    // Calculate Y Position
+    Layer *window_layer = window_get_root_layer(s_main_window);
+    GRect bounds = layer_get_bounds(window_layer);
+
+    #if PBL_DISPLAY_HEIGHT > 180
+    uint16_t top_y = stepy - 14;
+    #else
+    uint16_t top_y = stepy - 10;
+    #endif
+    uint16_t bottom_y = (bounds.size.h * time_h) - 25;
+
+    // Reposition Football
+    GRect frame = layer_get_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]));
+    frame.origin.y = bottom_y - (uint16_t)((bottom_y - top_y) * stepDiff);
+    layer_set_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), frame);
   }
 }
 

@@ -29,68 +29,48 @@ void animation_hide_text(bool count, bool score, bool time){
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time);
 }
 
-void animation_beat_team_layer() {
-  GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
-  GRect beat_from, beat_to;
-  GRect rect_from, rect_to;
+void animation_beat_team_layer(void) {
   static bool returning = false;
 
-  if (!returning) {
-    beat_from = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
-    beat_to   = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
 
-    rect_from = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    rect_to   = GRect(beat_spot, -10 - beat_primary, 44, 40);
-    
-    if (settings.countdownBool){
-      if ((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool){
-        if (settings.countdownDisplay != 2){
-          animation_hide_text(false, true, true);
-        }
-        else{
-          animation_hide_text(true, true, false);
-        }
-      }
-    }
+  // Define Keyframe Bounds (Calculated once)
+  GRect beat_on_screen  = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  GRect beat_off_screen = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
 
-    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
-        if (settings.scoreLocation != 2){
-          animation_hide_text(true, false, true);
-        }
-      else{
-          animation_hide_text(true, true, false);
-      }
-    }
-    
-  } else {
-    beat_from = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
-    beat_to   = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  GRect rect_pos_start = GRect(beat_spot, -40 + beat_primary, 44, 40);
+  GRect rect_pos_end   = GRect(beat_spot, -10 - beat_primary, 44, 40);
 
-    rect_from = GRect(beat_spot, -10 - beat_primary, 44, 40);
-    rect_to   = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    
-    if (settings.countdownBool){
-      if ((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool){
-        if (settings.countdownDisplay != 1){
-          animation_hide_text(false, true, true);
-        }
-        else{
-          animation_hide_text(true, true, false);
-        }
-      }
-    }
+  // Assign Animation Direction based on 'returning' state
+  GRect beat_from = returning ? beat_on_screen  : beat_off_screen;
+  GRect beat_to   = returning ? beat_off_screen : beat_on_screen;
 
-    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
-        if (settings.scoreLocation != 1){
-          animation_hide_text(true, false, true);
-        }
-      else{
-          animation_hide_text(true, true, false);
-      }
+  GRect rect_from = returning ? rect_pos_end   : rect_pos_start;
+  GRect rect_to   = returning ? rect_pos_start : rect_pos_end;
+
+  // Unified Text Visibility Logic
+  uint8_t target_mode = returning ? 1 : 2;
+
+  bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
+  bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
+
+  if (show_countdown) {
+    if (settings.countdownDisplay != target_mode) {
+      animation_hide_text(false, true, true);
+    } else {
+      animation_hide_text(true, true, false);
     }
   }
 
-  // Animate beat_team_layer
+  if (show_score) {
+    if (settings.scoreLocation != target_mode) {
+      animation_hide_text(true, false, true);
+    } else {
+      animation_hide_text(true, true, false);
+    }
+  }
+
+  // Schedule Layer Animations
   PropertyAnimation *anim_beat = property_animation_create_layer_frame(s_layers[LAYER_BEAT_TEAM], &beat_from, &beat_to);
   animation_set_duration((Animation*)anim_beat, 1000);
   animation_set_handlers((Animation*)anim_beat, (AnimationHandlers){
@@ -98,11 +78,11 @@ void animation_beat_team_layer() {
   }, s_layers[LAYER_BEAT_TEAM]);
   animation_schedule((Animation*)anim_beat);
 
-  // Animate rect_beat_layer
   PropertyAnimation *anim_rect = property_animation_create_layer_frame(s_layers[LAYER_BEAT_RECT], &rect_from, &rect_to);
   animation_set_duration((Animation*)anim_rect, 1000);
   animation_schedule((Animation*)anim_rect);
 
+  // Toggle State
   returning = !returning;
 }
 

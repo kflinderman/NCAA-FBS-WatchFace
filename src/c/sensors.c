@@ -86,30 +86,44 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
 void sensor_battery_handler(BatteryChargeState state) {
   s_battery_state = state;
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
+  GBitmap *target_gbitmap = NULL;
 
-  // optional: vibrate on low battery threshold or update UI
-  if (!state.is_charging && state.charge_percent <= settings.LowBatteryPercent && state.charge_percent > settings.EmptyBatteryPercent) {
-    // warn briefly
-    if (s_batt_history == 0) {
+  // Charging State
+  if (state.is_charging) {
+    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_CRG];
+    s_batt_history = 0;
+  } 
+  // Empty Battery State
+  else if (state.charge_percent <= settings.EmptyBatteryPercent) {
+    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_EMPTY];
+    
+    // Only vibrate on new state entry (0 -> 2 or 1 -> 2)
+    if (s_batt_history < 2) {
+      sensor_trigger_vibration(settings.EmptyBatteryVibration);
+      s_batt_history = 2;
+    }
+  } 
+  // Low Battery State
+  else if (state.charge_percent <= settings.LowBatteryPercent) {
+    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW];
+    
+    // Only vibrate on new state entry (0 -> 1)
+    if (s_batt_history < 1) {
       sensor_trigger_vibration(settings.LowBatteryVibration);
       s_batt_history = 1;
     }
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW]);
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
-  } else if (!state.is_charging && state.charge_percent <= settings.EmptyBatteryPercent) {
-    if (s_batt_history == 1) {
-      sensor_trigger_vibration(settings.EmptyBatteryVibration);
-      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], s_gbitmap_layers[GBITMAP_LAYER_BATT_EMPTY]);
-      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
-      s_batt_history = 2;
-    }
-  } else if (state.is_charging) {
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], s_gbitmap_layers[GBITMAP_LAYER_BATT_CRG]);
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
+  } 
+  // Normal Battery State
+  else {
     s_batt_history = 0;
+  }
+
+  // Single Pass UI Update
+  if (target_gbitmap != NULL) {
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], target_gbitmap);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
   } else {
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), true);
-    s_batt_history = 0;
   }
 }
 

@@ -18,8 +18,8 @@ typedef struct ClaySettings {
   uint8_t EmptyBatteryPercent;
   uint8_t EmptyBatteryVibration;
   uint8_t DisplayTeam;
-  uint16_t FavoriteTeam;
-  uint16_t BeatTeam;
+  uint8_t FavoriteTeam;
+  uint8_t BeatTeam;
   uint16_t animationSensitivity;
   bool quietTimeBool;
   uint16_t quietTimeStart;
@@ -175,12 +175,12 @@ extern int16_t conditionValue;
 	* data refreshed from the API, unlike
 	* ClaySettings which is user configuration)
  *******************************************/
-extern char scoreHomeTeam[32];
-extern char scoreAwayTeam[32];
-extern int16_t scoreHomePoints;
-extern int16_t scoreAwayPoints;
-extern bool scoreCompleted;
-extern bool scoreValid; // false until the first successful response arrives
+//extern char scoreHomeTeam[32];
+//extern char scoreAwayTeam[32];
+//extern int16_t scoreHomePoints;
+//extern int16_t scoreAwayPoints;
+//extern bool scoreCompleted;
+//extern bool scoreValid; // false until the first successful response arrives
 
 extern uint16_t beat_spot;
 extern uint16_t beat_primary;
