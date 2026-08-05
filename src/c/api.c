@@ -9,11 +9,8 @@ if postseason.games = 1 && postseason.wins = 1 (need to figure out other playoff
 Bowl win
 if postseason.games > 1 && postseason.loses != 1 (need to figure out other playoff teams not getting this)
 Champion
-
-Full sync takes 8s
 */
 
-// src/c/api_cfbd.c
 #include <pebble.h>
 #include "api.h"
 #include "globals.h"
@@ -232,15 +229,15 @@ static void build_request_full_sync(DictionaryIterator *iter) {
 
 uint8_t api_update_status_indicator() {
   if (api_calls_percent_used() >= 99) {
-    bitmap_layer_set_bitmap(s_api_layer, s_api_empty_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY]);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     return 0;
   } else if (api_calls_nearing_limit()) {
-    bitmap_layer_set_bitmap(s_api_layer, s_api_low_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), false);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API_LOW]);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     return 1;
   } else {
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
     return 2;
   }
 }
@@ -248,7 +245,7 @@ uint8_t api_update_status_indicator() {
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
     return;
   }
   else if (api_update_status_indicator() == 0){
@@ -268,7 +265,7 @@ static void build_request_light_sync(DictionaryIterator *iter) {
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
-    layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
     return;
   }
   else if (api_update_status_indicator() == 0){
@@ -474,24 +471,24 @@ void api_score_display() {
     snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);
   }
   
-    text_layer_set_text(s_home_layer, s_temp_buffer1);
-    text_layer_set_text(s_away_layer, s_temp_buffer2);
-    text_layer_set_text(s_score_layer, s_temp_buffer3);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_temp_buffer1);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_temp_buffer2);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_SCORE], s_temp_buffer3);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){
   // Create Battery GBitmap from resource
-  s_api_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
-  s_api_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+  s_gbitmap_layers[GBITMAP_LAYER_API_LOW] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
+  s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
   
   #if PBL_DISPLAY_HEIGHT > 180
     //168
-    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_api_low_bitmap, window_layer);
+    s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
   #else
-    s_api_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 10), bounds.size.h * vert_2 + 3, 4, 7, s_api_low_bitmap, window_layer);
+    s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 10), bounds.size.h * vert_2 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
     //+ 14
   #endif
   
     
-  layer_set_hidden(bitmap_layer_get_layer(s_api_layer), true);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
 }

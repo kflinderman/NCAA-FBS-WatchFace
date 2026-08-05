@@ -12,9 +12,9 @@ void health_heartRateHandler() {
       HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
       if (hrvalue > 0) {
         snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
-        text_layer_set_text(s_hr_layer, s_hr_buffer);
+        text_layer_set_text(s_text_layers[TEXT_LAYER_HR], s_hr_buffer);
 
-        layer_set_hidden(text_layer_get_layer(s_hr_layer), false);
+        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), false);
         layer_set_hidden(hr_icon, false);
         noHR = false;
       } else {
@@ -22,13 +22,13 @@ void health_heartRateHandler() {
       }
     }
     else {
-      layer_set_hidden(text_layer_get_layer(s_hr_layer), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), false);
       layer_set_hidden(hr_icon, false);
     }
   }
 
   if (!settings.hrBool || noHR) {
-    layer_set_hidden(text_layer_get_layer(s_hr_layer), true);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), true);
     layer_set_hidden(hr_icon, true);
   }
 }
@@ -44,11 +44,11 @@ void health_stepHandler(){
     if (settings.stepsBool) {
       static char s_step_buffer[8];
       snprintf(s_step_buffer, sizeof(s_step_buffer), "%d", (int)stepvalue);
-      text_layer_set_text(s_step_layer, s_step_buffer);
-      layer_set_hidden(text_layer_get_layer(s_step_layer), false);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_STEP], s_step_buffer);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), false);
     }
     else {
-      layer_set_hidden(text_layer_get_layer(s_step_layer), true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), true);
     }
 
     if (settings.stepsGoalBool) {
@@ -63,38 +63,38 @@ void health_stepHandler(){
       uint16_t bottom_y = (bounds.size.h * time_h) - 25;
       if (stepDiff >= 1){
         stepDiff = 1;
-        layer_set_hidden(text_layer_get_layer(s_td_layer), false);
+        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), false);
       }
       else{
-        layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
       }
 
-      GRect frame = layer_get_frame(bitmap_layer_get_layer(s_football_layer));
+      GRect frame = layer_get_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]));
       frame.origin.y = bottom_y - (bottom_y - top_y) * stepDiff;
 
-      layer_set_frame(bitmap_layer_get_layer(s_football_layer), frame);
+      layer_set_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), frame);
 
       layer_set_hidden(step_ladder, false);
-      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), false);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), false);
     }
     else {
       layer_set_hidden(step_ladder, true);
-      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), true);
-      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
     }
   }
   else{
-    if (settings.stepsBool) layer_set_hidden(text_layer_get_layer(s_step_layer), false);
-    else layer_set_hidden(text_layer_get_layer(s_step_layer), true);
+    if (settings.stepsBool) layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), false);
+    else layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), true);
     
     if (settings.stepsGoalBool) {
       layer_set_hidden(step_ladder, false);
-      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), false);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), false);
     }
     else {
       layer_set_hidden(step_ladder, true);
-      layer_set_hidden(bitmap_layer_get_layer(s_football_layer), true);
-      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
     }
   }
 }
@@ -106,9 +106,9 @@ void health_handler() {
 
 void health_draw(Layer *window_layer, GRect bounds){
   #if PBL_DISPLAY_HEIGHT > 180
-    s_hr_layer = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
   #else
-    s_hr_layer = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
   #endif
   
   hr_icon = drawing_multiline_layer_create(bounds, window_layer);
@@ -119,9 +119,9 @@ void health_draw(Layer *window_layer, GRect bounds){
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
 
   #if PBL_DISPLAY_HEIGHT > 180
-  s_step_layer = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
   #else
-  s_step_layer = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
   #endif
   uint16_t gaps = ((bounds.size.h * time_h) - stepy - 25) / 3;
   uint16_t gaps2 = gaps / 5;
@@ -138,23 +138,23 @@ void health_draw(Layer *window_layer, GRect bounds){
     }
   }
 
-  s_football_bitmap = gbitmap_create_with_resource(RESOURCE_ID_football);
+  s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL] = gbitmap_create_with_resource(RESOURCE_ID_football);
   #if PBL_DISPLAY_HEIGHT > 180
-    s_football_layer = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 6, 12, 12, s_football_bitmap, window_layer);
+    s_bitmap_layers[BITMAP_LAYER_FOOTBALL] = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 6, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL], window_layer);
     #ifdef PBL_RECT
-      s_td_layer = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #else
-      s_td_layer = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #endif
-      layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
   #else
-    s_football_layer = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 4, 8, 8, s_football_bitmap, window_layer);
+    s_bitmap_layers[BITMAP_LAYER_FOOTBALL] = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 4, 8, 8, s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL], window_layer);
     #ifdef PBL_RECT
-      s_td_layer = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #else
-      s_td_layer = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #endif
-    layer_set_hidden(text_layer_get_layer(s_td_layer), true);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
   #endif
 }
 #endif

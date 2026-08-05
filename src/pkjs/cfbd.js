@@ -216,32 +216,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /games for all weeks of a year (or filter by team)
-   * For batch processing; kept separate so it can be called independently
-   */
-  function fetchAllGamesForYear(year, apiKey, callback) {
-    var url = constants.API_BASE + '/games?year=' + year + '&classification=fbs';
-    
-    xhrAuth(url, apiKey, function(data) {
-      if (!data || !Array.isArray(data)) {
-        console.log('No games for year ' + year);
-        callback([]);
-        return;
-      }
-      console.log('Fetched ' + data.length + ' total games for ' + year);
-      if (data && Array.isArray(data)) {
-        cache.games = data;
-      } else {
-        console.log('Warning: games data invalid, cache not updated');
-      }
-      callback(data);
-    }, function(status) {
-      console.log('fetchAllGamesForYear failed: ' + status);
-      callback([]);
-    });
-  }
-
   function fetchRecords(year, apiKey, callback) {
     var url = constants.API_BASE + '/records?year=' + year;
 

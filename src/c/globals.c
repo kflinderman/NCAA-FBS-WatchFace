@@ -13,23 +13,18 @@
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer, *s_home_layer, *s_away_layer, *s_day_layer, *s_hour_layer, *s_countdown_layer, *s_score_layer;
+TextLayer* s_text_layers[NUM_TEXT_LAYERS];
 
 #if defined(PBL_HEALTH)
-TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
-GBitmap *s_football_bitmap;
-BitmapLayer *s_football_layer;
 Layer *hr_icon, *step_ladder;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap, *s_api_low_bitmap, *s_api_empty_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb, *s_api_layer;
-Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
-#ifdef PBL_RECT
-  Layer *vertical_line;
-#endif
+GBitmap* s_gbitmap_layers[NUM_GBITMAP_LAYERS];
+BitmapLayer* s_bitmap_layers[NUM_BITMAP_LAYERS];
+Layer* s_layers[NUM_GENERIC_LAYERS];
 
+//GFont s_gfont[NUM_GFONT];
 GFont s_font, s_wIcon;
 
 int16_t s_prev_y = 0;
@@ -214,19 +209,19 @@ void globals_prv_update_display() {
 
   // Update beat team layer position
   APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
-  if (rect_beat_layer) {
+  if (s_layers[LAYER_BEAT_RECT]) {
     GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    layer_set_frame(rect_beat_layer, new_frame);
-    layer_mark_dirty(rect_beat_layer);
+    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
+    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
   }
 
   // Update favorite team logo
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Favorite Team");
-  if (s_logo_bitmap) {
-    gbitmap_destroy(s_logo_bitmap);
+  if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
-  if (s_beat_team_bitmap) {
-    gbitmap_destroy(s_beat_team_bitmap);
+  if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
   
   if (settings.hardcodeRival == 1){
@@ -257,65 +252,65 @@ void globals_prv_update_display() {
   if (settings.DisplayTeam > 1) {
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - BEAT");
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color});
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    s_gbitmap_layers[GBITMAP_LAYER_LOGO] = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
     display_setupBag((GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
 
     #if defined(PBL_HEALTH)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
-    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     
     drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     #endif
     
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
-    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
     
-    if (beat_team_layer) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+    if (s_layers[LAYER_BEAT_TEAM]) {
+      RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
       if (beat_data) {
         beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color};
-        layer_mark_dirty(beat_team_layer);
+        layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
       }
     }
   } 
   else {
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - Favorite");
     window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
+    s_gbitmap_layers[GBITMAP_LAYER_LOGO] = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
+    s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
     display_setupBag((GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
     #if defined(PBL_HEALTH)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
-    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
     drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     #endif
     
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
-    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
     
-    if (beat_team_layer) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
+    if (s_layers[LAYER_BEAT_TEAM]) {
+      RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
       if (beat_data) {
         beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
-        layer_mark_dirty(beat_team_layer);
+        layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
       }
     }
   }
 
-  if (s_logo_layer) {
-    bitmap_layer_set_bitmap(s_logo_layer, s_logo_bitmap);
+  if (s_bitmap_layers[BITMAP_LAYER_LOGO]) {
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_LOGO], s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
-  if (s_beat_team_layer) {
-    bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
+  if (s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]) {
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
   
   bool timeTrue = true;

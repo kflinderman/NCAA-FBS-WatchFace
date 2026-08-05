@@ -20,13 +20,13 @@ static void animation_beat_team_stopped(Animation *animation, bool finished, voi
 }
 
 void animation_hide_text(bool count, bool score, bool time){
-  layer_set_hidden(text_layer_get_layer(s_day_layer), count);
-  layer_set_hidden(text_layer_get_layer(s_hour_layer), count);
-  layer_set_hidden(text_layer_get_layer(s_countdown_layer), count);
-  layer_set_hidden(text_layer_get_layer(s_home_layer), score);
-  layer_set_hidden(text_layer_get_layer(s_away_layer), score);
-  layer_set_hidden(text_layer_get_layer(s_score_layer), score);
-  layer_set_hidden(text_layer_get_layer(s_time_layer), time);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_DAY]), count);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOUR]), count);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_COUNTDOWN]), count);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), score);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), score);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_SCORE]), score);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time);
 }
 
 void animation_beat_team_layer() {
@@ -91,15 +91,15 @@ void animation_beat_team_layer() {
   }
 
   // Animate beat_team_layer
-  PropertyAnimation *anim_beat = property_animation_create_layer_frame(beat_team_layer, &beat_from, &beat_to);
+  PropertyAnimation *anim_beat = property_animation_create_layer_frame(s_layers[LAYER_BEAT_TEAM], &beat_from, &beat_to);
   animation_set_duration((Animation*)anim_beat, 1000);
   animation_set_handlers((Animation*)anim_beat, (AnimationHandlers){
     .stopped = animation_beat_team_stopped
-  }, beat_team_layer);
+  }, s_layers[LAYER_BEAT_TEAM]);
   animation_schedule((Animation*)anim_beat);
 
   // Animate rect_beat_layer
-  PropertyAnimation *anim_rect = property_animation_create_layer_frame(rect_beat_layer, &rect_from, &rect_to);
+  PropertyAnimation *anim_rect = property_animation_create_layer_frame(s_layers[LAYER_BEAT_RECT], &rect_from, &rect_to);
   animation_set_duration((Animation*)anim_rect, 1000);
   animation_schedule((Animation*)anim_rect);
 
@@ -120,25 +120,25 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_time_layer), time_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_date_layer), date_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, rect_layer, rect_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_logo_layer), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_beat_team_layer), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bt_layer), vert_2, 3, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_batt_layer), vert_2, 3, 1);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), date_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], rect_h, 0, 1);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 0.025, 0, 0.5);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 0.025, 0, 0.5);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), vert_2, 3, 1);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), vert_2, 3, 1);
 
 #ifdef PBL_RECT
-  LinePoints *points = (LinePoints *)layer_get_data(vertical_line);
+  LinePoints *points = (LinePoints *)layer_get_data(s_layers[LAYER_VERT]);
   points->y1 = unBounds.size.h * vert_1 - bound_diff;
   points->y2 = unBounds.size.h * vert_2 - bound_diff;
-  layer_mark_dirty(vertical_line);
+  layer_mark_dirty(s_layers[LAYER_VERT]);
 #endif
 
-  LinePoints *points2 = (LinePoints *)layer_get_data(horizontal_line);
+  LinePoints *points2 = (LinePoints *)layer_get_data(s_layers[LAYER_HOR]);
   points2->y1 = unBounds.size.h * vert_2 - bound_diff;
   points2->y2 = unBounds.size.h * vert_2 - bound_diff;
-  layer_mark_dirty(horizontal_line);
+  layer_mark_dirty(s_layers[LAYER_HOR]);
 }
 
 void animation_subscribe_unobstructed_area(void) {

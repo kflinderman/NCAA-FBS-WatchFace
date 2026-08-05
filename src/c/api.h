@@ -1,4 +1,3 @@
-// src/c/api_cfbd.h
 #pragma once
 #include <pebble.h>
 
