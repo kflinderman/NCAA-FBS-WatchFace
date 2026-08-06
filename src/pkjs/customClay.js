@@ -37,9 +37,22 @@ module.exports = function (minified) {
         { key: 'FavoriteTeam' },
         {
             key: 'hardcodeRivalBool',
-            condition: isFalse, // display below on false
+            condition: eq(0), // display below on 0
             children: [
                 { key: 'BeatTeam' }
+            ]
+        },
+        {
+            key: 'hardcodeRivalBool',
+            condition: eq(2), // display below on 2
+            children: [
+              {
+                key: 'opponentSelect',
+                condition: eq(2), // display below on 2
+                children: [
+                  { key: 'customOpponent' }
+                ]
+              }
             ]
         },
         { key: 'DisconnectVibration' },
@@ -88,12 +101,14 @@ module.exports = function (minified) {
                     key: 'countdownTime',
                     condition: eq(1), // display below on 1
                     children: [
-                        { key: 'countdownCustom' }
+                        { key: 'countdownCustomDate' },
+                        { key: 'countdownCustomTime' }
                     ]
                 },
                 { key: 'countdownDisplay' }
             ]
         },
+        { key: 'healthQuiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
         { key: 'hrBool' },
         { key: 'stepsBool' },
         {
@@ -116,20 +131,6 @@ module.exports = function (minified) {
                     children: [
                         { key: 'scoreUpdate' },
                         { key: 'scoreLocation' }
-                    ]
-                },
-                { key: 'api_opponent' },
-                {
-                    key: 'opponentBool',
-                    condition: isTrue, // display below on true
-                    children: [
-                        {
-                            key: 'opponentSelect',
-                            condition: eq(2), // display below on 2
-                            children: [
-                                { key: 'customOpponent' }
-                            ]
-                        }
                     ]
                 },
                 { key: 'api_extras' },
