@@ -266,10 +266,24 @@ static void build_request_light_sync(DictionaryIterator *iter) {
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
+// In-flight guard: globals_prv_update_display() can call
+// api_request_cfbd_light_sync() from more than one place in the same
+// invocation (countdown block + score block), and update_display() itself
+// gets invoked from several other call sites (settings changed, sync
+// complete). Without this flag, all of those can independently decide
+// "no valid data yet" and each fire their own REQUEST_CFBD_LIGHT_SYNC
+// before the first one's response has come back, causing JS to run two
+// (or more) concurrent syncLightCFBD() fetches racing each other.
+static bool cfbd_light_sync_pending = false;
+
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+    return;
+  }
+  if (cfbd_light_sync_pending) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync skipped: already in flight");
     return;
   }
   else if (api_update_status_indicator() == 0){
@@ -285,6 +299,7 @@ void api_request_cfbd_light_sync(void) {
   //}
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
+  cfbd_light_sync_pending = true;
   outbox_queue_send(build_request_light_sync);
 }
 
@@ -307,6 +322,10 @@ bool api_should_full_sync(void) {
 }
 
 bool api_should_light_sync(void) {
+  if (cfbd_light_sync_pending) {
+    return false;
+  }
+
   time_t now = time(NULL);
 
   // Light sync (games only) currently weekly, same as before the
@@ -349,6 +368,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)API_DATA_COUNT);
+    cfbd_light_sync_pending = false;
 
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();

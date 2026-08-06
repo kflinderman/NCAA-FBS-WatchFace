@@ -1403,7 +1403,7 @@
                     "type": "bitmap"
                 },
                 {
-                    "characterRegex": "\\\\uF00D\\\\uF002\\\\uF003\\\\uF00B\\\\uF0B2\\\\uF008\\\\uF006\\\\uF00A\\\\uF009\\\\uF065\\\\uF010\\\\uF005\\\\uF07B",
+                    "characterRegex": "[\\\\uF00D\\\\uF002\\\\uF003\\\\uF00B\\\\uF0B2\\\\uF008\\\\uF006\\\\uF00A\\\\uF009\\\\uF065\\\\uF010\\\\uF005\\\\uF07B]",
                     "file": "fonts/Weather Icons.ttf",
                     "name": "FONT_WEATHER_ICONS_18",
                     "targetPlatforms": [
@@ -1413,7 +1413,7 @@
                     "type": "font"
                 },
                 {
-                    "characterRegex": "\\\\uF00D\\\\uF002\\\\uF003\\\\uF00B\\\\uF0B2\\\\uF008\\\\uF006\\\\uF00A\\\\uF009\\\\uF065\\\\uF010\\\\uF005\\\\uF07B",
+                    "characterRegex": "[\\\\uF00D\\\\uF002\\\\uF003\\\\uF00B\\\\uF0B2\\\\uF008\\\\uF006\\\\uF00A\\\\uF009\\\\uF065\\\\uF010\\\\uF005\\\\uF07B]",
                     "file": "fonts/Weather Icons.ttf",
                     "name": "FONT_WEATHER_ICONS_12",
                     "targetPlatforms": [
@@ -1454,7 +1454,7 @@
         ],
         "uuid": "0d8ecaa4-3bc4-440b-b5a0-b4a67363e2b3",
         "watchapp": {
-            "watchface": false
+            "watchface": true
         }
     },
     "version": "5.0.0"

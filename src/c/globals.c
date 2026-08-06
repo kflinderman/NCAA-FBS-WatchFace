@@ -307,7 +307,12 @@ void globals_prv_update_display() {
   bool timeTrue = true;
   if (settings.countdownBool){
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
-    if (settings.api && !settings.cfbd.api_data_valid) {
+    // Shares api_should_light_sync() with the score block below (rather
+    // than its own separate !api_data_valid check) plus the in-flight
+    // guard in api_request_cfbd_light_sync() - previously these two call
+    // sites could both independently see "no valid data yet" on the same
+    // update_display() pass and fire two REQUEST_CFBD_LIGHT_SYNC in a row.
+    if (api_should_light_sync()) {
       api_request_cfbd_light_sync();
     }
     after_time = timekeeping_countdown();
