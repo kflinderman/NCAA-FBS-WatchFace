@@ -92,13 +92,14 @@
             "media": [
                 {
                     "file": "images/B1G.png",
+                    "memoryFormat": "Smallest",
                     "name": "B1G",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
-                    "characterRegex": "[0-9:APM ]",
+                    "characterRegex": "[0-9:APM| ]",
                     "file": "fonts/LECO 1976 Regular.ttf",
                     "name": "LECO_CUSTOM_54",
                     "targetPlatforms": [
@@ -108,7 +109,21 @@
                     "type": "font"
                 },
                 {
+                    "characterRegex": "[0-9:APM| ]",
+                    "file": "fonts/LECO 1976 Regular.ttf",
+                    "name": "LECO_CUSTOM_42",
+                    "targetPlatforms": [
+                        "aplite",
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "flint"
+                    ],
+                    "type": "font"
+                },
+                {
                     "file": "images/ArizonaSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "ARIZONAST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -116,6 +131,7 @@
                 },
                 {
                     "file": "images/AppSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "APPSTATE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -123,6 +139,7 @@
                 },
                 {
                     "file": "images/Auburn.png",
+                    "memoryFormat": "Smallest",
                     "name": "AUBURN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -130,6 +147,7 @@
                 },
                 {
                     "file": "images/Arizona.png",
+                    "memoryFormat": "Smallest",
                     "name": "ARIZONA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -137,6 +155,7 @@
                 },
                 {
                     "file": "images/BYU.png",
+                    "memoryFormat": "Smallest",
                     "name": "BYU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -144,6 +163,7 @@
                 },
                 {
                     "file": "images/ArkansasSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "ARKANSASST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -151,6 +171,7 @@
                 },
                 {
                     "file": "images/Army.png",
+                    "memoryFormat": "Smallest",
                     "name": "ARMY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -158,6 +179,7 @@
                 },
                 {
                     "file": "images/BallSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "BALLST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -165,6 +187,7 @@
                 },
                 {
                     "file": "images/BostonCollege.png",
+                    "memoryFormat": "Smallest",
                     "name": "BOSTONCOLLEGE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -172,6 +195,7 @@
                 },
                 {
                     "file": "images/BowlingGreen.png",
+                    "memoryFormat": "Smallest",
                     "name": "BOWLINGGREEN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -179,6 +203,7 @@
                 },
                 {
                     "file": "images/Buffalo.png",
+                    "memoryFormat": "Smallest",
                     "name": "BUFFALO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -186,6 +211,7 @@
                 },
                 {
                     "file": "images/Cal.png",
+                    "memoryFormat": "Smallest",
                     "name": "CAL",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -193,6 +219,7 @@
                 },
                 {
                     "file": "images/CentralMichigan.png",
+                    "memoryFormat": "Smallest",
                     "name": "CENTRALMICHIGAN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -200,6 +227,7 @@
                 },
                 {
                     "file": "images/Cinci.png",
+                    "memoryFormat": "Smallest",
                     "name": "CINCI",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -207,6 +235,7 @@
                 },
                 {
                     "file": "images/Coastal.png",
+                    "memoryFormat": "Smallest",
                     "name": "COASTAL",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -214,6 +243,7 @@
                 },
                 {
                     "file": "images/Colorado.png",
+                    "memoryFormat": "Smallest",
                     "name": "COLORADO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -221,6 +251,7 @@
                 },
                 {
                     "file": "images/ColoradoSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "COLORADOST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -228,6 +259,7 @@
                 },
                 {
                     "file": "images/Deleware.png",
+                    "memoryFormat": "Smallest",
                     "name": "DELEWARE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -235,6 +267,7 @@
                 },
                 {
                     "file": "images/Duke.png",
+                    "memoryFormat": "Smallest",
                     "name": "DUKE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -242,6 +275,7 @@
                 },
                 {
                     "file": "images/EasternMichigan.png",
+                    "memoryFormat": "Smallest",
                     "name": "EASTERNMICHIGAN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -249,6 +283,7 @@
                 },
                 {
                     "file": "images/ECU.png",
+                    "memoryFormat": "Smallest",
                     "name": "ECU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -256,6 +291,7 @@
                 },
                 {
                     "file": "images/FAU.png",
+                    "memoryFormat": "Smallest",
                     "name": "FAU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -263,6 +299,7 @@
                 },
                 {
                     "file": "images/FIU.png",
+                    "memoryFormat": "Smallest",
                     "name": "FIU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -270,6 +307,7 @@
                 },
                 {
                     "file": "images/Florida.png",
+                    "memoryFormat": "Smallest",
                     "name": "FLORIDA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -277,6 +315,7 @@
                 },
                 {
                     "file": "images/FresnoSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "FRESNOST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -284,6 +323,7 @@
                 },
                 {
                     "file": "images/FSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "FSU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -291,6 +331,7 @@
                 },
                 {
                     "file": "images/GeorgiaSouthern.png",
+                    "memoryFormat": "Smallest",
                     "name": "GEORGIASOUTHERN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -298,12 +339,14 @@
                 },
                 {
                     "file": "images/GeorgiaSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "GEORGIAST",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/GT.png",
+                    "memoryFormat": "Smallest",
                     "name": "GEORGIATECH",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -311,6 +354,7 @@
                 },
                 {
                     "file": "images/Hawaii.png",
+                    "memoryFormat": "Smallest",
                     "name": "HAWAII",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -318,6 +362,7 @@
                 },
                 {
                     "file": "images/CFB.png",
+                    "memoryFormat": "Smallest",
                     "name": "CFB",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -325,6 +370,7 @@
                 },
                 {
                     "file": "images/Big 12.png",
+                    "memoryFormat": "Smallest",
                     "name": "BIG12",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -332,6 +378,7 @@
                 },
                 {
                     "file": "images/Air Force.png",
+                    "memoryFormat": "Smallest",
                     "name": "AIRFORCE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -339,6 +386,7 @@
                 },
                 {
                     "file": "images/Akron.png",
+                    "memoryFormat": "Smallest",
                     "name": "AKRON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -346,6 +394,7 @@
                 },
                 {
                     "file": "images/Alabama.png",
+                    "memoryFormat": "Smallest",
                     "name": "ALABAMA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -353,6 +402,7 @@
                 },
                 {
                     "file": "images/Baylor.png",
+                    "memoryFormat": "Smallest",
                     "name": "BAYLOR",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -360,6 +410,7 @@
                 },
                 {
                     "file": "images/BoiseSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "BOISEST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -367,6 +418,7 @@
                 },
                 {
                     "file": "images/ACC.png",
+                    "memoryFormat": "Smallest",
                     "name": "ACC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -374,6 +426,7 @@
                 },
                 {
                     "file": "images/American.png",
+                    "memoryFormat": "Smallest",
                     "name": "AMERICAN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -381,6 +434,7 @@
                 },
                 {
                     "file": "images/Arkansas.png",
+                    "memoryFormat": "Smallest",
                     "name": "ARKANSAS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -388,6 +442,7 @@
                 },
                 {
                     "file": "images/CUSA.png",
+                    "memoryFormat": "Smallest",
                     "name": "CUSA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -395,6 +450,7 @@
                 },
                 {
                     "file": "images/Chaos.png",
+                    "memoryFormat": "Smallest",
                     "name": "CHAOS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -402,6 +458,7 @@
                 },
                 {
                     "file": "images/Houston.png",
+                    "memoryFormat": "Smallest",
                     "name": "HOUSTON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -409,6 +466,7 @@
                 },
                 {
                     "file": "images/Illinois.png",
+                    "memoryFormat": "Smallest",
                     "name": "ILLINOIS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -416,6 +474,7 @@
                 },
                 {
                     "file": "images/Independent.png",
+                    "memoryFormat": "Smallest",
                     "name": "INDEPENDENT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -423,6 +482,7 @@
                 },
                 {
                     "file": "images/Indiana.png",
+                    "memoryFormat": "Smallest",
                     "name": "INDIANA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -430,6 +490,7 @@
                 },
                 {
                     "file": "images/Iowa St.png",
+                    "memoryFormat": "Smallest",
                     "name": "IOWAST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -437,6 +498,7 @@
                 },
                 {
                     "file": "images/Iowa.png",
+                    "memoryFormat": "Smallest",
                     "name": "IOWA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -444,6 +506,7 @@
                 },
                 {
                     "file": "images/JMU.png",
+                    "memoryFormat": "Smallest",
                     "name": "JMU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -451,6 +514,7 @@
                 },
                 {
                     "file": "images/JaxSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "JAXST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -458,6 +522,7 @@
                 },
                 {
                     "file": "images/KState.png",
+                    "memoryFormat": "Smallest",
                     "name": "KSTATE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -465,6 +530,7 @@
                 },
                 {
                     "file": "images/Kansas.png",
+                    "memoryFormat": "Smallest",
                     "name": "KANSAS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -472,6 +538,7 @@
                 },
                 {
                     "file": "images/KennesawSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "KENNESAWST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -479,6 +546,7 @@
                 },
                 {
                     "file": "images/KentSt.png",
+                    "memoryFormat": "Smallest",
                     "name": "KENTST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -486,6 +554,7 @@
                 },
                 {
                     "file": "images/Kentucky.png",
+                    "memoryFormat": "Smallest",
                     "name": "KENTUCKY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -493,6 +562,7 @@
                 },
                 {
                     "file": "images/LA Tech.png",
+                    "memoryFormat": "Smallest",
                     "name": "LATECH",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -500,12 +570,14 @@
                 },
                 {
                     "file": "images/LSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "LSU",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/Liberty.png",
+                    "memoryFormat": "Smallest",
                     "name": "LIBERTY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -513,6 +585,7 @@
                 },
                 {
                     "file": "images/Louisville.png",
+                    "memoryFormat": "Smallest",
                     "name": "LOUISVILLE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -520,6 +593,7 @@
                 },
                 {
                     "file": "images/MAC.png",
+                    "memoryFormat": "Smallest",
                     "name": "MAC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -527,6 +601,7 @@
                 },
                 {
                     "file": "images/MW.png",
+                    "memoryFormat": "Smallest",
                     "name": "MW",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -534,6 +609,7 @@
                 },
                 {
                     "file": "images/Marshall.png",
+                    "memoryFormat": "Smallest",
                     "name": "MARSHALL",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -541,6 +617,7 @@
                 },
                 {
                     "file": "images/Maryland.png",
+                    "memoryFormat": "Smallest",
                     "name": "MARYLAND",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -548,6 +625,7 @@
                 },
                 {
                     "file": "images/Memphis.png",
+                    "memoryFormat": "Smallest",
                     "name": "MEMPHIS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -555,6 +633,7 @@
                 },
                 {
                     "file": "images/Meteor.png",
+                    "memoryFormat": "Smallest",
                     "name": "METEOR",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -562,6 +641,7 @@
                 },
                 {
                     "file": "images/Miami OH.png",
+                    "memoryFormat": "Smallest",
                     "name": "MIAMIOH",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -569,6 +649,7 @@
                 },
                 {
                     "file": "images/Miami.png",
+                    "memoryFormat": "Smallest",
                     "name": "MIAMI",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -576,6 +657,7 @@
                 },
                 {
                     "file": "images/Michigan St.png",
+                    "memoryFormat": "Smallest",
                     "name": "MICHIGANST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -583,6 +665,7 @@
                 },
                 {
                     "file": "images/Michigan.png",
+                    "memoryFormat": "Smallest",
                     "name": "MICHIGAN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -590,6 +673,7 @@
                 },
                 {
                     "file": "images/Mid Tenn St.png",
+                    "memoryFormat": "Smallest",
                     "name": "MIDTENNST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -597,6 +681,7 @@
                 },
                 {
                     "file": "images/Minnesota.png",
+                    "memoryFormat": "Smallest",
                     "name": "MINNESOTA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -604,6 +689,7 @@
                 },
                 {
                     "file": "images/Miss St.png",
+                    "memoryFormat": "Smallest",
                     "name": "MISSST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -611,6 +697,7 @@
                 },
                 {
                     "file": "images/Missouri St.png",
+                    "memoryFormat": "Smallest",
                     "name": "MISSOURIST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -618,6 +705,7 @@
                 },
                 {
                     "file": "images/Mizzou.png",
+                    "memoryFormat": "Smallest",
                     "name": "MISSOURI",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -625,12 +713,14 @@
                 },
                 {
                     "file": "images/NCAA.png",
+                    "memoryFormat": "Smallest",
                     "name": "NCAA",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/NCST.png",
+                    "memoryFormat": "Smallest",
                     "name": "NCST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -638,6 +728,7 @@
                 },
                 {
                     "file": "images/NDSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "NDSU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -645,6 +736,7 @@
                 },
                 {
                     "file": "images/NIU.png",
+                    "memoryFormat": "Smallest",
                     "name": "NIU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -652,6 +744,7 @@
                 },
                 {
                     "file": "images/Navy.png",
+                    "memoryFormat": "Smallest",
                     "name": "NAVY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -659,6 +752,7 @@
                 },
                 {
                     "file": "images/Nebraska.png",
+                    "memoryFormat": "Smallest",
                     "name": "NEBRASKA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -666,6 +760,7 @@
                 },
                 {
                     "file": "images/Nevada.png",
+                    "memoryFormat": "Smallest",
                     "name": "NEVADA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -673,6 +768,7 @@
                 },
                 {
                     "file": "images/New Mexico St.png",
+                    "memoryFormat": "Smallest",
                     "name": "NEWMEXICOST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -680,6 +776,7 @@
                 },
                 {
                     "file": "images/New Mexico.png",
+                    "memoryFormat": "Smallest",
                     "name": "NEWMEXICO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -687,6 +784,7 @@
                 },
                 {
                     "file": "images/Northwestern.png",
+                    "memoryFormat": "Smallest",
                     "name": "NORTHWESTERN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -694,6 +792,7 @@
                 },
                 {
                     "file": "images/Notre Dame.png",
+                    "memoryFormat": "Smallest",
                     "name": "NOTREDAME",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -701,6 +800,7 @@
                 },
                 {
                     "file": "images/ODU.png",
+                    "memoryFormat": "Smallest",
                     "name": "ODU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -708,6 +808,7 @@
                 },
                 {
                     "file": "images/OSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "OHIOST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -715,6 +816,7 @@
                 },
                 {
                     "file": "images/OU.png",
+                    "memoryFormat": "Smallest",
                     "name": "OKLAHOMA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -722,6 +824,7 @@
                 },
                 {
                     "file": "images/Ohio.png",
+                    "memoryFormat": "Smallest",
                     "name": "OHIO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -729,6 +832,7 @@
                 },
                 {
                     "file": "images/Ok St.png",
+                    "memoryFormat": "Smallest",
                     "name": "OKST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -736,6 +840,7 @@
                 },
                 {
                     "file": "images/Ole Miss.png",
+                    "memoryFormat": "Smallest",
                     "name": "OLEMISS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -743,6 +848,7 @@
                 },
                 {
                     "file": "images/Oregon St.png",
+                    "memoryFormat": "Smallest",
                     "name": "OREGONST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -750,6 +856,7 @@
                 },
                 {
                     "file": "images/Oregon.png",
+                    "memoryFormat": "Smallest",
                     "name": "OREGON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -757,6 +864,7 @@
                 },
                 {
                     "file": "images/Pac 12.png",
+                    "memoryFormat": "Smallest",
                     "name": "PAC12",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -764,6 +872,7 @@
                 },
                 {
                     "file": "images/Penn St.png",
+                    "memoryFormat": "Smallest",
                     "name": "PENNST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -771,6 +880,7 @@
                 },
                 {
                     "file": "images/Pitt.png",
+                    "memoryFormat": "Smallest",
                     "name": "PITT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -778,6 +888,7 @@
                 },
                 {
                     "file": "images/Purdue.png",
+                    "memoryFormat": "Smallest",
                     "name": "PURDUE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -785,6 +896,7 @@
                 },
                 {
                     "file": "images/Rice.png",
+                    "memoryFormat": "Smallest",
                     "name": "RICE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -792,6 +904,7 @@
                 },
                 {
                     "file": "images/Rutgers.png",
+                    "memoryFormat": "Smallest",
                     "name": "RUTGERS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -799,6 +912,7 @@
                 },
                 {
                     "file": "images/SDSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "SDSU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -806,6 +920,7 @@
                 },
                 {
                     "file": "images/SEC.png",
+                    "memoryFormat": "Smallest",
                     "name": "SEC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -813,6 +928,7 @@
                 },
                 {
                     "file": "images/SJSU.png",
+                    "memoryFormat": "Smallest",
                     "name": "SJSU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -820,6 +936,7 @@
                 },
                 {
                     "file": "images/SMU.png",
+                    "memoryFormat": "Smallest",
                     "name": "SMU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -827,6 +944,7 @@
                 },
                 {
                     "file": "images/Sac St.png",
+                    "memoryFormat": "Smallest",
                     "name": "SACST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -834,6 +952,7 @@
                 },
                 {
                     "file": "images/Sam Houston St.png",
+                    "memoryFormat": "Smallest",
                     "name": "SHSU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -841,6 +960,7 @@
                 },
                 {
                     "file": "images/South Alabama.png",
+                    "memoryFormat": "Smallest",
                     "name": "USA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -848,6 +968,7 @@
                 },
                 {
                     "file": "images/Southern Miss.png",
+                    "memoryFormat": "Smallest",
                     "name": "SOUTHERNMISS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -855,6 +976,7 @@
                 },
                 {
                     "file": "images/SouthernCal.png",
+                    "memoryFormat": "Smallest",
                     "name": "SOUTHERNCAL",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -862,6 +984,7 @@
                 },
                 {
                     "file": "images/Stanford.png",
+                    "memoryFormat": "Smallest",
                     "name": "STANFORD",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -869,6 +992,7 @@
                 },
                 {
                     "file": "images/Sun Belt.png",
+                    "memoryFormat": "Smallest",
                     "name": "SUNBELT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -876,6 +1000,7 @@
                 },
                 {
                     "file": "images/Syracuse.png",
+                    "memoryFormat": "Smallest",
                     "name": "SYRACUSE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -883,6 +1008,7 @@
                 },
                 {
                     "file": "images/TCU.png",
+                    "memoryFormat": "Smallest",
                     "name": "TCU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -890,6 +1016,7 @@
                 },
                 {
                     "file": "images/Temple.png",
+                    "memoryFormat": "Smallest",
                     "name": "TEMPLE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -897,6 +1024,7 @@
                 },
                 {
                     "file": "images/Tennessee.png",
+                    "memoryFormat": "Smallest",
                     "name": "TENNESSEE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -904,6 +1032,7 @@
                 },
                 {
                     "file": "images/Texas St.png",
+                    "memoryFormat": "Smallest",
                     "name": "TEXASST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -911,6 +1040,7 @@
                 },
                 {
                     "file": "images/Texas Tech.png",
+                    "memoryFormat": "Smallest",
                     "name": "TEXASTECH",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -918,6 +1048,7 @@
                 },
                 {
                     "file": "images/Texas.png",
+                    "memoryFormat": "Smallest",
                     "name": "TEXAS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -925,6 +1056,7 @@
                 },
                 {
                     "file": "images/Toledo.png",
+                    "memoryFormat": "Smallest",
                     "name": "TOLEDO",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -932,6 +1064,7 @@
                 },
                 {
                     "file": "images/Troy.png",
+                    "memoryFormat": "Smallest",
                     "name": "TROY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -939,6 +1072,7 @@
                 },
                 {
                     "file": "images/Tulane.png",
+                    "memoryFormat": "Smallest",
                     "name": "TULANE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -946,6 +1080,7 @@
                 },
                 {
                     "file": "images/Tulsa.png",
+                    "memoryFormat": "Smallest",
                     "name": "TULSA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -953,6 +1088,7 @@
                 },
                 {
                     "file": "images/UAB.png",
+                    "memoryFormat": "Smallest",
                     "name": "UAB",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -960,6 +1096,7 @@
                 },
                 {
                     "file": "images/UCF.png",
+                    "memoryFormat": "Smallest",
                     "name": "UCF",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -967,6 +1104,7 @@
                 },
                 {
                     "file": "images/UCLA.png",
+                    "memoryFormat": "Smallest",
                     "name": "UCLA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -974,6 +1112,7 @@
                 },
                 {
                     "file": "images/UConn.png",
+                    "memoryFormat": "Smallest",
                     "name": "UCONN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -981,6 +1120,7 @@
                 },
                 {
                     "file": "images/UGA.png",
+                    "memoryFormat": "Smallest",
                     "name": "UGA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -988,6 +1128,7 @@
                 },
                 {
                     "file": "images/ULL.png",
+                    "memoryFormat": "Smallest",
                     "name": "ULL",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -995,6 +1136,7 @@
                 },
                 {
                     "file": "images/ULM.png",
+                    "memoryFormat": "Smallest",
                     "name": "ULM",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1002,6 +1144,7 @@
                 },
                 {
                     "file": "images/UMass.png",
+                    "memoryFormat": "Smallest",
                     "name": "UMASS",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1009,6 +1152,7 @@
                 },
                 {
                     "file": "images/UNCC.png",
+                    "memoryFormat": "Smallest",
                     "name": "UNCC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1016,6 +1160,7 @@
                 },
                 {
                     "file": "images/UNC.png",
+                    "memoryFormat": "Smallest",
                     "name": "UNC",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1023,6 +1168,7 @@
                 },
                 {
                     "file": "images/UNLV.png",
+                    "memoryFormat": "Smallest",
                     "name": "UNLV",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1030,6 +1176,7 @@
                 },
                 {
                     "file": "images/UNT.png",
+                    "memoryFormat": "Smallest",
                     "name": "UNT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1037,6 +1184,7 @@
                 },
                 {
                     "file": "images/USF.png",
+                    "memoryFormat": "Smallest",
                     "name": "USF",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1044,6 +1192,7 @@
                 },
                 {
                     "file": "images/UTEP.png",
+                    "memoryFormat": "Smallest",
                     "name": "UTEP",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1051,6 +1200,7 @@
                 },
                 {
                     "file": "images/UTSA.png",
+                    "memoryFormat": "Smallest",
                     "name": "UTSA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1058,6 +1208,7 @@
                 },
                 {
                     "file": "images/UVA.png",
+                    "memoryFormat": "Smallest",
                     "name": "UVA",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1065,6 +1216,7 @@
                 },
                 {
                     "file": "images/Utah St.png",
+                    "memoryFormat": "Smallest",
                     "name": "UTAHST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1072,6 +1224,7 @@
                 },
                 {
                     "file": "images/Utah.png",
+                    "memoryFormat": "Smallest",
                     "name": "UTAH",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1079,6 +1232,7 @@
                 },
                 {
                     "file": "images/VT.png",
+                    "memoryFormat": "Smallest",
                     "name": "VT",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1086,6 +1240,7 @@
                 },
                 {
                     "file": "images/Vandy.png",
+                    "memoryFormat": "Smallest",
                     "name": "VANDY",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1093,6 +1248,7 @@
                 },
                 {
                     "file": "images/WKU.png",
+                    "memoryFormat": "Smallest",
                     "name": "WKU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1100,6 +1256,7 @@
                 },
                 {
                     "file": "images/WVU.png",
+                    "memoryFormat": "Smallest",
                     "name": "WVU",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1107,6 +1264,7 @@
                 },
                 {
                     "file": "images/Wake.png",
+                    "memoryFormat": "Smallest",
                     "name": "WAKE",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1114,6 +1272,7 @@
                 },
                 {
                     "file": "images/Washington St.png",
+                    "memoryFormat": "Smallest",
                     "name": "WASHINGTONST",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1121,6 +1280,7 @@
                 },
                 {
                     "file": "images/Washington.png",
+                    "memoryFormat": "Smallest",
                     "name": "WASHINGTON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1128,6 +1288,7 @@
                 },
                 {
                     "file": "images/Western Michigan.png",
+                    "memoryFormat": "Smallest",
                     "name": "WESTERNMICHIGAN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1135,6 +1296,7 @@
                 },
                 {
                     "file": "images/Wisconsin.png",
+                    "memoryFormat": "Smallest",
                     "name": "WISCONSIN",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1142,6 +1304,7 @@
                 },
                 {
                     "file": "images/Wyoming.png",
+                    "memoryFormat": "Smallest",
                     "name": "WYOMING",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1149,6 +1312,7 @@
                 },
                 {
                     "file": "images/aTm.png",
+                    "memoryFormat": "Smallest",
                     "name": "ATM",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1156,8 +1320,9 @@
                 },
                 {
                     "file": "images/bagsb.png",
+                    "memoryFormat": "Smallest",
                     "name": "BAGB",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": [
                         "aplite",
                         "diorite",
@@ -1167,20 +1332,23 @@
                 },
                 {
                     "file": "images/bag.png",
+                    "memoryFormat": "Smallest",
                     "name": "BAG",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/bt.png",
+                    "memoryFormat": "Smallest",
                     "name": "BT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/clemsonp2.png",
+                    "memoryFormat": "Smallest",
                     "name": "CLEMSON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -1188,8 +1356,9 @@
                 },
                 {
                     "file": "images/emptybatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "EMPTYBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -1211,8 +1380,9 @@
                 },
                 {
                     "file": "images/fullbatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "FULLBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -1226,8 +1396,9 @@
                 },
                 {
                     "file": "images/lowbatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "LOWBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -1256,15 +1427,17 @@
                 },
                 {
                     "file": "images/APIempty.png",
+                    "memoryFormat": "Smallest",
                     "name": "APIEMPTY",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/APIlow.png",
+                    "memoryFormat": "Smallest",
                     "name": "APILOW",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }
@@ -1272,7 +1445,6 @@
         },
         "sdkVersion": "3",
         "targetPlatforms": [
-            "aplite",
             "basalt",
             "chalk",
             "diorite",

@@ -14,17 +14,21 @@ void health_heartRateHandler(void) {
   }
 
   // Poll Heart Rate Sensor
-  if (!settings.healthQuiet && timekeeping_is_quiet_time()) {
-    HealthValue hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
-    
-    if (hrvalue > 0) {
-      static char s_hr_buffer[4];
-      snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_HR], s_hr_buffer);
-      noHR = false;
-    } else {
-      noHR = true;
-    }
+  HealthValue hrvalue;
+  if (!settings.healthQuiet || !timekeeping_is_quiet_time()) {
+    hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
+  }
+  else{
+    hrvalue = 70;
+  }
+
+  if (hrvalue > 0) {
+    static char s_hr_buffer[4];
+    snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_HR], s_hr_buffer);
+    noHR = false;
+  } else {
+    noHR = true;
   }
 
   // Set Final Visibility

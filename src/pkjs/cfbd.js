@@ -450,7 +450,7 @@ var cfbd = (function() {
 
     // Branch 3: not in season, not near next season -> offseason
     var lastEntry = cache.weekDates[cache.weekDates.length - 1];
-    console.log('Offseason - using last week of ' + cache.currentYear + ': week ' + lastEntry[0]);
+    console.log('Offseason - using last week of ' + cache.currentYear + ': week ' + lastEntry[0] + " Post Season");
     return {
       year: cache.currentYear,
       week: lastEntry[0],
