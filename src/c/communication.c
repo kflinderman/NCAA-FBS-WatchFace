@@ -1,133 +1,121 @@
+#include <stddef.h> // offsetof
 #include "communication.h"
 #include "globals.h"
 #include "weather.h"
 #include "api.h"
+#include "outbox_queue.h"
 
-void configuration_callback(DictionaryIterator *iterator, void *context){
-  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
-  // Check for Clay settings data
-  uint32_t claysettings_id[] = {
-    MESSAGE_KEY_DisconnectVibration,
-    MESSAGE_KEY_ReconnectVibration,
-    MESSAGE_KEY_LowBatteryPercent,
-    MESSAGE_KEY_LowBatteryVibration,
-    MESSAGE_KEY_EmptyBatteryPercent,
-    MESSAGE_KEY_EmptyBatteryVibration,
-    MESSAGE_KEY_DisplayTeam,
-    MESSAGE_KEY_FavoriteTeam,
-    MESSAGE_KEY_BeatTeam,
-    MESSAGE_KEY_animationSensitivity,
-    MESSAGE_KEY_quietTimeBool,
-    MESSAGE_KEY_quietTimeStart,
-    MESSAGE_KEY_quietTimeEnd,
-    MESSAGE_KEY_animationsBatt,
-    MESSAGE_KEY_animationsCustom,
-    MESSAGE_KEY_stepsBool,
-    MESSAGE_KEY_hrBool,
-    MESSAGE_KEY_stepsGoalBool,
-    MESSAGE_KEY_stepsGoal,
-    MESSAGE_KEY_hardcodeRivalBool, 
-    MESSAGE_KEY_donate,
-    MESSAGE_KEY_bagBool,
-    MESSAGE_KEY_animationDelay,
-    MESSAGE_KEY_countdownBool,
-    MESSAGE_KEY_countdownTime,
-    MESSAGE_KEY_countdownCustom,
-    MESSAGE_KEY_countdownDisplay,
-    MESSAGE_KEY_api,
-    MESSAGE_KEY_api_quiet,
-    MESSAGE_KEY_scoreDisplayBool,
-    MESSAGE_KEY_scoreUpdate,
-    MESSAGE_KEY_scoreLocation,
-    MESSAGE_KEY_opponentBool,
-    MESSAGE_KEY_opponentSelect,
-    MESSAGE_KEY_customOpponent,
-    MESSAGE_KEY_weatherBool,
-    MESSAGE_KEY_weatherQuiet,
-    MESSAGE_KEY_weatherUnits,
-    MESSAGE_KEY_rankingBool,
-    MESSAGE_KEY_winBool,
-    MESSAGE_KEY_confBool,
-    MESSAGE_KEY_bowlBool,
-    MESSAGE_KEY_champBool,
-  };
+// One entry per Clay-driven ClaySettings field: which AppMessage key feeds
+// it, and where/how big it is in the struct. offsetof/sizeof are computed
+// by the compiler, so adding, removing, or reordering a setting is a single
+// line here - there's no positional index or count to keep in sync by hand
+// (the previous switch(idx) on array position was one edit away from
+// silently writing a value into the wrong field, which is exactly what
+// happened when opponentBool needed to be removed here).
+//
+// message_key is a POINTER to the generated MESSAGE_KEY_* symbol, not the
+// key value itself: MESSAGE_KEY_* are extern const uint32_t (linked, not
+// #define'd), so their value isn't known until link time and can't sit
+// directly in a static initializer - only their address can (a valid
+// link-time constant). Dereference at lookup time in prv_find_field().
+typedef struct {
+  const uint32_t *message_key;
+  size_t offset;
+  uint8_t size; // bytes: 1 (uint8_t/bool), 2 (uint16_t), or 4 (uint32_t)
+} ClaySettingField;
 
-  bool settings_changed = false;
-  
-  Tuple *key_tuple = dict_find(iterator, MESSAGE_KEY_api_key);
-  if (key_tuple){
-    snprintf(settings.api_key, sizeof(settings.api_key), "%s", key_tuple->value->cstring);
-    settings_changed = true;
+#define SF(field) \
+  { &MESSAGE_KEY_##field, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
+#define SF2(msg_key, field) \
+  { &MESSAGE_KEY_##msg_key, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
+
+// Stored in Flash/ROM — 0 bytes of RAM usage
+static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
+  SF(DisconnectVibration),
+  SF(ReconnectVibration),
+  SF(LowBatteryPercent),
+  SF(LowBatteryVibration),
+  SF(EmptyBatteryPercent),
+  SF(EmptyBatteryVibration),
+  SF(DisplayTeam),
+  SF(FavoriteTeam),
+  SF(BeatTeam),
+  SF(animationSensitivity),
+  SF(quietTimeBool),
+  SF(quietTimeStart),
+  SF(quietTimeEnd),
+  SF(animationsBatt),
+  SF(animationsCustom),
+  SF(healthQuiet),
+  SF(stepsBool),
+  SF(hrBool),
+  SF(stepsGoalBool),
+  SF(stepsGoal),
+  SF2(hardcodeRivalBool, hardcodeRival), // messageKey/field names diverge
+  SF(bagBool),
+  SF(animationDelay),
+  SF(countdownBool),
+  SF(countdownTime),
+  SF(countdownCustomDate),
+  SF(countdownCustomTime),
+  SF(countdownDisplay),
+  SF(api),
+  SF(api_quiet),
+  SF(scoreDisplayBool),
+  SF(scoreUpdate),
+  SF(scoreLocation),
+  SF(opponentSelect),
+  SF(customOpponent),
+  SF(weatherBool),
+  SF(weatherQuiet),
+  SF(weatherUnits),
+  SF(rankingBool),
+  SF(winBool),
+  SF(confBool),
+  SF(bowlBool),
+  SF(champBool),
+};
+
+#undef SF
+#undef SF2
+
+#define CLAY_SETTINGS_FIELDS_COUNT (sizeof(CLAY_SETTINGS_FIELDS) / sizeof(CLAY_SETTINGS_FIELDS[0]))
+
+static const ClaySettingField *prv_find_field(uint32_t key) {
+  for (uint32_t i = 0; i < CLAY_SETTINGS_FIELDS_COUNT; i++) {
+    if (key == *CLAY_SETTINGS_FIELDS[i].message_key) return &CLAY_SETTINGS_FIELDS[i];
   }
-  
+  return NULL;
+}
 
-  for (uint16_t x = 0; x < 43; x++) {
-    Tuple *temp_t = dict_find(iterator, claysettings_id[x]);
-    
-    if (temp_t) {
-      int32_t value = 0;
+void configuration_callback(DictionaryIterator *iterator, void *context) {
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
+  bool settings_changed = false;
 
-      if (temp_t->type == TUPLE_CSTRING) {
-        // Manual, safer string-to-int conversion instead of strtol
-        const char *str = temp_t->value->cstring;
-        value = 0;
-        for (int i = 0; str[i] != '\0'; i++) {
-          if (str[i] >= '0' && str[i] <= '9') {
-            value = value * 10 + (str[i] - '0');
-          }
-        }
-      } else if (temp_t->type == TUPLE_INT) {
-        value = temp_t->value->int32;
-      }
-
-      // Directly assign to settings struct
-      switch (x) {
-        case 0: settings.DisconnectVibration = value; break;
-        case 1: settings.ReconnectVibration = value; break;
-        case 2: settings.LowBatteryPercent = value; break;
-        case 3: settings.LowBatteryVibration = value; break;
-        case 4: settings.EmptyBatteryPercent = value; break;
-        case 5: settings.EmptyBatteryVibration = value; break;
-        case 6: settings.DisplayTeam = value; break;
-        case 7: settings.FavoriteTeam = value; break;
-        case 8: settings.BeatTeam = value; break;
-        case 9: settings.animationSensitivity = value; break;
-        case 10: settings.quietTimeBool = value; break;
-        case 11: settings.quietTimeStart = value; break;
-        case 12: settings.quietTimeEnd = value; break;
-        case 13: settings.animationsBatt = value; break;
-        case 14: settings.animationsCustom = value; break;
-        case 15: settings.stepsBool = value; break;
-        case 16: settings.hrBool = value; break;
-        case 17: settings.stepsGoalBool = value; break;
-        case 18: settings.stepsGoal = value; break;
-        case 19: settings.hardcodeRival = value; break;
-        case 20: settings.donate = value; break;
-        case 21: settings.bagBool = value; break;
-        case 22: settings.animationDelay = value; break;
-        case 23: settings.countdownBool = value; break;
-        case 24: settings.countdownTime = value; break;
-        case 25: settings.countdownCustom = value; break;
-        case 26: settings.countdownDisplay = value; break;
-        case 27: settings.api = value; break;
-        case 28: settings.api_quiet = value; break;
-        case 29: settings.scoreDisplayBool = value; break;
-        case 30: settings.scoreUpdate = value; break;
-        case 31: settings.scoreLocation = value; break;
-        case 32: settings.opponentBool = value; break;
-        case 33: settings.opponentSelect = value; break;
-        case 34: settings.customOpponent = value; break;
-        case 35: settings.weatherBool = value; break;
-        case 36: settings.weatherQuiet = value; break;
-        case 37: settings.weatherUnits = value; break;
-        case 38: settings.rankingBool = value; break;
-        case 39: settings.winBool = value; break;
-        case 40: settings.confBool = value; break;
-        case 41: settings.bowlBool = value; break;
-        case 42: settings.champBool = value; break;
-      }
-
+  for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
+    // 1. API key string assignment
+    if (t->key == MESSAGE_KEY_api_key) {
+      snprintf(settings.api_key, sizeof(settings.api_key), "%s", t->value->cstring);
       settings_changed = true;
+      continue;
+    }
+
+    // 2. Look up which settings field this key maps to
+    const ClaySettingField *field = prv_find_field(t->key);
+    if (!field) continue;
+
+    int32_t value = (t->type == TUPLE_CSTRING) ? atoi(t->value->cstring) : t->value->int32;
+    settings_changed = true;
+
+    // 3. Write directly into the settings struct at the field's offset
+    uint8_t *field_ptr = (uint8_t *)&settings + field->offset;
+    switch (field->size) {
+      case 1: *(uint8_t *)field_ptr = (uint8_t)value; break;
+      case 2: *(uint16_t *)field_ptr = (uint16_t)value; break;
+      case 4: *(uint32_t *)field_ptr = (uint32_t)value; break;
+      default:
+        APP_LOG(APP_LOG_LEVEL_ERROR, "Clay setting field size %d unsupported", field->size);
+        break;
     }
   }
 
@@ -141,6 +129,7 @@ void configuration_callback(DictionaryIterator *iterator, void *context){
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
+  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
   api_cfbd_callback(iterator, context);
@@ -151,9 +140,11 @@ void inbox_dropped_callback(AppMessageResult reason, void *context) {
 }
 
 void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
-  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed!");
+  APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed! Reason: %d", reason);
+  outbox_queue_on_result();
 }
 
 void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+  outbox_queue_on_result();
 }

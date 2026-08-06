@@ -18,25 +18,26 @@ typedef struct ClaySettings {
   uint8_t EmptyBatteryPercent;
   uint8_t EmptyBatteryVibration;
   uint8_t DisplayTeam;
-  uint16_t FavoriteTeam;
-  uint16_t BeatTeam;
+  uint8_t FavoriteTeam;
+  uint8_t BeatTeam;
   uint16_t animationSensitivity;
   bool quietTimeBool;
   uint16_t quietTimeStart;
   uint16_t quietTimeEnd;
   uint8_t animationsBatt;
   uint8_t animationsCustom;
+  bool healthQuiet;
   bool stepsBool;
   bool hrBool;
   bool stepsGoalBool;
   uint16_t stepsGoal;
-  bool hardcodeRival;
-  bool donate;
+  uint8_t hardcodeRival;
   bool bagBool;
   bool animationDelay;
   bool countdownBool;
   uint8_t countdownTime;
-  uint16_t countdownCustom;
+  uint32_t countdownCustomDate;
+  uint16_t countdownCustomTime;
   uint8_t countdownDisplay;
   bool api;
   char api_key[128];
@@ -65,25 +66,92 @@ extern ClaySettings settings;
  * used by other modules)
  *******************************************/
 extern Window *s_main_window;
-extern TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
-extern int dummy;
+
+typedef enum {
+  LAYER_KIND_TEXT,
+  LAYER_KIND_BITMAP,
+  LAYER_KIND_GBITMAP,
+  LAYER_KIND_GENERIC
+} LayerKind;
+
+typedef enum {
+  TEXT_LAYER_TIME,
+  TEXT_LAYER_DATE,
+  TEXT_LAYER_BEAT,
+  TEXT_LAYER_WEATHER,
+  TEXT_LAYER_CONDITIONS,
+  TEXT_LAYER_HOME,
+  TEXT_LAYER_AWAY,
+  TEXT_LAYER_DAY,
+  TEXT_LAYER_HOUR,
+  TEXT_LAYER_COUNTDOWN,
+  TEXT_LAYER_SCORE,
+  #if defined(PBL_HEALTH)
+  TEXT_LAYER_HR,
+  TEXT_LAYER_STEP,
+  TEXT_LAYER_TD,
+  #endif
+  NUM_TEXT_LAYERS
+} TextLayerID;
+extern TextLayer* s_text_layers[NUM_TEXT_LAYERS];
 
 #if defined(PBL_HEALTH)
-extern TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
-extern GBitmap *s_football_bitmap;
-extern BitmapLayer *s_football_layer;
 extern Layer *hr_icon, *step_ladder;
 extern bool noHR;
 #endif
 
-extern GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
-extern BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
-extern Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
+typedef enum {
+  GBITMAP_LAYER_LOGO,
+  GBITMAP_LAYER_BEAT_TEAM,
+  GBITMAP_LAYER_BT,
+  GBITMAP_LAYER_BATT_CRG,
+  GBITMAP_LAYER_BATT_EMPTY,
+  GBITMAP_LAYER_BATT_LOW,
+  GBITMAP_LAYER_BAG,
+  GBITMAP_LAYER_API_LOW,
+  GBITMAP_LAYER_API_EMPTY,
+  #if defined(PBL_HEALTH)
+  GBITMAP_LAYER_FOOTBALL,
+  #endif
+  NUM_GBITMAP_LAYERS
+} GBitmapLayerID;
+extern GBitmap* s_gbitmap_layers[NUM_GBITMAP_LAYERS];
 
-#ifdef PBL_RECT
-  extern Layer *vertical_line;
-#endif
+typedef enum {
+  BITMAP_LAYER_LOGO,
+  BITMAP_LAYER_BEAT_TEAM,
+  BITMAP_LAYER_BT,
+  BITMAP_LAYER_BATT,
+  BITMAP_LAYER_BAG,
+  BITMAP_LAYER_BAGB,
+  BITMAP_LAYER_API,
+  #if defined(PBL_HEALTH)
+  BITMAP_LAYER_FOOTBALL,
+  #endif
+  NUM_BITMAP_LAYERS
+} BitmapLayerID;
+extern BitmapLayer* s_bitmap_layers[NUM_BITMAP_LAYERS];
 
+typedef enum {
+  LAYER_RECT,
+  LAYER_HOR,
+  LAYER_BEAT_TEAM,
+  LAYER_BEAT_RECT,
+  #ifdef PBL_RECT
+  LAYER_VERT,
+  #endif
+  NUM_GENERIC_LAYERS
+} LayerID;
+extern Layer* s_layers[NUM_GENERIC_LAYERS];
+
+/*
+typedef enum {
+  GFONT_FONT,
+  GFONT_WICON,
+  NUM_GFONT
+} GFontID;
+extern GFont s_gfont[NUM_GFONT];
+*/
 extern GFont s_font, s_wIcon;
 
 /*******************************************
@@ -92,6 +160,8 @@ extern GFont s_font, s_wIcon;
 extern int16_t s_prev_y;
 extern bool s_bt_connected;
 extern bool s_animation;
+extern bool after_time;
+extern bool gametime;
 extern BatteryChargeState s_battery_state;
 extern bool s_bt_history;
 extern int16_t s_batt_history;
@@ -104,12 +174,12 @@ extern int16_t conditionValue;
 	* data refreshed from the API, unlike
 	* ClaySettings which is user configuration)
  *******************************************/
-extern char scoreHomeTeam[32];
-extern char scoreAwayTeam[32];
-extern int16_t scoreHomePoints;
-extern int16_t scoreAwayPoints;
-extern bool scoreCompleted;
-extern bool scoreValid; // false until the first successful response arrives
+//extern char scoreHomeTeam[32];
+//extern char scoreAwayTeam[32];
+//extern int16_t scoreHomePoints;
+//extern int16_t scoreAwayPoints;
+//extern bool scoreCompleted;
+//extern bool scoreValid; // false until the first successful response arrives
 
 extern uint16_t beat_spot;
 extern uint16_t beat_primary;

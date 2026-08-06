@@ -1,20 +1,3 @@
-/*
-Task List:
----Release---
--Weather
-  - Code
--Football API Integration
-  - API
-  - Code
--Champ Designation
-  - Icons
-    - Nat Champ
-    - Conf Champ
-    - Winning Season
-    - Bowl Win
-  - Code
-*/
-
 #include <pebble.h>
 #include "globals.h"
 #include "health.h"
@@ -25,10 +8,36 @@ Task List:
 #include "communication.h"
 #include "weather.h"
 #include "display.h"
+#include "api.h"
 
 /***********************************/
 /* NCAA FBS Watchface              */
 /***********************************/
+
+void destroy_layers_by_kind(void **layers, LayerKind kind, size_t count) {
+  if (!layers) return;
+  for (size_t i = 0; i < count; ++i) {
+    Layer *l = layers[i];
+    if (!l) continue;
+
+    switch (kind) {
+      case LAYER_KIND_TEXT:
+        text_layer_destroy((TextLayer*)l);
+        break;
+      case LAYER_KIND_BITMAP:
+        bitmap_layer_destroy((BitmapLayer*)l);
+        break;
+      case LAYER_KIND_GBITMAP:
+        gbitmap_destroy((GBitmap*)l);
+      break;
+      case LAYER_KIND_GENERIC:
+      default:
+        layer_destroy(l);
+        break;
+    }
+    layers[i] = NULL;
+  }
+}
 
 // Loads the main window's UI elements
 static void main_window_load(Window *window) {
@@ -37,9 +46,9 @@ static void main_window_load(Window *window) {
   GRect bounds = layer_get_bounds(window_layer);
   
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
-  
-  s_logo_layer = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_logo_bitmap, window_layer);
-  s_bag_layerf = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_bag_bitmap, bitmap_layer_get_layer(s_logo_layer));
+  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
+  s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
 
   #if defined(PBL_HEALTH)
     APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Health");
@@ -66,6 +75,9 @@ static void main_window_load(Window *window) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
   sensor_battery_draw(window_layer, bounds);
+  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
+  api_icon_draw(window_layer, bounds);
 
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
   // Apply saved settings
@@ -84,54 +96,22 @@ static void main_window_load(Window *window) {
 // Unloads the main window's UI elements
 static void main_window_unload(Window *window) {
   // Destroy TextLayers
-  text_layer_destroy(s_time_layer);
-  text_layer_destroy(s_date_layer);
-  text_layer_destroy(s_beat_layer);
-  text_layer_destroy(s_weather_layer);
-  text_layer_destroy(s_conditions_layer);
-  #if defined(PBL_HEALTH)
-    text_layer_destroy(s_hr_layer);
-    text_layer_destroy(s_step_layer);
-  #endif
+  destroy_layers_by_kind((void**)s_text_layers, LAYER_KIND_TEXT, NUM_TEXT_LAYERS);
 
   // Destroy GBitmap
-  gbitmap_destroy(s_logo_bitmap);
-  gbitmap_destroy(s_beat_team_bitmap);
-  gbitmap_destroy(s_bt_bitmap);
-  gbitmap_destroy(s_batt_crg_bitmap);
-  gbitmap_destroy(s_batt_empty_bitmap);
-  gbitmap_destroy(s_batt_low_bitmap);
-  if(s_bag_bitmap) {
-    gbitmap_destroy(s_bag_bitmap);
-    s_bag_bitmap = NULL; 
-  }
+  destroy_layers_by_kind((void**)s_gbitmap_layers, LAYER_KIND_GBITMAP, NUM_GBITMAP_LAYERS);
 
-  #if PBL_DISPLAY_HEIGHT > 180
-    fonts_unload_custom_font(s_font);
-  #endif
+  // Unload Fonts
+  fonts_unload_custom_font(s_font);
   fonts_unload_custom_font(s_wIcon);
 
   // Destroy BitmapLayer
-  bitmap_layer_destroy(s_logo_layer);
-  bitmap_layer_destroy(s_beat_team_layer);
-  bitmap_layer_destroy(s_bt_layer);
-  bitmap_layer_destroy(s_batt_layer);
-  bitmap_layer_destroy(s_bag_layerf);
-  bitmap_layer_destroy(s_bag_layerb);
+  destroy_layers_by_kind((void**)s_bitmap_layers, LAYER_KIND_BITMAP, NUM_BITMAP_LAYERS);
 
   // Destroy Layers
-  layer_destroy(rect_layer);
-  layer_destroy(horizontal_line);
-  layer_destroy(beat_team_layer);
-  layer_destroy(rect_beat_layer);
-
-  #ifdef PBL_RECT
-    layer_destroy(vertical_line);
-  #endif
+  destroy_layers_by_kind((void**)s_layers, LAYER_KIND_GENERIC, NUM_GENERIC_LAYERS);
 
   #if defined(PBL_HEALTH)
-    gbitmap_destroy(s_football_bitmap);
-    bitmap_layer_destroy(s_football_layer);
     drawing_multiline_layer_destroy(hr_icon);
     drawing_multiline_layer_destroy(step_ladder);
   #endif
@@ -143,6 +123,7 @@ static void main_window_unload(Window *window) {
 // Initializes the app
 static void init() {
   // Load settings before creating UI
+  APP_LOG(APP_LOG_LEVEL_INFO, "-------- LOAD SETTINGS --------");
   globals_prv_load_settings();
 
   // Create main Window element
@@ -157,7 +138,6 @@ static void init() {
   // Show the Window on the watch, with animated=true
   window_stack_push(s_main_window, true);
 
-  
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- SUBSCRIBE --------");
   
   // Subscribe to unobstructed area events
@@ -193,9 +173,10 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
 
   // Open AppMessage
-  const int inbox_size = 512;
-  const int outbox_size = 512;
+  const int inbox_size = 600;
+  const int outbox_size = 256;
   app_message_open(inbox_size, outbox_size);
+  
 }
 
 // Deinitializes the app
