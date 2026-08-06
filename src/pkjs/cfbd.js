@@ -150,15 +150,17 @@ var cfbd = (function() {
       var inSeason = now >= startDate && now <= endDate;
       var postSeason = now > endDate;
       
-      const weeks = data.map(item => [
-        item.week, 
-        item.startDate, 
-        item.endDate
-      ]);
+      var weeks = data.map(function(item) {
+        return [
+          item.week,
+          item.startDate,
+          item.endDate
+        ];
+      });
       
 
       console.log('Calendar ' + year + ': ' + startStr + ' - ' + endStr + 
-                  ', in season: ' + inSeason + ', post season: ' + postSeason);// + ', week: ' + currentWeek);
+                  ', in season: ' + inSeason + ', post season: ' + postSeason);
 
       callback({
         isInSeason: inSeason,
@@ -333,7 +335,7 @@ var cfbd = (function() {
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
 
       // 1. Define the next step as a helper function
-      const fetchNextSeasonBoundary = function() {
+      var fetchNextSeasonBoundary = function() {
         fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
           if (firstGame && firstGame.startDate) {
             cache.nextSeasonFirstGameTs = Math.floor(new Date(firstGame.startDate).getTime() / 1000);
@@ -367,7 +369,12 @@ var cfbd = (function() {
           } else {
             // Offseason: use next year, fetch its first game
             console.error('No Schedules Found');
-            callback([]);
+            // Match the 4-arg (year, nextSeasonTs, seasonDates, weekDates)
+            // signature every other call site uses - a bare callback([])
+            // would silently pass year=[] and leave the rest undefined,
+            // crashing downstream (e.g. cache.weekDates.length) instead of
+            // failing here where the cause is clear.
+            callback(null, null, null, null);
             return; // Stops execution, fetchNextSeasonBoundary is never called
           }
         });
@@ -470,6 +477,16 @@ var cfbd = (function() {
       determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
 
+        // No schedule data was found for either the current or prior year
+        // (see determineSeasonAndBoundary's offseason branch) - cache is
+        // not populated, so stop here rather than let determineCurrentWeek
+        // run against unset year/weekDates further down.
+        if (year === null) {
+          console.log('Full sync aborted - no season boundary available');
+          callback(null);
+          return;
+        }
+
         // Correct the locally-tracked usage counter against CFBD's own
         // records. Only done here (full sync), not on every light sync,
         // so this correction call doesn't itself eat into the budget
@@ -521,13 +538,7 @@ var cfbd = (function() {
           });
 
           setTimeout(function() {
-            // week 14 is hardcoded for now (offseason testing, so real
-            // "current week" rankings don't exist yet) - swap the two
-            // lines below (comment the 14 one, uncomment target.week one)
-            // once testing is done, matching the same toggle used for
-            // games in doLightSync.
-            //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-            fetchRankings(target.year, 14, false, apiKey, function(data) {
+            fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
               rankings = data;
               onFetchComplete();
             });
@@ -579,12 +590,7 @@ var cfbd = (function() {
       games: []
     };
 
-    // week 14 is hardcoded for now (offseason testing, so real "current
-    // week" games don't exist yet) - swap the two lines below (comment
-    // the 14 one, uncomment target.week one) once testing is done and the
-    // season's actual current week should be used instead.
-    //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-    fetchGames(target.year, 14, false, apiKey, function(data) {
+    fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
       results.games = data;
       // Report the running local tally (not corrected against GET /info -
       // that only happens on full sync) so the watch's counter reflects

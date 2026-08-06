@@ -23,10 +23,6 @@ Layer* drawing_line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, ui
   return line_layer;
 }
 
-/*******************************************************************
- * Multi-line layer — draws N segments from one Layer's update_proc
- * instead of allocating a Layer per segment.
- *******************************************************************/
 typedef struct {
   GPoint p1;
   GPoint p2;
@@ -111,17 +107,6 @@ BitmapLayer* drawing_bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
 
   return s_bitmap_layer;
 }
-
-// Kept for parity with the original file — not currently wired to any layer's
-// update_proc, but preserved in case you want a bordered TextLayer later.
-/*
-static void drawing_text_layer_border_update_proc(Layer *layer, GContext *ctx) {
-  GRect bounds = layer_get_bounds(layer);
-  graphics_context_set_stroke_color(ctx, GColorBlack);
-  graphics_context_set_stroke_width(ctx, 1);
-  graphics_draw_rect(ctx, bounds);
-}
-*/
 
 TextLayer* drawing_text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color,
                      const char *initial_text, GFont font_handle,

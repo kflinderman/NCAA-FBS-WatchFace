@@ -3,18 +3,19 @@
 #include "globals.h"
 #include "drawing.h"
 
+//I think this one could be better
 void display_setupBag(GColor bagColor) {
   if (s_gbitmap_layers[GBITMAP_LAYER_BAG]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BAG]);
     s_gbitmap_layers[GBITMAP_LAYER_BAG] = NULL;
   }
   if (settings.bagBool) {
-#if defined(PBL_COLOR)
+    #if defined(PBL_COLOR)
     s_gbitmap_layers[GBITMAP_LAYER_BAG] = gbitmap_create_with_resource(RESOURCE_ID_BAG);
-#else
+    #else
     uint32_t res_id = gcolor_equal(bagColor, GColorWhite) ? RESOURCE_ID_BAG : RESOURCE_ID_BAGB;
     s_gbitmap_layers[GBITMAP_LAYER_BAG] = gbitmap_create_with_resource(res_id);
-#endif
+    #endif
 
     // Set the bitmap on the active layer, and explicitly clear it from the inactive layer
     if (settings.DisplayTeam > 1) {
@@ -80,5 +81,4 @@ void display_beatteam(Layer *window_layer, GRect bounds){
   layer_add_child(window_layer, s_layers[LAYER_BEAT_TEAM]);
   s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM], s_layers[LAYER_BEAT_TEAM]);
   s_bitmap_layers[BITMAP_LAYER_BAGB] = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]));
-
 }

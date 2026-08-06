@@ -143,7 +143,6 @@ void globals_prv_default_settings() {
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
   settings.hardcodeRival = 0;
-  settings.donate = false;
   settings.bagBool = false;
   settings.animationDelay = false;
   settings.countdownBool = false;

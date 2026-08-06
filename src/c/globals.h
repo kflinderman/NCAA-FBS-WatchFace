@@ -32,7 +32,6 @@ typedef struct ClaySettings {
   bool stepsGoalBool;
   uint16_t stepsGoal;
   uint8_t hardcodeRival;
-  bool donate;
   bool bagBool;
   bool animationDelay;
   bool countdownBool;
