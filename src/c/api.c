@@ -255,6 +255,8 @@ void api_request_cfbd_full_sync(void) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
   outbox_queue_send(build_request_full_sync);
+  
+  
 }
 
 static void build_request_light_sync(DictionaryIterator *iter) {

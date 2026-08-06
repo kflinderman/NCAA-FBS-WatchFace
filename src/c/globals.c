@@ -258,16 +258,17 @@ void globals_prv_update_display() {
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
 
   // 3. Update Logos
+  /*
   if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
   if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
-
+  */
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
-
+  
   // 4. Setup Accent / Icon Colors
   GColor primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
   display_setupBag(primary_icon_color);
@@ -301,16 +302,22 @@ void globals_prv_update_display() {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
   
+  
+  
   bool timeTrue = true;
   if (settings.countdownBool){
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
+    if (settings.api && !settings.cfbd.api_data_valid) {
+      api_request_cfbd_light_sync();
+    }
     after_time = timekeeping_countdown();
-    if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+    if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
       animation_hide_text(false, true, true);
       timeTrue = false;
     }
   }
   
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "After Time: %d", after_time);
   if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
     //OK This is the only time I'm not confident in after_time.  I also need to make a new variable for when it's checked the gametime since I should have that information.

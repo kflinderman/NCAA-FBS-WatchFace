@@ -790,7 +790,7 @@ module.exports = [
       },
       {
         "type": "toggle",
-        "messageKey": "donate",
+        "id": "donate",
         "label": "Donation",
   	    "description": "Consider donating to help support me!",
         "defaultValue": false

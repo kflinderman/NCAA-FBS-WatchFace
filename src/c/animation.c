@@ -3,11 +3,10 @@
 #include "structure.h"
 #include "timekeeping.h"
 
-static bool returning = false;
 
 // Animation complete handler
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
-  //static bool returning = false;
+  static bool returning = false;
   Layer *layer = (Layer *)context;
 
   if (!returning) {
@@ -31,7 +30,7 @@ void animation_hide_text(bool count, bool score, bool time){
 }
 
 void animation_beat_team_layer(void) {
-  //static bool returning = false;
+  static bool returning = false;
 
   GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
 

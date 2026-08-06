@@ -123,8 +123,9 @@
                 },
                 {
                     "file": "images/bagsb.png",
+                    "memoryFormat": "Smallest",
                     "name": "BAGB",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": [
                         "aplite",
                         "diorite",
@@ -134,20 +135,23 @@
                 },
                 {
                     "file": "images/bag.png",
+                    "memoryFormat": "Smallest",
                     "name": "BAG",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/bt.png",
+                    "memoryFormat": "Smallest",
                     "name": "BT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/clemsonp2.png",
+                    "memoryFormat": "Smallest",
                     "name": "CLEMSON",
                     "spaceOptimization": "storage",
                     "targetPlatforms": null,
@@ -155,8 +159,9 @@
                 },
                 {
                     "file": "images/emptybatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "EMPTYBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -170,8 +175,9 @@
                 },
                 {
                     "file": "images/fullbatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "FULLBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -208,22 +214,25 @@
                 },
                 {
                     "file": "images/APIempty.png",
+                    "memoryFormat": "Smallest",
                     "name": "APIEMPTY",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/APIlow.png",
+                    "memoryFormat": "Smallest",
                     "name": "APILOW",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
                 {
                     "file": "images/lowbatt.png",
+                    "memoryFormat": "Smallest",
                     "name": "LOWBATT",
-                    "spaceOptimization": "storage",
+                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 }

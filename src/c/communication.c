@@ -89,7 +89,6 @@ static const ClaySettingField *prv_find_field(uint32_t key) {
 }
 
 void configuration_callback(DictionaryIterator *iterator, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   bool settings_changed = false;
 
   for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
