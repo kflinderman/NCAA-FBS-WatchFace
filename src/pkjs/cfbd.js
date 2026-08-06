@@ -199,7 +199,17 @@ var cfbd = (function() {
         return new Date(a.startDate) - new Date(b.startDate);
       });
 
-      var trimmedGames = data.map(function(game) {
+      var trimmedGames = data
+      .filter(function(game) {
+        // CFBD uses "NA" as a placeholder team on some entries (TBD/unscheduled).
+        // Skip these so they never reach findTeamGame()/AppMessage formatting.
+        if (game.homeTeam === 'NA' || game.awayTeam === 'NA') {
+          console.log('Skipping game with NA placeholder team');
+          return false;
+        }
+        return true;
+      })
+      .map(function(game) {
         return {
           startDate: game.startDate,
           homeTeam: game.homeTeam,

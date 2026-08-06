@@ -95,6 +95,9 @@ static void main_window_load(Window *window) {
 
 // Unloads the main window's UI elements
 static void main_window_unload(Window *window) {
+  // Unsubscribe from TickTimerService
+  tick_timer_service_unsubscribe();
+  
   // Destroy TextLayers
   destroy_layers_by_kind((void**)s_text_layers, LAYER_KIND_TEXT, NUM_TEXT_LAYERS);
 
@@ -115,9 +118,6 @@ static void main_window_unload(Window *window) {
     drawing_multiline_layer_destroy(hr_icon);
     drawing_multiline_layer_destroy(step_ladder);
   #endif
-
-  // Unsubscribe from TickTimerService
-  tick_timer_service_unsubscribe();
 }
 
 // Initializes the app
@@ -181,10 +181,14 @@ static void init() {
 
 // Deinitializes the app
 static void deinit() {
-  window_destroy(s_main_window);
+  //bluetooth_connection_service_unsubscribe();
+  
   accel_data_service_unsubscribe();
-  bluetooth_connection_service_unsubscribe();
+  connection_service_unsubscribe();
   battery_state_service_unsubscribe();
+  unobstructed_area_service_unsubscribe();
+
+  window_destroy(s_main_window);
 }
 
 int main(void) {

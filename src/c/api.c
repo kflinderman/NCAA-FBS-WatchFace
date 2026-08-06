@@ -78,10 +78,12 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type);
  */
 static const Team *teams_find_by_name(const char *name) {
   if (!name || !name[0]) return NULL;
+  if (strcmp(name, "NA") == 0) return NULL; // never resolve a placeholder opponent
+
   for (size_t i = 0; i < TEAMS_COUNT; i++) {
-    if (TEAMS[i].name && strcmp(TEAMS[i].name, name) == 0) {
-      return &TEAMS[i];
-    }
+    if (!TEAMS[i].name) continue;
+    if (strcmp(TEAMS[i].name, "NA") == 0) continue; // skip placeholder roster slots
+    if (strcmp(TEAMS[i].name, name) == 0) return &TEAMS[i];
   }
   return NULL;
 }
