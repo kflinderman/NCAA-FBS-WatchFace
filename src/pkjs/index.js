@@ -193,13 +193,16 @@ function sendScoreToWatch(game) {
   );
 }
 
-// Two independent caches now, matching the split sync protocol: games
-// come from light sync (its own cadence), records+rankings come from full
-// sync (records/rankings don't change fast enough within a week to need
-// their own cadence, so they ride along with the daily full sync).
-// REQUEST_CFBD_TEAM_DATA is served from whichever of these matches the
-// requested type - no new API call per team either way, just filtering
-// data already fetched by whichever sync last ran.
+// Two caches, matching the sync protocol: gamesData holds the whole
+// season's games (regular, plus postseason once the calendar's past the
+// regular season) from the light sync - see syncLightCFBD in cfbd.js for
+// why this is a bulk fetch rather than per-team: API_DATA[] tracks the
+// full ~140-team FBS roster, not just the user's favorite/beat team, so
+// anything scoped per-team would mean 100+ CFBD calls every light sync.
+// recordsRankingsData comes from the (less frequent) full sync.
+// REQUEST_CFBD_TEAM_DATA is served by searching whichever cache matches
+// the requested type - no new API call per team, regardless of roster
+// size or how often the displayed team changes.
 var gamesData = null;
 var recordsRankingsData = null;
 
@@ -221,33 +224,74 @@ function sendCalendarToWatch(calendarData) {
   );
 }
 
-// Finds this team's game (if any) in the cached games array and returns
-// { opponent, teamScore, vsScore, gametime } from that team's own point
-// of view, regardless of whether it played home or away. Returns
-// nulls/zeros/empty string if the team has no game this week (bye week).
-function findTeamGame(teamName, games) {
-  for (var i = 0; i < games.length; i++) {
-    var g = games[i];
-    if (g.homeTeam === teamName) {
-      return {
-        opponent: g.awayTeam || '',
-        teamScore: g.homePoints || 0,
-        vsScore: g.awayPoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0,
-        completed: !!g.completed
-      };
-    }
-    if (g.awayTeam === teamName) {
-      return {
-        opponent: g.homeTeam || '',
-        teamScore: g.awayPoints || 0,
-        vsScore: g.homePoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0,
-        completed: !!g.completed
-      };
-    }
+// Scans a pool of games (one seasonType's worth) for teamName's entries
+// and returns the one that best represents their "current" game: the
+// most recent one that's already kicked off (in progress or completed).
+// Comparing by date across every matching entry - rather than assuming
+// one game per week - is what correctly handles a team having more than
+// one entry under the same nominal week (bowl slates, doubleheaders). If
+// none have started yet, falls back to the single earliest upcoming game
+// so there's still something to show.
+function pickTeamGameFromPool(teamName, pool) {
+  var matches = pool.filter(function(g) {
+    return g.homeTeam === teamName || g.awayTeam === teamName;
+  });
+  if (matches.length === 0) return null;
+
+  var now = new Date();
+  var started = matches.filter(function(g) { return new Date(g.startDate) <= now; });
+  if (started.length > 0) {
+    started.sort(function(a, b) { return new Date(b.startDate) - new Date(a.startDate); });
+    return started[0];
   }
-  return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
+
+  var upcoming = matches.slice().sort(function(a, b) {
+    return new Date(a.startDate) - new Date(b.startDate);
+  });
+  return upcoming[0];
+}
+
+// Finds the single most current game for one team out of the cached
+// gamesData pool, handling the postseason correctly: once the calendar's
+// past the regular season, check the team's postseason games first (a
+// team can have more than one bowl/playoff-round entry, which
+// pickTeamGameFromPool's date comparison - not a week lookup - is what
+// finds correctly). If the team has no postseason games at all (didn't
+// make a bowl/the playoff), fall back to their last regular season game
+// so there's still real, current data instead of nothing.
+function findLatestTeamGame(teamName, games) {
+  if (games.inPostseason) {
+    var postGame = pickTeamGameFromPool(teamName, games.postGames);
+    if (postGame) return postGame;
+    console.log(teamName + ' has no postseason games - falling back to last regular season game');
+  }
+  return pickTeamGameFromPool(teamName, games.regularGames);
+}
+
+// Converts one game object (home/away fields) into this team's own point
+// of view - { opponent, teamScore, vsScore, gametime, completed } -
+// regardless of whether they played home or away. Pass null for a bye/
+// no-game situation (nulls/zeros/empty string).
+function gameToTeamPerspective(teamName, game) {
+  if (!game) {
+    return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
+  }
+  if (game.homeTeam === teamName) {
+    return {
+      opponent: game.awayTeam || '',
+      teamScore: game.homePoints || 0,
+      vsScore: game.awayPoints || 0,
+      gametime: game.startDate ? Math.floor(new Date(game.startDate).getTime() / 1000) : 0,
+      completed: !!game.completed
+    };
+  }
+  return {
+    opponent: game.homeTeam || '',
+    teamScore: game.awayPoints || 0,
+    vsScore: game.homePoints || 0,
+    gametime: game.startDate ? Math.floor(new Date(game.startDate).getTime() / 1000) : 0,
+    completed: !!game.completed
+  };
 }
 
 function findTeamRecord(teamName, records) {
@@ -274,43 +318,52 @@ function findTeamRank(teamName, rankings) {
 }
 
 // Handles one REQUEST_CFBD_TEAM_DATA from the watch: looks up teamName in
-// whichever cache matches dataType (no new API call, just filtering data
-// already fetched by that sync type) and sends back only the field subset
-// relevant to that type - the watch applies whatever fields are present,
-// so a games response never touches record/ranking fields and vice versa.
+// whichever cache matches dataType (no new API call - just searching data
+// already fetched in bulk by that sync type) and sends back only the
+// field subset relevant to dataType - the watch applies whatever fields
+// are present, so a games response never touches record/ranking fields
+// and vice versa.
 function sendTeamData(teamIndex, teamName, dataType) {
-  var dictionary = {
-    'CFBD_TEAM_INDEX': teamIndex,
-    'CFBD_TEAM_DATA_TYPE': dataType
-  };
-
   if (dataType === CFBD_TEAM_DATA_TYPE_GAMES) {
     if (!gamesData) {
       console.log('REQUEST_CFBD_TEAM_DATA (games) received with no games data cached - skipping');
       return;
     }
-    var game = findTeamGame(teamName, gamesData.games);
-    dictionary['CFBD_TEAM_OPPONENT'] = game.opponent.substring(0, 31);
-    dictionary['CFBD_TEAM_SCORE'] = game.teamScore;
-    dictionary['CFBD_TEAM_VS_SCORE'] = game.vsScore;
-    dictionary['CFBD_TEAM_GAMETIME'] = game.gametime;
-    dictionary['CFBD_TEAM_COMPLETED'] = game.completed ? 1 : 0;
-  } else {
-    if (!recordsRankingsData) {
-      console.log('REQUEST_CFBD_TEAM_DATA (records) received with no records/rankings data cached - skipping');
-      return;
-    }
-    var record = findTeamRecord(teamName, recordsRankingsData.records);
-    var rank = findTeamRank(teamName, recordsRankingsData.rankings);
-    dictionary['CFBD_TEAM_RANK'] = rank;
-    dictionary['CFBD_TEAM_WINS'] = record.wins;
-    dictionary['CFBD_TEAM_PS_GAMES'] = record.postseasonGames;
-    dictionary['CFBD_TEAM_PS_WINS'] = record.postseasonWins;
-    dictionary['CFBD_TEAM_PS_LOSSES'] = record.postseasonLosses;
+    var game = findLatestTeamGame(teamName, gamesData);
+    var perspective = gameToTeamPerspective(teamName, game);
+    var dictionary = {
+      'CFBD_TEAM_INDEX': teamIndex,
+      'CFBD_TEAM_DATA_TYPE': dataType,
+      'CFBD_TEAM_OPPONENT': perspective.opponent.substring(0, 31),
+      'CFBD_TEAM_SCORE': perspective.teamScore,
+      'CFBD_TEAM_VS_SCORE': perspective.vsScore,
+      'CFBD_TEAM_GAMETIME': perspective.gametime,
+      'CFBD_TEAM_COMPLETED': perspective.completed ? 1 : 0
+    };
+    Pebble.sendAppMessage(dictionary,
+      function(e) { console.log('Team data (games) sent for index ' + teamIndex + ' (' + teamName + ')'); },
+      function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
+    );
+    return;
   }
 
+  if (!recordsRankingsData) {
+    console.log('REQUEST_CFBD_TEAM_DATA (records) received with no records/rankings data cached - skipping');
+    return;
+  }
+  var record = findTeamRecord(teamName, recordsRankingsData.records);
+  var rank = findTeamRank(teamName, recordsRankingsData.rankings);
+  var dictionary = {
+    'CFBD_TEAM_INDEX': teamIndex,
+    'CFBD_TEAM_DATA_TYPE': dataType,
+    'CFBD_TEAM_RANK': rank,
+    'CFBD_TEAM_WINS': record.wins,
+    'CFBD_TEAM_PS_GAMES': record.postseasonGames,
+    'CFBD_TEAM_PS_WINS': record.postseasonWins,
+    'CFBD_TEAM_PS_LOSSES': record.postseasonLosses
+  };
   Pebble.sendAppMessage(dictionary,
-    function(e) { console.log('Team data (type ' + dataType + ') sent for index ' + teamIndex + ' (' + teamName + ')'); },
+    function(e) { console.log('Team data (records) sent for index ' + teamIndex + ' (' + teamName + ')'); },
     function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
   );
 }
@@ -354,10 +407,13 @@ Pebble.addEventListener('appmessage',
       });
     }
 
-    // ===== CFBD Light Sync: fetch this week's games ONCE, cache in
-    // memory, then tell the watch it's ready. The watch then requests one
-    // team at a time (REQUEST_CFBD_TEAM_DATA below), each served from
-    // this same cached fetch - no repeat API calls. =====
+    // ===== CFBD Light Sync: fetch the whole season's games in bulk
+    // (regular, plus postseason once the calendar's past the regular
+    // season), cache in memory, then tell the watch it's ready. The watch
+    // then requests one team at a time (REQUEST_CFBD_TEAM_DATA below),
+    // each served from this same cached fetch - no repeat API calls no
+    // matter how many teams are tracked or how often the displayed team
+    // changes. =====
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
 
@@ -366,14 +422,15 @@ Pebble.addEventListener('appmessage',
         return;
       }
 
-      cfbdModule.syncLightCFBD(apiKey, function(lightData) {
-        gamesData = lightData;
-        console.log('Games cached: ' + lightData.games.length + ' games');
+      cfbdModule.syncLightCFBD(apiKey, function(result) {
+        gamesData = result;
+        console.log('Games cached: ' + result.regularGames.length + ' regular' +
+          (result.inPostseason ? ', ' + result.postGames.length + ' postseason' : ''));
 
         Pebble.sendAppMessage({
             'CFBD_LIGHT_SYNC_READY': 1,
-            'CFBD_API_CALLS_USED': lightData.apiCallsUsed || 0,
-            'CFBD_API_CALLS_LIMIT': lightData.apiCallsLimit || 0
+            'CFBD_API_CALLS_USED': result.apiCallsUsed || 0,
+            'CFBD_API_CALLS_LIMIT': result.apiCallsLimit || 0
           },
           function(e) { console.log('Light sync ready signal sent'); },
           function(e) { console.log('Error sending light sync ready signal!'); }

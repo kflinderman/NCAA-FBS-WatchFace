@@ -67,6 +67,14 @@ static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_cu
 static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
 
+// In-flight guard covering a light sync's entire lifecycle - set when
+// api_request_cfbd_light_sync() sends the request, and only cleared once
+// the resulting games walk fully completes in cfbd_team_walk_complete()
+// (not merely when JS's ready-signal arrives - see that function's
+// comments for why the walk's completion, not the ready-signal, is the
+// right place to release this).
+static bool cfbd_light_sync_pending = false;
+
 static void cfbd_team_walk_complete(CFBDTeamDataType type);
 
 /**
@@ -208,6 +216,16 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
 
   if (type == CFBD_TEAM_DATA_GAMES) {
     settings.cfbd.last_light_sync_ts = time(NULL);
+    // Only now - once the games walk has actually finished applying data
+    // to every tracked team - is it safe to let api_should_light_sync()
+    // fire another request. Clearing this back when CFBD_LIGHT_SYNC_READY
+    // first arrived left a window open: if the games walk got deferred
+    // (a records walk was still running), globals_prv_update_display()
+    // a few lines below would see the guard already released and
+    // last_light_sync_ts still 0, and fire a second, premature
+    // REQUEST_CFBD_LIGHT_SYNC right as the deferred walk was about to
+    // start on its own.
+    cfbd_light_sync_pending = false;
   } else {
     settings.cfbd.last_full_sync_ts = time(NULL);
   }
@@ -266,15 +284,16 @@ static void build_request_light_sync(DictionaryIterator *iter) {
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
-// In-flight guard: globals_prv_update_display() can call
-// api_request_cfbd_light_sync() from more than one place in the same
-// invocation (countdown block + score block), and update_display() itself
-// gets invoked from several other call sites (settings changed, sync
-// complete). Without this flag, all of those can independently decide
-// "no valid data yet" and each fire their own REQUEST_CFBD_LIGHT_SYNC
-// before the first one's response has come back, causing JS to run two
-// (or more) concurrent syncLightCFBD() fetches racing each other.
-static bool cfbd_light_sync_pending = false;
+// cfbd_light_sync_pending (declared near the top of the file, alongside
+// the other sync-state statics) guards this: globals_prv_update_display()
+// can call api_request_cfbd_light_sync() from more than one place in the
+// same invocation (countdown block + score block), and update_display()
+// itself gets invoked from several other call sites (settings changed,
+// sync complete). Without this flag, all of those can independently
+// decide "no valid data yet" and each fire their own
+// REQUEST_CFBD_LIGHT_SYNC before the first one's response has come back,
+// causing JS to run two (or more) concurrent games walks racing each
+// other.
 
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
@@ -362,13 +381,15 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
-  // Light sync: JS has fetched (once) and cached this week's games and is
-  // ready to serve per-team lookups. Kick off (or defer, if a records
-  // walk is already running) a games-type team-by-team walk.
+  // Light sync: JS is ready to serve per-team game lookups. Kick off (or
+  // defer, if a records walk is already running) a games-type team-by-team
+  // walk. cfbd_light_sync_pending stays true through this - it's only
+  // cleared once the games walk actually completes in
+  // cfbd_team_walk_complete(), not here, so a deferred walk can't get
+  // raced by another premature light-sync request in the meantime.
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)API_DATA_COUNT);
-    cfbd_light_sync_pending = false;
 
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
@@ -459,8 +480,8 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: score=%d-%d rank=%d wins=%d",
-      team_index, info->name, cfbd_current_sync_type, info->score, info->vs_score,
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
+      team_index, info->name, cfbd_current_sync_type, info->vs_id, info->score, info->vs_score,
       info->ranking, info->wins);
 
     uint16_t next_index = team_index + 1;

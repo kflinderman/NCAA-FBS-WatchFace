@@ -176,33 +176,13 @@ var cfbd = (function() {
   }
 
   /**
-   * GET /games for a specific year/week to find first game
-   * Returns: [ { id, startDate, homeTeam, awayTeam, ... }, ... ]
+   * Shared by fetchSeasonGames: drops CFBD's "NA" placeholder entries
+   * (TBD/unscheduled opponents) and trims each game down to just the
+   * fields the watch needs.
    */
-  function fetchGames(year, week, postseason, apiKey, callback) {
-    if (postseason){
-      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=postseason&classification=fbs';
-    }
-    else{
-      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=regular&classification=fbs';
-    }
-    console.log('Grabbing game data for: ' + year + ' week ' + week + (postseason ? ' (offseason)' : ''));
-    xhrAuth(url, apiKey, function(data) {
-      if (!data || !Array.isArray(data)) {
-        console.log('No games for ' + year + ' week ' + week);
-        callback([]);
-        return;
-      }
-
-      // Sort by startDate to find earliest game
-      data.sort(function(a, b) {
-        return new Date(a.startDate) - new Date(b.startDate);
-      });
-
-      var trimmedGames = data
+  function trimGames(data) {
+    return data
       .filter(function(game) {
-        // CFBD uses "NA" as a placeholder team on some entries (TBD/unscheduled).
-        // Skip these so they never reach findTeamGame()/AppMessage formatting.
         if (game.homeTeam === 'NA' || game.awayTeam === 'NA') {
           console.log('Skipping game with NA placeholder team');
           return false;
@@ -219,11 +199,34 @@ var cfbd = (function() {
           completed: game.completed
         };
       });
+  }
 
-      console.log('Fetched ' + trimmedGames.length + ' games for week ' + week);
-      callback(trimmedGames);
+  /**
+   * GET /games for an entire year/seasonType - no week filter, no team
+   * filter. API_DATA[] tracks the full ~140-team FBS roster (not just the
+   * user's favorite/beat team), so a per-team CFBD call would mean 100+
+   * HTTP requests every light sync. Fetching the whole season in one
+   * call and picking each team's latest game client-side (see
+   * findLatestTeamGame in index.js) keeps this at one call for the
+   * regular season, plus one more only when the postseason fallback
+   * actually needs it - regardless of roster size or how often the
+   * displayed team changes.
+   */
+  function fetchSeasonGames(year, seasonType, apiKey, callback) {
+    var url = constants.API_BASE + '/games?year=' + year +
+        '&seasonType=' + seasonType + '&classification=fbs';
+    console.log('Grabbing full ' + seasonType + ' season for ' + year);
+    xhrAuth(url, apiKey, function(data) {
+      if (!data || !Array.isArray(data)) {
+        console.log('No ' + seasonType + ' games for ' + year);
+        callback([]);
+        return;
+      }
+      var trimmed = trimGames(data);
+      console.log('Fetched ' + trimmed.length + ' ' + seasonType + ' games for ' + year);
+      callback(trimmed);
     }, function(status) {
-      console.log('fetchGames failed for week ' + week + ': ' + status);
+      console.log('fetchSeasonGames failed (' + seasonType + '): ' + status);
       callback([]);
     });
   }
@@ -393,16 +396,22 @@ var cfbd = (function() {
   }
 
   /**
-   * Helper: Fetch the first game (by date) of a given year's season
+   * Helper: Fetch the first game (by date) of a given year's season.
+   * Only called from determineSeasonAndBoundary, near season transitions -
+   * not part of the regular light-sync cadence - so reusing the
+   * whole-season fetch here (rather than a week-scoped one) keeps this
+   * file to a single fetch function without adding meaningful call volume.
    */
   function fetchFirstGameOfYear(year, apiKey, callback) {
-    fetchGames(year, 1, false, apiKey, function(games) {
-      if (games.length > 0) {
-        // games are already sorted by startDate from fetchGames
-        callback(games[0]);
-      } else {
+    fetchSeasonGames(year, 'regular', apiKey, function(games) {
+      if (games.length === 0) {
         callback(null);
+        return;
       }
+      var sorted = games.slice().sort(function(a, b) {
+        return new Date(a.startDate) - new Date(b.startDate);
+      });
+      callback(sorted[0]);
     });
   }
 
@@ -560,60 +569,64 @@ var cfbd = (function() {
     },
 
     /**
-   * Lighter refresh: uses cached season info from syncFullCFBD to determine
-   * the correct year/week, then fetches just this week's games.
-   * Records/rankings are no longer fetched here - they moved to
-   * syncFullCFBD since they don't change fast enough within a week to
-   * need their own sync cadence.
+   * Lighter refresh: fetches the whole regular season in one call (games
+   * for all ~140 FBS teams don't fit any smaller unit that's still cheap
+   * to fetch: API_DATA[] tracks the full roster, not just the user's
+   * favorite/beat team, so anything scoped per-team or per-week would
+   * multiply into 100+ calls or miss games depending on bye weeks/bowl
+   * scheduling). Also fetches the whole postseason in a second call, but
+   * only once the calendar's actually past the regular season - no need
+   * to pay for that call all year. Each team's actual latest game is
+   * then picked out of this cached pool client-side, per team, as
+   * REQUEST_CFBD_TEAM_DATA comes in (see findLatestTeamGame in
+   * index.js) - no further CFBD calls needed regardless of roster size
+   * or how often the displayed team changes.
    *
-   * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates to
-   * already be populated (normally true after a prior syncFullCFBD call in
-   * this same JS session). If the JS worker restarted and light sync fires
-   * first - which can happen, since the watch decides to sync based on its
-   * own persisted timestamps, not on what this JS session has done - that
-   * cache would be empty and determineCurrentWeek would throw. So: if
-   * cache.currentYear is unset, run determineSeasonAndBoundary first to
-   * populate it, then proceed exactly as before.
+   * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates
+   * already populated (normally true after a prior syncFullCFBD call this
+   * session). If the JS worker restarted and light sync fires first -
+   * which can happen, since the watch decides to sync based on its own
+   * persisted timestamps, not on what this JS session has done - that
+   * cache would be empty, so run determineSeasonAndBoundary first.
    */
     syncLightCFBD: function(apiKey, callback) {
+      function fetchAndReturn() {
+        var target = determineCurrentWeek(cache);
+
+        fetchSeasonGames(cache.currentYear, 'regular', apiKey, function(regularGames) {
+          if (!target.offseason) {
+            callback({
+              regularGames: regularGames,
+              postGames: [],
+              inPostseason: false,
+              apiCallsUsed: usage.used,
+              apiCallsLimit: usage.limit
+            });
+            return;
+          }
+
+          fetchSeasonGames(cache.currentYear, 'postseason', apiKey, function(postGames) {
+            callback({
+              regularGames: regularGames,
+              postGames: postGames,
+              inPostseason: true,
+              apiCallsUsed: usage.used,
+              apiCallsLimit: usage.limit
+            });
+          });
+        });
+      }
+
       if (cache.currentYear === null) {
         console.log('Light sync: cache empty (no full sync this session yet) - determining season first');
         determineSeasonAndBoundary(apiKey, function() {
-          doLightSync(apiKey, callback);
+          fetchAndReturn();
         });
         return;
       }
-      doLightSync(apiKey, callback);
+      fetchAndReturn();
     }
   };
-
-  function doLightSync(apiKey, callback) {
-    console.log('=== CFBD Light Sync Start ===');
-    var target = determineCurrentWeek(cache);
-    console.log('Light sync: year ' + target.year + ', week ' + target.week +
-                (target.offseason ? ' (offseason)' : ''));
-
-    var results = {
-      year: target.year,
-      week: target.week,
-      offseason: target.offseason,
-      games: []
-    };
-
-    fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-      results.games = data;
-      // Report the running local tally (not corrected against GET /info -
-      // that only happens on full sync) so the watch's counter reflects
-      // the call this light sync just made rather than whatever it was
-      // before this sync started.
-      results.apiCallsUsed = usage.used;
-      results.apiCallsLimit = usage.limit;
-      callback(results);
-    });
-    
-    
-    console.log('=== CFBD Light Sync End ===');
-  }
 })();
 
 module.exports = cfbd;
