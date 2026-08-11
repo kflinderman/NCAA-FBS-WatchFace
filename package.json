@@ -114,6 +114,14 @@
                     "type": "font"
                 },
                 {
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
                     "file": "images/bagsb.png",
                     "memoryFormat": "Smallest",
                     "name": "BAGB",
@@ -158,14 +166,6 @@
                     "type": "bitmap"
                 },
                 {
-                    "file": "images/football-black.png",
-                    "memoryFormat": "Smallest",
-                    "name": "EMPTYBATT",
-                    "spaceOptimization": "memory",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
                     "file": "images/football-color.png",
                     "memoryFormat": "Smallest",
                     "name": "football",
@@ -186,14 +186,6 @@
                     "memoryFormat": "Smallest",
                     "name": "GAMECOCK",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/lowbatt.png",
-                    "memoryFormat": "Smallest",
-                    "name": "LOWBATT",
-                    "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
                 },
@@ -235,11 +227,20 @@
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
+                },
+                {
+                    "file": "images/lowbatt.png",
+                    "memoryFormat": "Smallest",
+                    "name": "LOWBATT",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
                 }
             ]
         },
         "sdkVersion": "3",
         "targetPlatforms": [
+            "aplite",
             "basalt",
             "chalk",
             "diorite",

@@ -543,22 +543,19 @@ void api_score_display() {
   // 2. Only s_temp_buffer3 needs memory for formatted score "XX|YY\0"
   static char s_score_buffer[6];
 
-  int fav = settings.FavoriteTeam;
-  int vs_id = API_DATA[fav].vs_id;
-
-  if (vs_id == -1) {
+  if (API_DATA[settings.FavoriteTeam].vs_id == -1) {
     home_str = "BYE";
     away_str = "WEEK";
     // Copy constant string directly instead of snprintf
     memcpy(s_score_buffer, "00|00", 6);
   } else {
     // Zero-copy! Point directly to existing string constants
-    home_str = TEAMS[fav].shortname;
-    away_str = TEAMS[vs_id].shortname;
+    home_str = TEAMS[settings.FavoriteTeam].shortname;
+    away_str = TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname;
 
     // Clamp scores cleanly
-    int score1 = API_DATA[fav].score;
-    int score2 = API_DATA[fav].vs_score;
+    int score1 = API_DATA[settings.FavoriteTeam].score;
+    int score2 = API_DATA[settings.FavoriteTeam].vs_score;
     if (score1 > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
     if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
 
@@ -575,6 +572,8 @@ void api_score_display() {
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){
+  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  
   // Create Battery GBitmap from resource
   s_gbitmap_layers[GBITMAP_LAYER_API_LOW] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
   s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
@@ -589,16 +588,26 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
   
-  
-  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(beat_spot, -40 + beat_primary, 45, 40), sizeof(RoundRectData));
+  //Create Ranking resources
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 40, 25), sizeof(RoundRectData));
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
   rect_beat_data->fill_color = GColorWhite;
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
   layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
 
-  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, 10, 22, 30, GColorBlack, "00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
-
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 40, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
   
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
+  
+  //Create supurlitive resources
+  s_gbitmap_layers[GBITMAP_LAYER_WIN] = gbitmap_create_with_resource(RESOURCE_ID_football);
+  s_gbitmap_layers[GBITMAP_LAYER_BOWL] = gbitmap_create_with_resource(RESOURCE_ID_football);
+  s_gbitmap_layers[GBITMAP_LAYER_CHAMP] = gbitmap_create_with_resource(RESOURCE_ID_football);
+  
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - 30, 0, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - 30, logo_bounds.size.h - 20, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_BOWL], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
 }

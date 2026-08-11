@@ -22,18 +22,18 @@ void destroy_layers_by_kind(void **layers, LayerKind kind, size_t count) {
 
     switch (kind) {
       case LAYER_KIND_TEXT:
-      text_layer_destroy((TextLayer*)l);
-      break;
+        text_layer_destroy((TextLayer*)l);
+        break;
       case LAYER_KIND_BITMAP:
-      bitmap_layer_destroy((BitmapLayer*)l);
-      break;
+        bitmap_layer_destroy((BitmapLayer*)l);
+        break;
       case LAYER_KIND_GBITMAP:
-      gbitmap_destroy((GBitmap*)l);
+        gbitmap_destroy((GBitmap*)l);
       break;
       case LAYER_KIND_GENERIC:
       default:
-      layer_destroy(l);
-      break;
+        layer_destroy(l);
+        break;
     }
     layers[i] = NULL;
   }
@@ -44,89 +44,57 @@ static void main_window_load(Window *window) {
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
-
-  #if defined(DEBUG)
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
-  #endif
   s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
   s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
 
   #if defined(PBL_HEALTH)
-  #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Health");
+    APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Health");
+    health_draw(window_layer, bounds);
   #endif
-  health_draw(window_layer, bounds);
-  #endif
-
-  #if defined(DEBUG)
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Weather");
-  #endif
   weather_draw(window_layer, bounds);
 
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Team to Beat");
-  #endif
   display_beatteam(window_layer, bounds);
-
-  #if defined(DEBUG)
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing 'BEAT' Textbox");
-  #endif
   display_beat_textbox(window_layer, bounds);
-
-  #if defined(DEBUG)
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Bottom Box");
-  #endif
   display_main_time_layer(window_layer, bounds);
 
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Date and Time");
-  #endif
   timeDate_draw(window_layer, bounds);
-
-  #if defined(DEBUG)
+  
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Bluetooth");
-  #endif
   sensor_bluetooth_draw(window_layer, bounds);
 
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
-  #endif
   sensor_battery_draw(window_layer, bounds);
   
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
   api_icon_draw(window_layer, bounds);
 
-  #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
-  #endif
-  api_icon_draw(window_layer, bounds);
-
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
   // Apply saved settings
   APP_LOG(APP_LOG_LEVEL_INFO, "Applying Saved Settings");
-  #endif
   globals_prv_update_display();
 
   // Make sure the time and date are displayed from the start
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Time");
-  #endif
   update_time();
 
   // Apply correct layout in case Quick View is already active
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Apply Correct Layout w/ Quick View");
-  #endif
   animation_prv_unobstructed_change(0, NULL);
 }
 
 // Unloads the main window's UI elements
 static void main_window_unload(Window *window) {
-  // Unsubscribe from TickTimerService
-  tick_timer_service_unsubscribe();
-
   // Destroy TextLayers
   destroy_layers_by_kind((void**)s_text_layers, LAYER_KIND_TEXT, NUM_TEXT_LAYERS);
 
@@ -144,17 +112,18 @@ static void main_window_unload(Window *window) {
   destroy_layers_by_kind((void**)s_layers, LAYER_KIND_GENERIC, NUM_GENERIC_LAYERS);
 
   #if defined(PBL_HEALTH)
-  drawing_multiline_layer_destroy(hr_icon);
-  drawing_multiline_layer_destroy(step_ladder);
+    drawing_multiline_layer_destroy(hr_icon);
+    drawing_multiline_layer_destroy(step_ladder);
   #endif
+
+  // Unsubscribe from TickTimerService
+  tick_timer_service_unsubscribe();
 }
 
 // Initializes the app
 static void init() {
   // Load settings before creating UI
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- LOAD SETTINGS --------");
-  #endif
   globals_prv_load_settings();
 
   // Create main Window element
@@ -169,47 +138,35 @@ static void init() {
   // Show the Window on the watch, with animated=true
   window_stack_push(s_main_window, true);
 
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- SUBSCRIBE --------");
-
+  
   // Subscribe to unobstructed area events
   APP_LOG(APP_LOG_LEVEL_INFO, "Quick View");
-  #endif
   animation_subscribe_unobstructed_area();
-
+  
   // Register with TickTimerService
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Tick Handler");
-  #endif
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
   // Subscribe to continuous accelerometer data for Y-movement detection
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Accelerometer");
-  #endif
   accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
   accel_data_service_subscribe(5, sensor_accel_data_handler);
 
   // Subscribe to bluetooth connection updates and set initial state
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Bluetooth");
-  #endif
   connection_service_subscribe((ConnectionHandlers) {
     .pebble_app_connection_handler = sensor_connection_handler
   });
   sensor_connection_handler(connection_service_peek_pebble_app_connection());
 
   // Subscribe to battery state changes and initialize
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Battery Level");
-  #endif
   battery_state_service_subscribe(sensor_battery_handler);
   sensor_battery_handler(battery_state_service_peek());
 
   // Register AppMessage callbacks
-  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Communication");
-  #endif
   app_message_register_inbox_received(inbox_received_callback);
   app_message_register_inbox_dropped(inbox_dropped_callback);
   app_message_register_outbox_failed(outbox_failed_callback);
@@ -217,21 +174,17 @@ static void init() {
 
   // Open AppMessage
   const int inbox_size = 600;
-  const int outbox_size = 200;
+  const int outbox_size = 256;
   app_message_open(inbox_size, outbox_size);
-
+  
 }
 
 // Deinitializes the app
 static void deinit() {
-  //bluetooth_connection_service_unsubscribe();
-
-  accel_data_service_unsubscribe();
-  connection_service_unsubscribe();
-  battery_state_service_unsubscribe();
-  unobstructed_area_service_unsubscribe();
-
   window_destroy(s_main_window);
+  accel_data_service_unsubscribe();
+  bluetooth_connection_service_unsubscribe();
+  battery_state_service_unsubscribe();
 }
 
 int main(void) {
