@@ -25,7 +25,9 @@ static void outbox_queue_try_send(void) {
     // gates this, but AppMessage state can be affected by other things
     // like a Bluetooth disconnect) - drop this one item and try the next
     // rather than getting stuck.
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox queue: begin failed (%d) - dropping this item", begin_result);
+    #endif
     outbox_queue_try_send();
     return;
   }
@@ -35,7 +37,9 @@ static void outbox_queue_try_send(void) {
   outbox_busy = true;
   AppMessageResult send_result = app_message_outbox_send();
   if (send_result != APP_MSG_OK) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox queue: send failed (%d) - trying next item", send_result);
+    #endif
     outbox_busy = false;
     outbox_queue_try_send();
   }
@@ -45,7 +49,9 @@ static void outbox_queue_try_send(void) {
 
 bool outbox_queue_send(OutboxBuilderFn builder) {
   if (outbox_queue_count >= OUTBOX_QUEUE_MAX) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox queue full - dropping send");
+    #endif
     return false;
   }
 

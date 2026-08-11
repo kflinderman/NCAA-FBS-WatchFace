@@ -833,7 +833,6 @@ module.exports = [
       		  }
       		]
       },
-      // I need to figure out how to get date and time.
       {
         "type": "input",
         "messageKey": "countdownCustomDate",
@@ -888,6 +887,7 @@ module.exports = [
         "label": "Pause Watchface Health Display During Quiet Time",
         "messageKey": "healthQuiet",
         "defaultValue": false,
+        "capabilities": ["HEALTH"]
       },
       {
         "type": "toggle",

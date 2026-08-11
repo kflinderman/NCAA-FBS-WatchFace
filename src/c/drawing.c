@@ -64,7 +64,9 @@ void drawing_multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t 
     uint16_t new_capacity = (data->capacity == 0) ? 4 : data->capacity * 2;
     LineSegment *new_segments = realloc(data->segments, new_capacity * sizeof(LineSegment));
     if (!new_segments) {
+      #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_ERROR, "multiline_add_segment: realloc failed, segment dropped");
+      #endif
       return;
     }
     data->segments = new_segments;

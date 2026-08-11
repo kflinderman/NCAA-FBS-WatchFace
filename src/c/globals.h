@@ -86,6 +86,7 @@ typedef enum {
   TEXT_LAYER_HOUR,
   TEXT_LAYER_COUNTDOWN,
   TEXT_LAYER_SCORE,
+  TEXT_LAYER_RANK,
   #if defined(PBL_HEALTH)
   TEXT_LAYER_HR,
   TEXT_LAYER_STEP,
@@ -137,6 +138,7 @@ typedef enum {
   LAYER_HOR,
   LAYER_BEAT_TEAM,
   LAYER_BEAT_RECT,
+  LAYER_RANK_RECT,
   #ifdef PBL_RECT
   LAYER_VERT,
   #endif
