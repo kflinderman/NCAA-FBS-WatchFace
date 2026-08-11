@@ -702,21 +702,21 @@ module.exports = [
         "messageKey": "watchUpdate",
         "defaultValue": 1,
         "label": "Update Frequency",
-        "description": "How often should the watch update?"
+        "description": "How often should the watch update?",
     		"options": [
     		  { "label": "Every minute", "value": 1 },
     		  { "label": "Every 5 minutes", "value": 5 },
     		  { "label": "Every 10 minutes", "value": 10 },
     		  { "label": "Every 15 minutes", "value": 15 },
     		  { "label": "Every 30 minutes", "value": 30 },
-    		  { "label": "Every 60 minutes", "value": 60 },
+    		  { "label": "Every 60 minutes", "value": 60 }
     		]
       },
       {
         "type": "toggle",
         "messageKey": "quietTimeBool",
         "label": "Enable Quiet Time",
-        "description": "Used to pause options during off hours."
+        "description": "Used to pause options during off hours.",
         "defaultValue": false
       },
       {
