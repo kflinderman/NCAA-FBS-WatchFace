@@ -136,8 +136,8 @@ void globals_prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 108;
-  settings.FavoriteTeam = 26;
+  settings.DisplayTeam = 0;
+  settings.FavoriteTeam = 1;
   settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
@@ -405,17 +405,24 @@ void globals_prv_update_display() {
 
 
   if (settings.bowlBool){
-    GBitmap *target_gbitmap = NULL;
+    // Resource ID rather than GBitmap*: only one trophy-state GBitmap is
+    // ever resident at a time (created below, right before use), instead
+    // of preloading both BOWL and CHAMP permanently at startup.
+    uint32_t target_res_id = 0;
     if(API_DATA[settings.FavoriteTeam].postseasonGames >= 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 1){
-      target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BOWL];
+      target_res_id = RESOURCE_ID_BOWL;
     }
     else if (API_DATA[settings.FavoriteTeam].postseasonLosses < 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 3){
-      target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_CHAMP];
+      target_res_id = RESOURCE_ID_CHAMP;
     }
 
     // Single Pass UI Update
-    if (target_gbitmap != NULL) {
-      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], target_gbitmap);
+    if (target_res_id != 0) {
+      if (s_gbitmap_layers[GBITMAP_LAYER_TROPHY]) {
+        gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
+      }
+      s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = gbitmap_create_with_resource(target_res_id);
+      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), false);
     } else {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);

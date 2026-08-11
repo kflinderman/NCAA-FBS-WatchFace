@@ -256,12 +256,23 @@ static void build_request_full_sync(DictionaryIterator *iter) {
 }
 
 uint8_t api_update_status_indicator() {
+  // Only one status GBitmap is ever resident at a time (destroyed and
+  // recreated here as the state changes) instead of both API_LOW and
+  // API_EMPTY being preloaded permanently at startup.
   if (api_calls_percent_used() >= 99) {
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY]);
+    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
+    }
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     return 0;
   } else if (api_calls_nearing_limit()) {
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API_LOW]);
+    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
+    }
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     return 1;
   } else {
@@ -574,15 +585,16 @@ void api_score_display() {
 void api_icon_draw(Layer *window_layer, GRect bounds){
   GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
 
-  // Create Battery GBitmap from resource
-  s_gbitmap_layers[GBITMAP_LAYER_API_LOW] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
-  s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+  // No GBitmap created here - api_update_status_indicator() creates
+  // whichever status icon actually applies, so only one (or none) is
+  // ever resident instead of both APILOW and APIEMPTY permanently.
+  s_gbitmap_layers[GBITMAP_LAYER_API] = NULL;
 
   #if PBL_DISPLAY_HEIGHT > 180
   //168
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 19), (bounds.size.h * vert_2) / 1000 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 19), (bounds.size.h * vert_2) / 1000 + 3, 8, 14, NULL, window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 10), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 10), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, NULL, window_layer);
   //+ 14
   #endif
 
@@ -602,11 +614,13 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   //Create supurlitive resources
   s_gbitmap_layers[GBITMAP_LAYER_WIN] = gbitmap_create_with_resource(RESOURCE_ID_WIN);
-  s_gbitmap_layers[GBITMAP_LAYER_BOWL] = gbitmap_create_with_resource(RESOURCE_ID_BOWL);
-  s_gbitmap_layers[GBITMAP_LAYER_CHAMP] = gbitmap_create_with_resource(RESOURCE_ID_CHAMP);
+  // No GBitmap created here for the trophy slot - the bowlBool block in
+  // globals.c creates whichever of BOWL/CHAMP actually applies, so only
+  // one (or none) is ever resident instead of both permanently.
+  s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = NULL;
 
   s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - 30, 0, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - 30, logo_bounds.size.h - 20, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_BOWL], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - 30, logo_bounds.size.h - 20, 12, 12, NULL, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
 
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);

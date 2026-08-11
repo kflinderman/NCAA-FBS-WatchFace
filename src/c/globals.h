@@ -106,15 +106,20 @@ typedef enum {
   GBITMAP_LAYER_LOGO,
   GBITMAP_LAYER_BEAT_TEAM,
   GBITMAP_LAYER_BT,
-  GBITMAP_LAYER_BATT_CRG,
-  GBITMAP_LAYER_BATT_EMPTY,
-  GBITMAP_LAYER_BATT_LOW,
+  // BATT was 3 separate GBitmaps (BATT_CRG/BATT_EMPTY/BATT_LOW) all kept
+  // resident in RAM at once even though only one battery state is ever
+  // shown - now a single slot that's created/destroyed as the state
+  // changes (see sensor_battery_handler in sensors.c).
+  GBITMAP_LAYER_BATT,
   GBITMAP_LAYER_BAG,
-  GBITMAP_LAYER_API_LOW,
-  GBITMAP_LAYER_API_EMPTY,
+  // Same consolidation: API status was 2 GBitmaps (API_LOW/API_EMPTY),
+  // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
+  GBITMAP_LAYER_API,
   GBITMAP_LAYER_WIN,
-  GBITMAP_LAYER_BOWL,
-  GBITMAP_LAYER_CHAMP,
+  // Same consolidation: the postseason badge was 2 GBitmaps
+  // (BOWL/CHAMP), now 1 slot swapped on demand (see the bowlBool block
+  // in globals.c).
+  GBITMAP_LAYER_TROPHY,
   #if defined(PBL_HEALTH)
   GBITMAP_LAYER_FOOTBALL,
   #endif
