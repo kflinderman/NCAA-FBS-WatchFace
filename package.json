@@ -1,7 +1,7 @@
 {
     "author": "kenny.linderman@gmail.com",
     "dependencies": {
-        "@rebble/clay": "^1.0.10"
+        "@rebble/clay": "^1.0.8"
     },
     "keywords": [],
     "name": "ncaa-fbs",
@@ -91,6 +91,30 @@
         "projectType": "native",
         "resources": {
             "media": [
+                {
+                    "file": "images/champ.png",
+                    "memoryFormat": "Smallest",
+                    "name": "CHAMP",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/bowl.png",
+                    "memoryFormat": "Smallest",
+                    "name": "BOWL",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/w.png",
+                    "memoryFormat": "Smallest",
+                    "name": "WIN",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
                 {
                     "file": "images/B1G.png",
                     "memoryFormat": "Smallest",
@@ -1366,7 +1390,7 @@
                 {
                     "file": "images/football-black.png",
                     "memoryFormat": "Smallest",
-                    "name": "EMPTYBATT",
+                    "name": "football_black",
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
@@ -1438,30 +1462,6 @@
                     "file": "images/APIlow.png",
                     "memoryFormat": "Smallest",
                     "name": "APILOW",
-                    "spaceOptimization": "memory",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/w.png",
-                    "memoryFormat": "Smallest",
-                    "name": "WIN",
-                    "spaceOptimization": "memory",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/bowl.png",
-                    "memoryFormat": "Smallest",
-                    "name": "BOWL",
-                    "spaceOptimization": "memory",
-                    "targetPlatforms": null,
-                    "type": "bitmap"
-                },
-                {
-                    "file": "images/champ.png",
-                    "memoryFormat": "Smallest",
-                    "name": "CHAMP",
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
