@@ -42,56 +42,54 @@ void update_time() {
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_time();
-  
-  #if defined(PBL_HEALTH)
-    health_handler();
-  #endif
-
-  #if defined(PBL_HEALTH)
-  health_handler();
-  #endif
-
-  if (settings.weatherBool && (!settings.weatherQuiet || !timekeeping_is_quiet_time())){
-    // Get weather update every 30 minutes
-    if (tick_time->tm_min % 30 == 0) {
-      #if defined(DEBUG)
-      APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
-      #endif
-      outbox_queue_send(build_request_weather);
-    }
-  }
-
   time_t now = time(NULL);
+  if(tick_time->tm_min % settings.watchUpdate == 0){
+    update_time();
 
-  // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-  if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
-    api_request_cfbd_full_sync();
-  }
+    #if defined(PBL_HEALTH)
+    health_handler();
+    #endif
 
-  if (settings.countdownBool){
-    after_time = timekeeping_countdown();
-    if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
-      animation_hide_text(false, true, true);
-    }
-  }
-
-  // I might need to look into if both countdown and scores are chosen + they're on different screens
-  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
-    time_t target_time = (time_t)API_DATA[settings.FavoriteTeam].gametime;
-    int32_t seconds_diff = (int32_t)(target_time - now);
-    int32_t minutes_diff = seconds_diff / 60;
-    if (minutes_diff <= 0) gametime = true;
-    else gametime = false;
-    //I need to find out if the game is completed.
-
-    if (api_should_light_sync() && gametime && !API_DATA[settings.FavoriteTeam].completed) {
-      api_request_cfbd_light_sync();
+    if (settings.weatherBool && (!settings.weatherQuiet || !timekeeping_is_quiet_time())){
+      // Get weather update every 30 minutes
+      if (tick_time->tm_min % 30 == 0) {
+        #if defined(DEBUG)
+        APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
+        #endif
+        outbox_queue_send(build_request_weather);
+      }
     }
 
-    api_score_display();
-    if (settings.scoreLocation != 1){
-      animation_hide_text(true, false, true);
+
+    // Check if we should sync CFBD data (e.g., once daily at 2 AM)
+    if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
+      api_request_cfbd_full_sync();
+    }
+
+    if (settings.countdownBool){
+      after_time = timekeeping_countdown();
+      if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+        animation_hide_text(false, true, true);
+      }
+    }
+
+    // I might need to look into if both countdown and scores are chosen + they're on different screens
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+      time_t target_time = (time_t)API_DATA[settings.FavoriteTeam].gametime;
+      int32_t seconds_diff = (int32_t)(target_time - now);
+      int32_t minutes_diff = seconds_diff / 60;
+      if (minutes_diff <= 0) gametime = true;
+      else gametime = false;
+      //I need to find out if the game is completed.
+
+      if (api_should_light_sync() && gametime && !API_DATA[settings.FavoriteTeam].completed) {
+        api_request_cfbd_light_sync();
+      }
+
+      api_score_display();
+      if (settings.scoreLocation != 1){
+        animation_hide_text(true, false, true);
+      }
     }
   }
 }
