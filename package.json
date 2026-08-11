@@ -85,7 +85,8 @@
             "CFBD_TEAM_DATA_TYPE",
             "CFBD_TEAM_COMPLETED",
             "healthQuiet",
-            "opponentBool"
+            "opponentBool",
+            "watchUpdate"
         ],
         "projectType": "native",
         "resources": {
@@ -1437,6 +1438,30 @@
                     "file": "images/APIlow.png",
                     "memoryFormat": "Smallest",
                     "name": "APILOW",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/w.png",
+                    "memoryFormat": "Smallest",
+                    "name": "WIN",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/bowl.png",
+                    "memoryFormat": "Smallest",
+                    "name": "BOWL",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/champ.png",
+                    "memoryFormat": "Smallest",
+                    "name": "CHAMP",
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"
