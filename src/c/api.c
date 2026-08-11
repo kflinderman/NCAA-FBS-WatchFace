@@ -67,6 +67,14 @@ static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_cu
 static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
 
+// In-flight guard covering a light sync's entire lifecycle - set when
+// api_request_cfbd_light_sync() sends the request, and only cleared once
+// the resulting games walk fully completes in cfbd_team_walk_complete()
+// (not merely when JS's ready-signal arrives - see that function's
+// comments for why the walk's completion, not the ready-signal, is the
+// right place to release this).
+static bool cfbd_light_sync_pending = false;
+
 static void cfbd_team_walk_complete(CFBDTeamDataType type);
 
 /**
@@ -78,10 +86,12 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type);
  */
 static const Team *teams_find_by_name(const char *name) {
   if (!name || !name[0]) return NULL;
+  if (strcmp(name, "NA") == 0) return NULL; // never resolve a placeholder opponent
+
   for (size_t i = 0; i < TEAMS_COUNT; i++) {
-    if (TEAMS[i].name && strcmp(TEAMS[i].name, name) == 0) {
-      return &TEAMS[i];
-    }
+    if (!TEAMS[i].name) continue;
+    if (strcmp(TEAMS[i].name, "NA") == 0) continue; // skip placeholder roster slots
+    if (strcmp(TEAMS[i].name, name) == 0) return &TEAMS[i];
   }
   return NULL;
 }
@@ -112,8 +122,10 @@ static void apply_api_usage_from_message(DictionaryIterator *iterator) {
   }
 
   if (used_tuple || limit_tuple) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD API usage: %d/%d",
-      settings.cfbd.api_calls_this_month, settings.cfbd.api_calls_monthly_limit);
+            settings.cfbd.api_calls_this_month, settings.cfbd.api_calls_monthly_limit);
+    #endif
   }
 }
 
@@ -158,9 +170,11 @@ static void build_request_team_data(DictionaryIterator *iter) {
  * is valid (checked by the caller before setting it).
  */
 static void request_team_data(void) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
-    cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name,
-    cfbd_current_sync_type);
+          cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name,
+          cfbd_current_sync_type);
+  #endif
 
   outbox_queue_send(build_request_team_data);
 }
@@ -173,8 +187,10 @@ static void request_team_data(void) {
  */
 static void start_team_walk(CFBDTeamDataType type) {
   if (cfbd_current_team_index >= 0) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk (type %d) deferred - type %d walk in progress",
-      type, cfbd_current_sync_type);
+            type, cfbd_current_sync_type);
+    #endif
     if (type == CFBD_TEAM_DATA_GAMES) {
       cfbd_pending_games_walk = true;
     } else {
@@ -199,13 +215,25 @@ static void start_team_walk(CFBDTeamDataType type) {
  * got deferred while this one was running.
  */
 static void cfbd_team_walk_complete(CFBDTeamDataType type) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
-    type, (int)API_DATA_COUNT);
+          type, (int)API_DATA_COUNT);
+  #endif
 
   cfbd_current_team_index = -1;
 
   if (type == CFBD_TEAM_DATA_GAMES) {
     settings.cfbd.last_light_sync_ts = time(NULL);
+    // Only now - once the games walk has actually finished applying data
+    // to every tracked team - is it safe to let api_should_light_sync()
+    // fire another request. Clearing this back when CFBD_LIGHT_SYNC_READY
+    // first arrived left a window open: if the games walk got deferred
+    // (a records walk was still running), globals_prv_update_display()
+    // a few lines below would see the guard already released and
+    // last_light_sync_ts still 0, and fire a second, premature
+    // REQUEST_CFBD_LIGHT_SYNC right as the deferred walk was about to
+    // start on its own.
+    cfbd_light_sync_pending = false;
   } else {
     settings.cfbd.last_full_sync_ts = time(NULL);
   }
@@ -244,19 +272,25 @@ uint8_t api_update_status_indicator() {
 
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
+    #endif
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
     return;
   }
   else if (api_update_status_indicator() == 0){
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
+    #endif
     return;
   }
 
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
+  #endif
   outbox_queue_send(build_request_full_sync);
-  
-  
+
+
 }
 
 static void build_request_light_sync(DictionaryIterator *iter) {
@@ -264,25 +298,49 @@ static void build_request_light_sync(DictionaryIterator *iter) {
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
+// cfbd_light_sync_pending (declared near the top of the file, alongside
+// the other sync-state statics) guards this: globals_prv_update_display()
+// can call api_request_cfbd_light_sync() from more than one place in the
+// same invocation (countdown block + score block), and update_display()
+// itself gets invoked from several other call sites (settings changed,
+// sync complete). Without this flag, all of those can independently
+// decide "no valid data yet" and each fire their own
+// REQUEST_CFBD_LIGHT_SYNC before the first one's response has come back,
+// causing JS to run two (or more) concurrent games walks racing each
+// other.
+
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
+    #endif
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
     return;
   }
+  if (cfbd_light_sync_pending) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync skipped: already in flight");
+    #endif
+    return;
+  }
   else if (api_update_status_indicator() == 0){
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API calls used for the month");
+    #endif
     return;
   }
 
   // Need calendar data from a prior full sync so JS can determine the
   // current week itself (it keeps season/week dates in its own cache).
   //if (!settings.cfbd.api_data_valid) {
-    //APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: no prior data");
-    //return;
+  //APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: no prior data");
+  //return;
   //}
 
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
+  #endif
+  cfbd_light_sync_pending = true;
   outbox_queue_send(build_request_light_sync);
 }
 
@@ -291,7 +349,7 @@ bool api_should_full_sync(void) {
 
   // Never synced, or more than 24 hours since last full sync
   if (settings.api && (!settings.cfbd.api_data_valid ||
-      (now - settings.cfbd.last_full_sync_ts >= 86400))) {
+                       (now - settings.cfbd.last_full_sync_ts >= 86400))) {
     return true;
   }
 
@@ -305,6 +363,10 @@ bool api_should_full_sync(void) {
 }
 
 bool api_should_light_sync(void) {
+  if (cfbd_light_sync_pending) {
+    return false;
+  }
+
   time_t now = time(NULL);
 
   // Light sync (games only) currently weekly, same as before the
@@ -315,7 +377,7 @@ bool api_should_light_sync(void) {
   // it's decoupled - left at 7 days for now since that wasn't explicitly
   // asked to change.
   if (settings.api && (!settings.cfbd.api_data_valid ||
-      (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60)))) {
+                       (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60)))) {
     return true;
   }
   return false;
@@ -332,8 +394,12 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       settings.cfbd.next_season_first_game_ts = next_season_tuple->value->uint32;
     }
 
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD calendar received: year %d, next season ts %lu",
-      settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
+            settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
+    #endif
+
+    apply_api_usage_from_message(iterator);
 
     apply_api_usage_from_message(iterator);
 
@@ -341,12 +407,17 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
-  // Light sync: JS has fetched (once) and cached this week's games and is
-  // ready to serve per-team lookups. Kick off (or defer, if a records
-  // walk is already running) a games-type team-by-team walk.
+  // Light sync: JS is ready to serve per-team game lookups. Kick off (or
+  // defer, if a records walk is already running) a games-type team-by-team
+  // walk. cfbd_light_sync_pending stays true through this - it's only
+  // cleared once the games walk actually completes in
+  // cfbd_team_walk_complete(), not here, so a deferred walk can't get
+  // raced by another premature light-sync request in the meantime.
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)API_DATA_COUNT);
+    #endif
 
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
@@ -361,7 +432,9 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   // a records-type walk instead of games-type.
   Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
   if (records_ready_tuple) {
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - requesting %d teams", (int)API_DATA_COUNT);
+    #endif
 
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
@@ -381,13 +454,17 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     uint16_t team_index = team_index_tuple->value->uint16;
 
     if (cfbd_current_team_index < 0 || team_index != (uint16_t)cfbd_current_team_index) {
+      #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD team data for index %d ignored - expected %d",
-        team_index, cfbd_current_team_index);
+              team_index, cfbd_current_team_index);
+      #endif
       return;
     }
 
     if (team_index >= API_DATA_COUNT) {
+      #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team data index %d out of range", team_index);
+      #endif
       cfbd_team_walk_complete(cfbd_current_sync_type);
       return;
     }
@@ -437,9 +514,11 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: score=%d-%d rank=%d wins=%d",
-      team_index, info->name, cfbd_current_sync_type, info->score, info->vs_score,
-      info->ranking, info->wins);
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
+            team_index, info->name, cfbd_current_sync_type, info->vs_id, info->score, info->vs_score,
+            info->ranking, info->wins);
+    #endif
 
     uint16_t next_index = team_index + 1;
     if (next_index < API_DATA_COUNT) {
@@ -451,46 +530,75 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   }
 }
 
+void format_2digits(char *buf, int val) {
+  buf[0] = '0' + ((val / 10) % 10);
+  buf[1] = '0' + (val % 10);
+}
+
 void api_score_display() {
-  static char s_temp_buffer1[8], s_temp_buffer2[8], s_temp_buffer3[8];
-  if (API_DATA[settings.FavoriteTeam].vs_id == -1){
-    snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "BYE");
-    snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "WEEK");
-    snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "00|00");
-  }
-  else{
-    snprintf(s_temp_buffer1, sizeof(s_temp_buffer1), "%s", TEAMS[settings.FavoriteTeam].shortname);
-    snprintf(s_temp_buffer2, sizeof(s_temp_buffer2), "%s", TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname);
-
-    int score1, score2;
-
-    if (API_DATA[settings.FavoriteTeam].score > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
-    else score1 = API_DATA[settings.FavoriteTeam].score;
-
-    if (API_DATA[settings.FavoriteTeam].vs_score > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
-    else score2 = API_DATA[settings.FavoriteTeam].vs_score;
-
-    snprintf(s_temp_buffer3, sizeof(s_temp_buffer3), "%02d|%02d", score1, score2);
-  }
+  // 1. Direct pointers replace s_temp_buffer1 and s_temp_buffer2
+  const char *home_str;
+  const char *away_str;
   
-    text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_temp_buffer1);
-    text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_temp_buffer2);
-    text_layer_set_text(s_text_layers[TEXT_LAYER_SCORE], s_temp_buffer3);
+  // 2. Only s_temp_buffer3 needs memory for formatted score "XX|YY\0"
+  static char s_score_buffer[6];
+
+  int fav = settings.FavoriteTeam;
+  int vs_id = API_DATA[fav].vs_id;
+
+  if (vs_id == -1) {
+    home_str = "BYE";
+    away_str = "WEEK";
+    // Copy constant string directly instead of snprintf
+    memcpy(s_score_buffer, "00|00", 6);
+  } else {
+    // Zero-copy! Point directly to existing string constants
+    home_str = TEAMS[fav].shortname;
+    away_str = TEAMS[vs_id].shortname;
+
+    // Clamp scores cleanly
+    int score1 = API_DATA[fav].score;
+    int score2 = API_DATA[fav].vs_score;
+    if (score1 > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
+    if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
+
+    // Manual string building for "XX|YY" without snprintf
+    format_2digits(&s_score_buffer[0], score1);
+    s_score_buffer[2] = '|';
+    format_2digits(&s_score_buffer[3], score2);
+    s_score_buffer[5] = '\0';
+  }
+
+  text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], home_str);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], away_str);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_SCORE], s_score_buffer);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){
   // Create Battery GBitmap from resource
   s_gbitmap_layers[GBITMAP_LAYER_API_LOW] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
   s_gbitmap_layers[GBITMAP_LAYER_API_EMPTY] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
-  
+
   #if PBL_DISPLAY_HEIGHT > 180
-    //168
-    s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  //168
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
   #else
-    s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 10), bounds.size.h * vert_2 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
-    //+ 14
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 10), bounds.size.h * vert_2 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  //+ 14
   #endif
-  
-    
+
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+  
+  
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(beat_spot, -40 + beat_primary, 45, 40), sizeof(RoundRectData));
+  RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
+  rect_beat_data->fill_color = GColorWhite;
+  layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
+  layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
+
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, 10, 22, 30, GColorBlack, "00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+
+  
+  layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
 }

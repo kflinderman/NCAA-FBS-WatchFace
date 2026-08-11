@@ -7,6 +7,14 @@
 #include "animation.h"
 #include "api.h"
 
+
+#ifdef PBL_PLATFORM_APLITE
+
+#else
+#define DEBUG
+#endif
+
+
 /*******************************************
  * Definitions for all extern globals
  *******************************************/
@@ -50,75 +58,75 @@ uint16_t beat_spot;
 uint16_t beat_primary;
 
 #ifdef PBL_ROUND
-  float rect_h = 0.66;
-  float date_h = 0.84;
-  float vert_2 = 0.93;
-  float hor_1 = 0.45;
-  float hor_2 = 0.55;
-  float time_h = 0.62;
-  #if PBL_DISPLAY_HEIGHT > 180
-    uint16_t time_w = 75;
-    uint16_t time_x = 150;
-    uint16_t time_y = 70;
-    uint16_t icon_bump = 9; //10;
-    uint16_t hr_thick = 2;
-    bool hr_w = 0;
-    uint16_t stepx1 = 16;
-    uint16_t stepx2 = 95;
-    uint16_t stepy = 50;
-  #else
-    uint16_t time_w = 60;
-    uint16_t time_x = 120;
-    uint16_t time_y = 50;
-    uint16_t icon_bump = 7;
-    uint16_t hr_thick = 1;
-    bool hr_w = 1;
-    uint16_t stepx1 = 12;
-    uint16_t stepx2 = 67;
-    uint16_t stepy = 37;
-  #endif
+float rect_h = 0.66;
+float date_h = 0.84;
+float vert_2 = 0.93;
+float hor_1 = 0.45;
+float hor_2 = 0.55;
+float time_h = 0.62;
+#if PBL_DISPLAY_HEIGHT > 180
+uint16_t time_w = 75;
+uint16_t time_x = 150;
+uint16_t time_y = 70;
+uint16_t icon_bump = 9; //10;
+uint16_t hr_thick = 2;
+bool hr_w = 0;
+uint16_t stepx1 = 16;
+uint16_t stepx2 = 95;
+uint16_t stepy = 50;
 #else
-  float rect_h = 0.72;
-  float date_w = 0.81;
-  //uint16_t icon_bump = 4;//5
-  float time_h = 0.70;
-  #if PBL_DISPLAY_HEIGHT > 180
-    float date_h = 0.72;
-    uint16_t time_w = 92;
-    uint16_t time_x = 160;
-    uint16_t time_y = 70;
-    float vert_1 = 0.82;
-    float vert_2 = 0.90;
-    float hor_1 = 0.83;
-    float hor_2 = 0.92;
-    uint16_t hr_thick = 2;
-    bool hr_w = 0;
-    uint16_t stepx1 = 16;
-    uint16_t stepx2 = 95;
-    uint16_t stepy = 50;
-    uint16_t icon_bump = 1;
-  #else
-    float date_h = 0.74;
-    uint16_t time_w = 72;
-    uint16_t time_x = 120;
-    uint16_t time_y = 50;
-    float vert_1 = 0.85;
-    float vert_2 = 0.93;
-    float hor_1 = 0.86;
-    float hor_2 = 0.97;
-    uint16_t hr_thick = 1;
-    bool hr_w = 1;
-    uint16_t stepx1 = 12;
-    uint16_t stepx2 = 67;
-    uint16_t stepy = 37;
-    uint16_t icon_bump = 4;
-  #endif
+uint16_t time_w = 60;
+uint16_t time_x = 120;
+uint16_t time_y = 50;
+uint16_t icon_bump = 7;
+uint16_t hr_thick = 1;
+bool hr_w = 1;
+uint16_t stepx1 = 12;
+uint16_t stepx2 = 67;
+uint16_t stepy = 37;
+#endif
+#else
+float rect_h = 0.72;
+float date_w = 0.81;
+//uint16_t icon_bump = 4;//5
+float time_h = 0.70;
+#if PBL_DISPLAY_HEIGHT > 180
+float date_h = 0.72;
+uint16_t time_w = 92;
+uint16_t time_x = 160;
+uint16_t time_y = 70;
+float vert_1 = 0.82;
+float vert_2 = 0.90;
+float hor_1 = 0.83;
+float hor_2 = 0.92;
+uint16_t hr_thick = 2;
+bool hr_w = 0;
+uint16_t stepx1 = 16;
+uint16_t stepx2 = 95;
+uint16_t stepy = 50;
+uint16_t icon_bump = 1;
+#else
+float date_h = 0.74;
+uint16_t time_w = 72;
+uint16_t time_x = 120;
+uint16_t time_y = 50;
+float vert_1 = 0.85;
+float vert_2 = 0.93;
+float hor_1 = 0.86;
+float hor_2 = 0.97;
+uint16_t hr_thick = 1;
+bool hr_w = 1;
+uint16_t stepx1 = 12;
+uint16_t stepx2 = 67;
+uint16_t stepy = 37;
+uint16_t icon_bump = 4;
+#endif
 #endif
 
 #if PBL_DISPLAY_HEIGHT > 180
-  uint16_t bitmap_size = 160;
+uint16_t bitmap_size = 160;
 #else
-  uint16_t bitmap_size = 115;
+uint16_t bitmap_size = 115;
 #endif
 
 void globals_prv_default_settings() {
@@ -192,22 +200,28 @@ void globals_prv_load_settings() {
 }
 
 void globals_prv_update_display() {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- UPDATE DISPLAY --------");
-  
+  #endif
+
   // Only update if window exists
   if (!s_main_window) return;
-  
+
   // API Check if empty
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "API Sync");
+  #endif
   if (api_should_full_sync()) {
     api_request_cfbd_full_sync();
   }
-  
+
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
   // Update beat team layer position
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
+  #endif
   if (s_layers[LAYER_BEAT_RECT]) {
     GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
     layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
@@ -215,32 +229,48 @@ void globals_prv_update_display() {
   }
 
   // Update favorite team logo
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Favorite Team");
+  #endif
   if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
   if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
-  
+
   if (settings.hardcodeRival == 1){
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - Rival");
+    #endif
     settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
   }
   else if (settings.hardcodeRival == 2){
     if (API_DATA[settings.FavoriteTeam].vs_id == -1){
       if (settings.opponentSelect == 1){
+        #if defined(DEBUG)
         APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Rival)");
+        #endif
         settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
       }
       else if (settings.opponentSelect == 2){
+        #if defined(DEBUG)
         APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Custom)");
+        #endif
         settings.BeatTeam = settings.customOpponent;
       }
       else{
+        #if defined(DEBUG)
         APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (NCAA)");
+        #endif
         settings.BeatTeam = 1; //77
       }
+    }
+    else{
+      #if defined(DEBUG)
+      APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
+      #endif
+      settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
     }
     else{
       APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
@@ -252,7 +282,9 @@ void globals_prv_update_display() {
   uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
   uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
 
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
+  #endif
 
   // 2. Main Window Background
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
@@ -268,13 +300,15 @@ void globals_prv_update_display() {
   */
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
-  
+
   // 4. Setup Accent / Icon Colors
   GColor primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
   display_setupBag(primary_icon_color);
 
   #if defined(PBL_HEALTH)
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
+  #endif
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], primary_icon_color);
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], primary_icon_color);
 
@@ -282,7 +316,9 @@ void globals_prv_update_display() {
   drawing_multiline_set_all_colors(step_ladder, primary_icon_color);
   #endif
 
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
+  #endif
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], primary_icon_color);
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], primary_icon_color);
 
@@ -301,13 +337,24 @@ void globals_prv_update_display() {
   if (s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]) {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
-  
-  
-  
+
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather");
+  #endif
+  weather_update();
+
   bool timeTrue = true;
   if (settings.countdownBool){
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
-    if (settings.api && !settings.cfbd.api_data_valid) {
+    #endif
+    // Shares api_should_light_sync() with the score block below (rather
+    // than its own separate !api_data_valid check) plus the in-flight
+    // guard in api_request_cfbd_light_sync() - previously these two call
+    // sites could both independently see "no valid data yet" on the same
+    // update_display() pass and fire two REQUEST_CFBD_LIGHT_SYNC in a row.
+    if (api_should_light_sync()) {
       api_request_cfbd_light_sync();
     }
     after_time = timekeeping_countdown();
@@ -316,10 +363,14 @@ void globals_prv_update_display() {
       timeTrue = false;
     }
   }
-  
+
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "After Time: %d", after_time);
+  #endif
   if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
+    #endif
     //OK This is the only time I'm not confident in after_time.  I also need to make a new variable for when it's checked the gametime since I should have that information.
     if (api_should_light_sync() && after_time) {
       api_request_cfbd_light_sync();
@@ -330,16 +381,15 @@ void globals_prv_update_display() {
       timeTrue = false;
     }
   }
-  
+
   if (timeTrue){
     animation_hide_text(true, true, false);
   }
-  
+
   #if defined(PBL_HEALTH)
-    APP_LOG(APP_LOG_LEVEL_INFO, "Update Health");
-    health_handler();
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Health");
   #endif
-  
-  APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather");
-  weather_update();
+  health_handler();
+  #endif
 }

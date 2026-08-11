@@ -113,8 +113,10 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
       case 2: *(uint16_t *)field_ptr = (uint16_t)value; break;
       case 4: *(uint32_t *)field_ptr = (uint32_t)value; break;
       default:
-        APP_LOG(APP_LOG_LEVEL_ERROR, "Clay setting field size %d unsupported", field->size);
-        break;
+      #if defined(DEBUG)
+      APP_LOG(APP_LOG_LEVEL_ERROR, "Clay setting field size %d unsupported", field->size);
+      #endif
+      break;
     }
   }
 
@@ -127,23 +129,31 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
 
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
+  #endif
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
   api_cfbd_callback(iterator, context);
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
+  #endif
 }
 
 void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed! Reason: %d", reason);
+  #endif
   outbox_queue_on_result();
 }
 
 void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");
+  #endif
   outbox_queue_on_result();
 }
