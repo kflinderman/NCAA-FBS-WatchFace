@@ -401,6 +401,8 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
 
     apply_api_usage_from_message(iterator);
 
+    apply_api_usage_from_message(iterator);
+
     globals_prv_save_settings();
     return;
   }

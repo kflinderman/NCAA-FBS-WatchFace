@@ -93,6 +93,9 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
   #endif
   sensor_battery_draw(window_layer, bounds);
+  
+  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
+  api_icon_draw(window_layer, bounds);
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");

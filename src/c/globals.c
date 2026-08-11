@@ -137,8 +137,8 @@ void globals_prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 108;
-  settings.BeatTeam = 26;
+  settings.FavoriteTeam = 1;
+  settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
@@ -195,8 +195,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 26;
+  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
 }
 
 void globals_prv_update_display() {
@@ -270,6 +270,10 @@ void globals_prv_update_display() {
       #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
       #endif
+      settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
+    }
+    else{
+      APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
       settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
     }
   }

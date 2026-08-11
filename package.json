@@ -1,7 +1,7 @@
 {
     "author": "kenny.linderman@gmail.com",
     "dependencies": {
-        "@rebble/clay": "^1.0.8"
+        "@rebble/clay": "^1.0.10"
     },
     "keywords": [],
     "name": "ncaa-fbs",
@@ -1365,7 +1365,7 @@
                 {
                     "file": "images/football-black.png",
                     "memoryFormat": "Smallest",
-                    "name": "football_black",
+                    "name": "EMPTYBATT",
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"

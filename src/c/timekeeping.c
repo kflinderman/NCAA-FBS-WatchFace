@@ -43,6 +43,10 @@ void update_time() {
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   update_time();
+  
+  #if defined(PBL_HEALTH)
+    health_handler();
+  #endif
 
   #if defined(PBL_HEALTH)
   health_handler();
