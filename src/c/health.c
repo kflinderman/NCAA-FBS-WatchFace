@@ -63,16 +63,16 @@ void health_stepHandler(){
 
   // Update Goal Progress & Football Position
   if (settings.stepsGoalBool) {
-    // Calculate progress (safely handles zero to avoid div-by-zero crashes)
-    float stepDiff = (settings.stepsGoal > 0) ? ((float)stepvalue / settings.stepsGoal) : 0.0f;
+    // Clamp steps to the goal (so the football never overshoots) and
+    // track goal-reached directly, rather than computing a 0.0-1.0 ratio
+    // first - the cross-multiplication below (steps_clamped * span) /
+    // goal gets the same interpolated position without ever forming a
+    // fractional progress value.
+    int32_t steps_clamped = (settings.stepsGoal > 0) ?
+      ((int32_t)stepvalue < settings.stepsGoal ? (int32_t)stepvalue : settings.stepsGoal) : 0;
+    bool goal_reached = (settings.stepsGoal > 0) && ((int32_t)stepvalue >= settings.stepsGoal);
 
-    // Check goal status and clamp at 100%
-    //bool goal_reached = (stepDiff >= 1.0f);
-    if (stepDiff > 1.0f) {
-      stepDiff = 1.0f;
-    }
-
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), !(stepDiff >= 1.0f));
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), !goal_reached);
 
     // Calculate Y Position
     Layer *window_layer = window_get_root_layer(s_main_window);
@@ -83,11 +83,13 @@ void health_stepHandler(){
     #else
     uint16_t top_y = stepy - 10;
     #endif
-    uint16_t bottom_y = (bounds.size.h * time_h) - 25;
+    uint16_t bottom_y = ((bounds.size.h * time_h) / 1000) - 25;
 
     // Reposition Football
     GRect frame = layer_get_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]));
-    frame.origin.y = bottom_y - (uint16_t)((bottom_y - top_y) * stepDiff);
+    uint16_t y_offset = (settings.stepsGoal > 0) ?
+      (uint16_t)(((int32_t)(bottom_y - top_y) * steps_clamped) / settings.stepsGoal) : 0;
+    frame.origin.y = bottom_y - y_offset;
     layer_set_frame(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_FOOTBALL]), frame);
   }
 }
@@ -112,14 +114,14 @@ void health_draw(Layer *window_layer, GRect bounds){
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
 
   #if PBL_DISPLAY_HEIGHT > 180
-  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
   #else
-  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, (bounds.size.h * time_h) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
   #endif
-  uint16_t gaps = ((bounds.size.h * time_h) - stepy - 25) / 3;
+  uint16_t gaps = (((bounds.size.h * time_h) / 1000) - stepy - 25) / 3;
   uint16_t gaps2 = gaps / 5;
   step_ladder = drawing_multiline_layer_create(bounds, window_layer);
-  //drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), (bounds.size.h * time_h) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+  //drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), ((bounds.size.h * time_h) / 1000) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
 
   for (uint16_t x = 0; x < 4; x++) {
     drawing_multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + (gaps * x)), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + (gaps * x)), 2, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});

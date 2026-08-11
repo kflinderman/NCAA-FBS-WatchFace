@@ -58,12 +58,12 @@ uint16_t beat_spot;
 uint16_t beat_primary;
 
 #ifdef PBL_ROUND
-float rect_h = 0.66;
-float date_h = 0.84;
-float vert_2 = 0.93;
-float hor_1 = 0.45;
-float hor_2 = 0.55;
-float time_h = 0.62;
+uint16_t rect_h = 660;
+uint16_t date_h = 840;
+uint16_t vert_2 = 930;
+uint16_t hor_1 = 450;
+uint16_t hor_2 = 550;
+uint16_t time_h = 620;
 #if PBL_DISPLAY_HEIGHT > 180
 uint16_t time_w = 75;
 uint16_t time_x = 150;
@@ -86,19 +86,19 @@ uint16_t stepx2 = 67;
 uint16_t stepy = 37;
 #endif
 #else
-float rect_h = 0.72;
-float date_w = 0.81;
+uint16_t rect_h = 720;
+uint16_t date_w = 810;
 //uint16_t icon_bump = 4;//5
-float time_h = 0.70;
+uint16_t time_h = 700;
 #if PBL_DISPLAY_HEIGHT > 180
-float date_h = 0.72;
+uint16_t date_h = 720;
 uint16_t time_w = 92;
 uint16_t time_x = 160;
 uint16_t time_y = 70;
-float vert_1 = 0.82;
-float vert_2 = 0.90;
-float hor_1 = 0.83;
-float hor_2 = 0.92;
+uint16_t vert_1 = 820;
+uint16_t vert_2 = 900;
+uint16_t hor_1 = 830;
+uint16_t hor_2 = 920;
 uint16_t hr_thick = 2;
 bool hr_w = 0;
 uint16_t stepx1 = 16;
@@ -106,14 +106,14 @@ uint16_t stepx2 = 95;
 uint16_t stepy = 50;
 uint16_t icon_bump = 1;
 #else
-float date_h = 0.74;
+uint16_t date_h = 740;
 uint16_t time_w = 72;
 uint16_t time_x = 120;
 uint16_t time_y = 50;
-float vert_1 = 0.85;
-float vert_2 = 0.93;
-float hor_1 = 0.86;
-float hor_2 = 0.97;
+uint16_t vert_1 = 850;
+uint16_t vert_2 = 930;
+uint16_t hor_1 = 860;
+uint16_t hor_2 = 970;
 uint16_t hr_thick = 1;
 bool hr_w = 1;
 uint16_t stepx1 = 12;
@@ -136,8 +136,8 @@ void globals_prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 1;
+  settings.DisplayTeam = 108;
+  settings.FavoriteTeam = 26;
   settings.BeatTeam = 0;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;

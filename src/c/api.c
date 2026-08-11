@@ -580,9 +580,9 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
   //168
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 19), bounds.size.h * vert_2 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 19), (bounds.size.h * vert_2) / 1000 + 3, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 10), bounds.size.h * vert_2 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 10), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_API_LOW], window_layer);
   //+ 14
   #endif
 

@@ -199,9 +199,9 @@ extern uint16_t beat_primary;
  * repositioning) and main.c (initial layout) agree.
  *******************************************/
 #ifdef PBL_ROUND
-  extern float rect_h, date_h, vert_2, hor_1, hor_2, time_h;
+  extern uint16_t rect_h, date_h, vert_2, hor_1, hor_2, time_h;
 #else
-  extern float rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
+  extern uint16_t rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
 #endif
 extern uint16_t icon_bump;
 extern uint16_t time_w, time_x, time_y;

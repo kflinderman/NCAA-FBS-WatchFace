@@ -394,7 +394,7 @@ module.exports = [
       },
       {
         "type": "select",
-        "defaultValue": 23,
+        "defaultValue": 26,
         "label": "Custom Team",
         "messageKey": "customOpponent",
         "options": [
