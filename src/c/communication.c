@@ -74,6 +74,7 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(confBool),
   SF(bowlBool),
   SF(champBool),
+  SF(watchUpdate),
 };
 
 #undef SF
