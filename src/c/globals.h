@@ -56,6 +56,7 @@ typedef struct ClaySettings {
   bool confBool;
   bool bowlBool;
   bool champBool;
+  uint8_t watchUpdate;
   CFBDState cfbd;
 } ClaySettings;
 
@@ -111,6 +112,9 @@ typedef enum {
   GBITMAP_LAYER_BAG,
   GBITMAP_LAYER_API_LOW,
   GBITMAP_LAYER_API_EMPTY,
+  GBITMAP_LAYER_WIN,
+  GBITMAP_LAYER_BOWL,
+  GBITMAP_LAYER_CHAMP,
   #if defined(PBL_HEALTH)
   GBITMAP_LAYER_FOOTBALL,
   #endif
@@ -126,6 +130,8 @@ typedef enum {
   BITMAP_LAYER_BAG,
   BITMAP_LAYER_BAGB,
   BITMAP_LAYER_API,
+  BITMAP_LAYER_WIN,
+  BITMAP_LAYER_TROPHY,
   #if defined(PBL_HEALTH)
   BITMAP_LAYER_FOOTBALL,
   #endif
