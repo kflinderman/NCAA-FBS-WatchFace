@@ -586,9 +586,9 @@ void api_score_display() {
     format_2digits(&s_score_buffer[3], score2);
     s_score_buffer[5] = '\0';
   }
-
   text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], home_str);
   text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], away_str);
+  
   text_layer_set_text(s_text_layers[TEXT_LAYER_SCORE], s_score_buffer);
 }
 

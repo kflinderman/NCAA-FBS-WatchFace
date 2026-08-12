@@ -64,63 +64,63 @@ uint16_t vert_2 = 930;
 uint16_t hor_1 = 450;
 uint16_t hor_2 = 550;
 uint16_t time_h = 620;
-#if PBL_DISPLAY_HEIGHT > 180
-uint16_t time_w = 75;
-uint16_t time_x = 155;
-uint16_t time_y = 70;
-uint16_t icon_bump = 9; //10;
-uint16_t hr_thick = 2;
-bool hr_w = 0;
-uint16_t stepx1 = 16;
-uint16_t stepx2 = 95;
-uint16_t stepy = 50;
-#else
-uint16_t time_w = 60;
-uint16_t time_x = 120;
-uint16_t time_y = 50;
-uint16_t icon_bump = 7;
-uint16_t hr_thick = 1;
-bool hr_w = 1;
-uint16_t stepx1 = 12;
-uint16_t stepx2 = 67;
-uint16_t stepy = 37;
-#endif
+  #if PBL_DISPLAY_HEIGHT > 180
+  uint16_t time_w = 75;
+  uint16_t time_x = 155;
+  uint16_t time_y = 70;
+  uint16_t icon_bump = 9; //10;
+  uint16_t hr_thick = 2;
+  bool hr_w = 0;
+  uint16_t stepx1 = 16;
+  uint16_t stepx2 = 95;
+  uint16_t stepy = 50;
+  #else
+  uint16_t time_w = 60;
+  uint16_t time_x = 120;
+  uint16_t time_y = 50;
+  uint16_t icon_bump = 7;
+  uint16_t hr_thick = 1;
+  bool hr_w = 1;
+  uint16_t stepx1 = 12;
+  uint16_t stepx2 = 67;
+  uint16_t stepy = 37;
+  #endif
 #else
 uint16_t rect_h = 720;
 uint16_t date_w = 810;
 //uint16_t icon_bump = 4;//5
 uint16_t time_h = 700;
-#if PBL_DISPLAY_HEIGHT > 180
-uint16_t date_h = 720;
-uint16_t time_w = 92;
-uint16_t time_x = 160;
-uint16_t time_y = 70;
-uint16_t vert_1 = 820;
-uint16_t vert_2 = 900;
-uint16_t hor_1 = 830;
-uint16_t hor_2 = 920;
-uint16_t hr_thick = 2;
-bool hr_w = 0;
-uint16_t stepx1 = 16;
-uint16_t stepx2 = 95;
-uint16_t stepy = 50;
-uint16_t icon_bump = 1;
-#else
-uint16_t date_h = 740;
-uint16_t time_w = 72;
-uint16_t time_x = 120;
-uint16_t time_y = 50;
-uint16_t vert_1 = 850;
-uint16_t vert_2 = 930;
-uint16_t hor_1 = 860;
-uint16_t hor_2 = 970;
-uint16_t hr_thick = 1;
-bool hr_w = 1;
-uint16_t stepx1 = 12;
-uint16_t stepx2 = 67;
-uint16_t stepy = 37;
-uint16_t icon_bump = 4;
-#endif
+  #if PBL_DISPLAY_HEIGHT > 180
+  uint16_t date_h = 720;
+  uint16_t time_w = 92;
+  uint16_t time_x = 160;
+  uint16_t time_y = 70;
+  uint16_t vert_1 = 820;
+  uint16_t vert_2 = 900;
+  uint16_t hor_1 = 830;
+  uint16_t hor_2 = 920;
+  uint16_t hr_thick = 2;
+  bool hr_w = 0;
+  uint16_t stepx1 = 16;
+  uint16_t stepx2 = 95;
+  uint16_t stepy = 50;
+  uint16_t icon_bump = 1;
+  #else
+  uint16_t date_h = 740;
+  uint16_t time_w = 72;
+  uint16_t time_x = 120;
+  uint16_t time_y = 50;
+  uint16_t vert_1 = 850;
+  uint16_t vert_2 = 930;
+  uint16_t hor_1 = 860;
+  uint16_t hor_2 = 970;
+  uint16_t hr_thick = 1;
+  bool hr_w = 1;
+  uint16_t stepx1 = 12;
+  uint16_t stepx2 = 67;
+  uint16_t stepy = 37;
+  uint16_t icon_bump = 4;
+  #endif
 #endif
 
 #if PBL_DISPLAY_HEIGHT > 180
