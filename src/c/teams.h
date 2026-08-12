@@ -7,7 +7,9 @@
 typedef struct {
   uint32_t logo_res_id;
   uint8_t color;
+  #if defined(PBL_COLOR)
   uint8_t icon_color;
+  #endif
   uint8_t rival;
   const char *name;
   const char *shortname;

@@ -100,35 +100,47 @@ void health_handler() {
 }
 
 void health_draw(Layer *window_layer, GRect bounds){
-  #if PBL_DISPLAY_HEIGHT > 180
-    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+  GColor icon_color;
+  #if defined(PBL_COLOR)
+  icon_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color};
   #else
-    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  if(gcolor_equal((GColor){.argb = TEAMS[settings.FavoriteTeam].color}, GColorWhite)){
+    icon_color = GColorBlack;
+  }
+  else{
+    icon_color = GColorWhite;
+  }
+  #endif
+  
+  #if PBL_DISPLAY_HEIGHT > 180
+    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, icon_color, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
+  #else
+    s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, icon_color, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
   #endif
   
   hr_icon = drawing_multiline_layer_create(bounds, window_layer);
-  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*hr_w), 30), GPoint(bounds.size.w - 20 + (5*hr_w), 30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*hr_w), 30), GPoint(bounds.size.w - 17 + (4*hr_w), 35), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 17 + (4*hr_w), 35), GPoint(bounds.size.w - 11 + (2*hr_w), 25), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*hr_w), 25), GPoint(bounds.size.w - 8 + (hr_w),    30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*hr_w), 30), GPoint(bounds.size.w - 20 + (5*hr_w), 30), hr_thick, icon_color);
+  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*hr_w), 30), GPoint(bounds.size.w - 17 + (4*hr_w), 35), hr_thick, icon_color);
+  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 17 + (4*hr_w), 35), GPoint(bounds.size.w - 11 + (2*hr_w), 25), hr_thick, icon_color);
+  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*hr_w), 25), GPoint(bounds.size.w - 8 + (hr_w),    30), hr_thick, icon_color);
+  drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (hr_w), 30),    GPoint(bounds.size.w - 5,             30), hr_thick, icon_color);
 
   #if PBL_DISPLAY_HEIGHT > 180
-  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 20, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 20, icon_color, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
   #else
-  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 16, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - stepx2, ((bounds.size.h * time_h) / 1000) - 20, 50, 16, icon_color, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
   #endif
   uint16_t gaps = (((bounds.size.h * time_h) / 1000) - stepy - 25) / 3;
   uint16_t gaps2 = gaps / 5;
   step_ladder = drawing_multiline_layer_create(bounds, window_layer);
-  //drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), ((bounds.size.h * time_h) / 1000) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+  //drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), ((bounds.size.h * time_h) / 1000) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, icon_color);
 
   for (uint16_t x = 0; x < 4; x++) {
-    drawing_multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + (gaps * x)), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + (gaps * x)), 2, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+    drawing_multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - stepx2, stepy + (gaps * x)), GPoint((bounds.size.w / 2 - stepx2) + stepx1, stepy + (gaps * x)), 2, icon_color);
 
     if (x < 3){
       for (uint16_t y = 1; y < 6; y++) {
-        drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + 3, stepy + (gaps * x) + (gaps2 * y)), GPoint((bounds.size.w / 2 - stepx2) + stepx1 - 3, stepy + (gaps * x) + (gaps2 * y)), 1, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
+        drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + 3, stepy + (gaps * x) + (gaps2 * y)), GPoint((bounds.size.w / 2 - stepx2) + stepx1 - 3, stepy + (gaps * x) + (gaps2 * y)), 1, icon_color);
       }
     }
   }
@@ -137,17 +149,17 @@ void health_draw(Layer *window_layer, GRect bounds){
   #if PBL_DISPLAY_HEIGHT > 180
     s_bitmap_layers[BITMAP_LAYER_FOOTBALL] = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 6, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL], window_layer);
     #ifdef PBL_RECT
-      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (14+21), 25, 21, icon_color, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #else
-      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 55, 10, 80, icon_color, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
     #endif
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
   #else
     s_bitmap_layers[BITMAP_LAYER_FOOTBALL] = drawing_bitmap_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 4, stepy + gaps * 4 - 4, 8, 8, s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL], window_layer);
     #ifdef PBL_RECT
-      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) + (stepx1 / 2) - 10, stepy - (10+17), 25, 17, icon_color, "TD!", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #else
-      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+      s_text_layers[TEXT_LAYER_TD] = drawing_text_set((bounds.size.w / 2 - stepx2) - 15, (bounds.size.w / 2) - 35, 10, 50, icon_color, "T D !", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
     #endif
     layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TD]), true);
   #endif

@@ -299,7 +299,18 @@ void globals_prv_update_display() {
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
 
   // 4. Setup Accent / Icon Colors
-  GColor primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
+  GColor primary_icon_color;
+  #if defined(PBL_COLOR)
+  primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
+  #else
+  if(gcolor_equal((GColor){.argb = TEAMS[primary_idx].color}, GColorWhite)){
+    primary_icon_color = GColorBlack;
+  }
+  else{
+    primary_icon_color = GColorWhite;
+  }
+  #endif
+  
   display_setupBag(primary_icon_color);
 
   #if defined(PBL_HEALTH)
