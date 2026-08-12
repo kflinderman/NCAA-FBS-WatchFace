@@ -226,8 +226,40 @@ module.exports = function (minified) {
         });
     }
 
-    clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
+clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
         attachListeners(tree);
         recomputeAll();
+
+        // --- NEW CODE: Sync scoreUpdate min to watchUpdate value ---
+        
+        var watchUpdateItem = getItem('watchUpdate');
+        var scoreUpdateItem = getItem('scoreUpdate');
+
+        if (watchUpdateItem && scoreUpdateItem) {
+            function syncScoreMin() {
+                // Get the current integer value of watchUpdate
+                var newMin = parseInt(watchUpdateItem.get(), 10);
+
+                // 1. Update the internal Clay config
+                scoreUpdateItem.config.min = newMin;
+
+                // 2. Update the actual HTML attribute on the range input
+                // (Clay components expose their input elements via $manipulator)
+                if (scoreUpdateItem.$manipulator) {
+                    scoreUpdateItem.$manipulator.set('@min', newMin);
+                }
+
+                // 3. Ensure the current slider value doesn't violate the new minimum
+                if (parseInt(scoreUpdateItem.get(), 10) < newMin) {
+                    scoreUpdateItem.set(newMin); // Automatically bumps slider up
+                }
+            }
+
+            // Trigger whenever the 'watchUpdate' select menu changes
+            watchUpdateItem.on('change', syncScoreMin);
+
+            // Run once on load to ensure initial state is correct
+            syncScoreMin();
+        }
     });
 };

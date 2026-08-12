@@ -75,9 +75,6 @@ static void main_window_load(Window *window) {
 
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Battery");
   sensor_battery_draw(window_layer, bounds);
-  
-  APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
-  api_icon_draw(window_layer, bounds);
 
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
   // Apply saved settings
@@ -173,8 +170,8 @@ static void init() {
   app_message_register_outbox_sent(outbox_sent_callback);
 
   // Open AppMessage
-  const int inbox_size = 600;
-  const int outbox_size = 256;
+  const int inbox_size = 560;
+  const int outbox_size = 128;
   app_message_open(inbox_size, outbox_size);
   
 }

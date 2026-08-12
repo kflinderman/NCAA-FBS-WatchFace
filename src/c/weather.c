@@ -87,13 +87,26 @@ void weather_callback(DictionaryIterator *iterator, void *context){
 }
 
 void weather_draw(Layer *window_layer, GRect bounds){
+  GColor icon_color;
+  #if defined(PBL_COLOR)
+  icon_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color};
+  #else
+  if(gcolor_equal((GColor){.argb = TEAMS[settings.FavoriteTeam].color}, GColorWhite)){
+    icon_color = GColorBlack;
+  }
+  else{
+    icon_color = GColorWhite;
+  }
+  #endif
+  
+  
   #if PBL_DISPLAY_HEIGHT > 180
   s_wIcon = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WEATHER_ICONS_18));
-  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 65, (bounds.size.h * time_h) - 20, 35, 38, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 69, (bounds.size.h * time_h) - 40, 35, 35, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 65, ((bounds.size.h * time_h) / 1000) - 20, 35, 38, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 69, ((bounds.size.h * time_h) / 1000) - 40, 35, 35, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
   #else
   s_wIcon = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WEATHER_ICONS_12));
-  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 46, (bounds.size.h * time_h) - 20, 26, 32, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 51, (bounds.size.h * time_h) - 34, 23, 23, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color}, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 46, ((bounds.size.h * time_h) / 1000) - 20, 26, 32, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 51, ((bounds.size.h * time_h) / 1000) - 34, 23, 23, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
   #endif
 }

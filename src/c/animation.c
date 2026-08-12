@@ -86,9 +86,9 @@ void animation_beat_team_layer(void) {
   returning = !returning;
 }
 
-static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
+static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, uint16_t bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
-  move_frame.origin.y = ((tmp_bounds.size.h * origin) + bump) - diff * bmp_ratio;
+  move_frame.origin.y = (((tmp_bounds.size.h * origin_permil) / 1000) + bump) - (diff * bmp_ratio_permil) / 1000;
   layer_set_frame(tmp_layer, move_frame);
 }
 
@@ -100,24 +100,24 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), date_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], rect_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), vert_2, 3, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), vert_2, 3, 1);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time_h, 0, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), date_h, 0, 1000);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], rect_h, 0, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), vert_2, 3, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), vert_2, 3, 1000);
 
 #ifdef PBL_RECT
   LinePoints *points = (LinePoints *)layer_get_data(s_layers[LAYER_VERT]);
-  points->y1 = unBounds.size.h * vert_1 - bound_diff;
-  points->y2 = unBounds.size.h * vert_2 - bound_diff;
+  points->y1 = (unBounds.size.h * vert_1) / 1000 - bound_diff;
+  points->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_VERT]);
 #endif
 
   LinePoints *points2 = (LinePoints *)layer_get_data(s_layers[LAYER_HOR]);
-  points2->y1 = unBounds.size.h * vert_2 - bound_diff;
-  points2->y2 = unBounds.size.h * vert_2 - bound_diff;
+  points2->y1 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
+  points2->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_HOR]);
 }
 

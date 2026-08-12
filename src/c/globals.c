@@ -58,69 +58,69 @@ uint16_t beat_spot;
 uint16_t beat_primary;
 
 #ifdef PBL_ROUND
-float rect_h = 0.66;
-float date_h = 0.84;
-float vert_2 = 0.93;
-float hor_1 = 0.45;
-float hor_2 = 0.55;
-float time_h = 0.62;
-#if PBL_DISPLAY_HEIGHT > 180
-uint16_t time_w = 75;
-uint16_t time_x = 150;
-uint16_t time_y = 70;
-uint16_t icon_bump = 9; //10;
-uint16_t hr_thick = 2;
-bool hr_w = 0;
-uint16_t stepx1 = 16;
-uint16_t stepx2 = 95;
-uint16_t stepy = 50;
+uint16_t rect_h = 660;
+uint16_t date_h = 840;
+uint16_t vert_2 = 930;
+uint16_t hor_1 = 450;
+uint16_t hor_2 = 550;
+uint16_t time_h = 620;
+  #if PBL_DISPLAY_HEIGHT > 180
+  uint16_t time_w = 75;
+  uint16_t time_x = 155;
+  uint16_t time_y = 70;
+  uint16_t icon_bump = 9; //10;
+  uint16_t hr_thick = 2;
+  bool hr_w = 0;
+  uint16_t stepx1 = 16;
+  uint16_t stepx2 = 95;
+  uint16_t stepy = 50;
+  #else
+  uint16_t time_w = 60;
+  uint16_t time_x = 120;
+  uint16_t time_y = 50;
+  uint16_t icon_bump = 7;
+  uint16_t hr_thick = 1;
+  bool hr_w = 1;
+  uint16_t stepx1 = 12;
+  uint16_t stepx2 = 67;
+  uint16_t stepy = 37;
+  #endif
 #else
-uint16_t time_w = 60;
-uint16_t time_x = 120;
-uint16_t time_y = 50;
-uint16_t icon_bump = 7;
-uint16_t hr_thick = 1;
-bool hr_w = 1;
-uint16_t stepx1 = 12;
-uint16_t stepx2 = 67;
-uint16_t stepy = 37;
-#endif
-#else
-float rect_h = 0.72;
-float date_w = 0.81;
+uint16_t rect_h = 720;
+uint16_t date_w = 810;
 //uint16_t icon_bump = 4;//5
-float time_h = 0.70;
-#if PBL_DISPLAY_HEIGHT > 180
-float date_h = 0.72;
-uint16_t time_w = 92;
-uint16_t time_x = 160;
-uint16_t time_y = 70;
-float vert_1 = 0.82;
-float vert_2 = 0.90;
-float hor_1 = 0.83;
-float hor_2 = 0.92;
-uint16_t hr_thick = 2;
-bool hr_w = 0;
-uint16_t stepx1 = 16;
-uint16_t stepx2 = 95;
-uint16_t stepy = 50;
-uint16_t icon_bump = 1;
-#else
-float date_h = 0.74;
-uint16_t time_w = 72;
-uint16_t time_x = 120;
-uint16_t time_y = 50;
-float vert_1 = 0.85;
-float vert_2 = 0.93;
-float hor_1 = 0.86;
-float hor_2 = 0.97;
-uint16_t hr_thick = 1;
-bool hr_w = 1;
-uint16_t stepx1 = 12;
-uint16_t stepx2 = 67;
-uint16_t stepy = 37;
-uint16_t icon_bump = 4;
-#endif
+uint16_t time_h = 700;
+  #if PBL_DISPLAY_HEIGHT > 180
+  uint16_t date_h = 720;
+  uint16_t time_w = 92;
+  uint16_t time_x = 160;
+  uint16_t time_y = 70;
+  uint16_t vert_1 = 820;
+  uint16_t vert_2 = 900;
+  uint16_t hor_1 = 830;
+  uint16_t hor_2 = 920;
+  uint16_t hr_thick = 2;
+  bool hr_w = 0;
+  uint16_t stepx1 = 16;
+  uint16_t stepx2 = 95;
+  uint16_t stepy = 50;
+  uint16_t icon_bump = 1;
+  #else
+  uint16_t date_h = 740;
+  uint16_t time_w = 72;
+  uint16_t time_x = 120;
+  uint16_t time_y = 50;
+  uint16_t vert_1 = 850;
+  uint16_t vert_2 = 930;
+  uint16_t hor_1 = 860;
+  uint16_t hor_2 = 970;
+  uint16_t hr_thick = 1;
+  bool hr_w = 1;
+  uint16_t stepx1 = 12;
+  uint16_t stepx2 = 67;
+  uint16_t stepy = 37;
+  uint16_t icon_bump = 4;
+  #endif
 #endif
 
 #if PBL_DISPLAY_HEIGHT > 180
@@ -137,8 +137,8 @@ void globals_prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 1;
-  settings.BeatTeam = 0;
+  settings.FavoriteTeam = 108;
+  settings.BeatTeam = 26;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
@@ -181,6 +181,7 @@ void globals_prv_default_settings() {
   settings.cfbd.api_calls_this_month = 0;
   settings.cfbd.api_calls_monthly_limit = 0; // unknown until first full sync reports it
   settings.cfbd.api_data_valid = false;
+  settings.watchUpdate = 1;
 }
 
 void globals_prv_save_settings() {
@@ -298,7 +299,18 @@ void globals_prv_update_display() {
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
 
   // 4. Setup Accent / Icon Colors
-  GColor primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
+  GColor primary_icon_color;
+  #if defined(PBL_COLOR)
+  primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
+  #else
+  if(gcolor_equal((GColor){.argb = TEAMS[primary_idx].color}, GColorWhite)){
+    primary_icon_color = GColorBlack;
+  }
+  else{
+    primary_icon_color = GColorWhite;
+  }
+  #endif
+  
   display_setupBag(primary_icon_color);
 
   #if defined(PBL_HEALTH)
@@ -415,6 +427,57 @@ void globals_prv_update_display() {
     // Single Pass UI Update
     if (target_gbitmap != NULL) {
       bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], target_gbitmap);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), false);
+    } else {
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
+    }
+  }
+
+  if (settings.rankingBool){
+    if (API_DATA[settings.FavoriteTeam].ranking <= 25 && API_DATA[settings.FavoriteTeam].ranking > 0){
+
+      static char s_rank_buffer[3];
+      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", API_DATA[settings.FavoriteTeam].ranking);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
+
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
+    }
+    else{
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
+    }
+  }
+
+  if (settings.winBool){
+    if(API_DATA[settings.FavoriteTeam].wins > 6){
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
+    }
+    else{
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
+    }
+  }
+
+
+  if (settings.bowlBool){
+    // Resource ID rather than GBitmap*: only one trophy-state GBitmap is
+    // ever resident at a time (created below, right before use), instead
+    // of preloading both BOWL and CHAMP permanently at startup.
+    uint32_t target_res_id = 0;
+    if(API_DATA[settings.FavoriteTeam].postseasonGames >= 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 1){
+      target_res_id = RESOURCE_ID_BOWL;
+    }
+    else if (API_DATA[settings.FavoriteTeam].postseasonLosses < 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 3){
+      target_res_id = RESOURCE_ID_CHAMP;
+    }
+
+    // Single Pass UI Update
+    if (target_res_id != 0) {
+      if (s_gbitmap_layers[GBITMAP_LAYER_TROPHY]) {
+        gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
+      }
+      s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = gbitmap_create_with_resource(target_res_id);
+      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), false);
     } else {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);

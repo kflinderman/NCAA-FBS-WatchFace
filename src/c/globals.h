@@ -56,6 +56,7 @@ typedef struct ClaySettings {
   bool confBool;
   bool bowlBool;
   bool champBool;
+  uint8_t watchUpdate;
   CFBDState cfbd;
 } ClaySettings;
 
@@ -105,15 +106,20 @@ typedef enum {
   GBITMAP_LAYER_LOGO,
   GBITMAP_LAYER_BEAT_TEAM,
   GBITMAP_LAYER_BT,
-  GBITMAP_LAYER_BATT_CRG,
-  GBITMAP_LAYER_BATT_EMPTY,
-  GBITMAP_LAYER_BATT_LOW,
+  // BATT was 3 separate GBitmaps (BATT_CRG/BATT_EMPTY/BATT_LOW) all kept
+  // resident in RAM at once even though only one battery state is ever
+  // shown - now a single slot that's created/destroyed as the state
+  // changes (see sensor_battery_handler in sensors.c).
+  GBITMAP_LAYER_BATT,
   GBITMAP_LAYER_BAG,
-  GBITMAP_LAYER_API_LOW,
-  GBITMAP_LAYER_API_EMPTY,
+  // Same consolidation: API status was 2 GBitmaps (API_LOW/API_EMPTY),
+  // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
+  GBITMAP_LAYER_API,
   GBITMAP_LAYER_WIN,
-  GBITMAP_LAYER_BOWL,
-  GBITMAP_LAYER_CHAMP,
+  // Same consolidation: the postseason badge was 2 GBitmaps
+  // (BOWL/CHAMP), now 1 slot swapped on demand (see the bowlBool block
+  // in globals.c).
+  GBITMAP_LAYER_TROPHY,
   #if defined(PBL_HEALTH)
   GBITMAP_LAYER_FOOTBALL,
   #endif
@@ -198,9 +204,9 @@ extern uint16_t beat_primary;
  * repositioning) and main.c (initial layout) agree.
  *******************************************/
 #ifdef PBL_ROUND
-  extern float rect_h, date_h, vert_2, hor_1, hor_2, time_h;
+  extern uint16_t rect_h, date_h, vert_2, hor_1, hor_2, time_h;
 #else
-  extern float rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
+  extern uint16_t rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
 #endif
 extern uint16_t icon_bump;
 extern uint16_t time_w, time_x, time_y;

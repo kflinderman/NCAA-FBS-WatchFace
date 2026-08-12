@@ -74,9 +74,9 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
   //182
-  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 9), bounds.size.h * vert_2, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 9), (bounds.size.h * vert_2) / 1000, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 5), bounds.size.h * vert_2 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 5), (bounds.size.h * vert_2) / 1000 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   //+ 9
   #endif
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), s_bt_connected);
@@ -90,16 +90,19 @@ void sensor_battery_handler(BatteryChargeState state) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
   #endif
-  GBitmap *target_gbitmap = NULL;
+  // Resource ID rather than GBitmap*: only one battery-state GBitmap is
+  // ever resident at a time (created below, right before use), instead
+  // of preloading all three states permanently at startup.
+  uint32_t target_res_id = 0;
 
   // Charging State
   if (state.is_charging) {
-    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_CRG];
+    target_res_id = RESOURCE_ID_FULLBATT;
     s_batt_history = 0;
   } 
   // Empty Battery State
   else if (state.charge_percent <= settings.EmptyBatteryPercent) {
-    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_EMPTY];
+    target_res_id = RESOURCE_ID_EMPTYBATT;
 
     // Only vibrate on new state entry (0 -> 2 or 1 -> 2)
     if (s_batt_history < 2) {
@@ -109,7 +112,7 @@ void sensor_battery_handler(BatteryChargeState state) {
   } 
   // Low Battery State
   else if (state.charge_percent <= settings.LowBatteryPercent) {
-    target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW];
+    target_res_id = RESOURCE_ID_LOWBATT;
 
     // Only vibrate on new state entry (0 -> 1)
     if (s_batt_history < 1) {
@@ -123,8 +126,12 @@ void sensor_battery_handler(BatteryChargeState state) {
   }
 
   // Single Pass UI Update
-  if (target_gbitmap != NULL) {
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], target_gbitmap);
+  if (target_res_id != 0) {
+    if (s_gbitmap_layers[GBITMAP_LAYER_BATT]) {
+      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BATT]);
+    }
+    s_gbitmap_layers[GBITMAP_LAYER_BATT] = gbitmap_create_with_resource(target_res_id);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], s_gbitmap_layers[GBITMAP_LAYER_BATT]);
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
   } else {
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), true);
@@ -132,16 +139,17 @@ void sensor_battery_handler(BatteryChargeState state) {
 }
 
 void sensor_battery_draw(Layer *window_layer, GRect bounds){
-  // Create Battery GBitmap from resource
-  s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW] = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
-  s_gbitmap_layers[GBITMAP_LAYER_BATT_EMPTY] = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
-  s_gbitmap_layers[GBITMAP_LAYER_BATT_CRG] = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
+  // No GBitmap created here - sensor_battery_handler() creates whichever
+  // one state actually applies the first time it runs (Pebble calls the
+  // subscribed handler once immediately on subscribe), so only one
+  // battery-state bitmap is ever resident instead of all three.
+  s_gbitmap_layers[GBITMAP_LAYER_BATT] = NULL;
 
   #if PBL_DISPLAY_HEIGHT > 180
   //168
-  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump - 4), bounds.size.h * vert_2, 8, 14, s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump - 4), (bounds.size.h * vert_2) / 1000, 8, 14, NULL, window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump - 2), bounds.size.h * vert_2 + 3, 4, 7, s_gbitmap_layers[GBITMAP_LAYER_BATT_LOW], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump - 2), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, NULL, window_layer);
   //+ 2
   #endif
 }

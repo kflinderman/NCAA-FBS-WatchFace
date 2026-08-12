@@ -57,7 +57,7 @@ void display_beat_textbox(Layer *window_layer, GRect bounds){
 }
 
 void display_main_time_layer(Layer *window_layer, GRect bounds){
-  s_layers[LAYER_RECT] = layer_create_with_data(GRect(0, bounds.size.h * rect_h, bounds.size.w, 100), sizeof(RoundRectData));
+  s_layers[LAYER_RECT] = layer_create_with_data(GRect(0, (bounds.size.h * rect_h) / 1000, bounds.size.w, 100), sizeof(RoundRectData));
 
   RoundRectData *rect_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RECT]);
   rect_data->fill_color = GColorWhite;

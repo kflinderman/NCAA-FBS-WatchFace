@@ -1,7 +1,7 @@
 {
     "author": "kenny.linderman@gmail.com",
     "dependencies": {
-        "@rebble/clay": "^1.0.10"
+        "@rebble/clay": "^1.0.8"
     },
     "keywords": [],
     "name": "ncaa-fbs",
@@ -85,11 +85,36 @@
             "CFBD_TEAM_DATA_TYPE",
             "CFBD_TEAM_COMPLETED",
             "healthQuiet",
-            "opponentBool"
+            "opponentBool",
+            "watchUpdate"
         ],
         "projectType": "native",
         "resources": {
             "media": [
+                {
+                    "file": "images/champ.png",
+                    "memoryFormat": "Smallest",
+                    "name": "CHAMP",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/bowl.png",
+                    "memoryFormat": "Smallest",
+                    "name": "BOWL",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/w.png",
+                    "memoryFormat": "Smallest",
+                    "name": "WIN",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
                 {
                     "characterRegex": "[0-9:APM| ]",
                     "file": "fonts/LECO 1976 Regular.ttf",
@@ -161,6 +186,14 @@
                     "file": "images/emptybatt.png",
                     "memoryFormat": "Smallest",
                     "name": "EMPTYBATT",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
                     "spaceOptimization": "memory",
                     "targetPlatforms": null,
                     "type": "bitmap"

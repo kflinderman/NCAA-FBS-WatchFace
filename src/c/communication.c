@@ -74,6 +74,7 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(confBool),
   SF(bowlBool),
   SF(champBool),
+  SF(watchUpdate),
 };
 
 #undef SF
@@ -129,10 +130,10 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
 
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  #if defined(DEBUG)
+  //#if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Message Received!");
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
-  #endif
+  //#endif
   configuration_callback(iterator, context);
   weather_callback(iterator, context);
   api_cfbd_callback(iterator, context);
