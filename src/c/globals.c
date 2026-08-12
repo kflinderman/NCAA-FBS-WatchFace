@@ -393,6 +393,45 @@ void globals_prv_update_display() {
   if (timeTrue){
     animation_hide_text(true, true, false);
   }
+  
+  if (settings.rankingBool){
+    if (API_DATA[settings.FavoriteTeam].ranking <= 25 && API_DATA[settings.FavoriteTeam].ranking > 0){
+
+      static char s_rank_buffer[3];
+      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", API_DATA[settings.FavoriteTeam].ranking);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
+
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
+    }
+    else{
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
+    }
+  }
+
+  if (settings.winBool){
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), API_DATA[settings.FavoriteTeam].wins > 6);
+  }
+
+
+  if (settings.bowlBool){
+    GBitmap *target_gbitmap = NULL;
+    if(API_DATA[settings.FavoriteTeam].postseasonGames >= 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 1){
+      target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_BOWL];
+    }
+    else if (API_DATA[settings.FavoriteTeam].postseasonLosses < 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 3){
+      target_gbitmap = s_gbitmap_layers[GBITMAP_LAYER_CHAMP];
+    }
+
+    // Single Pass UI Update
+    if (target_gbitmap != NULL) {
+      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], target_gbitmap);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), false);
+    } else {
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
+    }
+  }
 
   if (settings.rankingBool){
     if (API_DATA[settings.FavoriteTeam].ranking <= 25 && API_DATA[settings.FavoriteTeam].ranking > 0){
