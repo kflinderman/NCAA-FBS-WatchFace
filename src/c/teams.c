@@ -1,9 +1,22 @@
 // teams.c
 #include "teams.h" // Include the header to get the 'Team' type
 
-
+#ifdef TESTING
 #if defined(PBL_COLOR)
 const Team TEAMS[] = {
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorOrangeARGB8, .icon_color = GColorWhiteARGB8, .rival = 108, .name="Clemson", .shortname="CLEM" },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 26, .name="South Carolina", .shortname="SC  " },
+};
+#else
+const Team TEAMS[] = {
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .rival = 108, .name="Clemson", .shortname="CLEM" },
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .rival = 26, .name="South Carolina", .shortname="SC  " },
+};
+#endif
+#else
+#if defined(PBL_COLOR)
+const Team TEAMS[] = {
+  /*
   { .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 77, .name="PLACEHOLDER", .shortname="PLCH" },
   { .logo_res_id = RESOURCE_ID_AIRFORCE, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 10, .name="Air Force", .shortname="AFA " },
   { .logo_res_id = RESOURCE_ID_AKRON, .color = GColorOxfordBlueARGB8, .icon_color = GColorWhiteARGB8, .rival = 54, .name="Akron", .shortname="AKRN" },
@@ -157,9 +170,11 @@ const Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_WKU, .color = GColorDarkCandyAppleRedARGB8, .icon_color = GColorWhiteARGB8, .rival = 70, .name="Western Kentucky", .shortname="WKU " },
   { .logo_res_id = RESOURCE_ID_WVU, .color = GColorChromeYellowARGB8, .icon_color = GColorBlackARGB8, .rival = 97, .name="West Virginia", .shortname="WVU " },
   { .logo_res_id = RESOURCE_ID_WYOMING, .color = GColorWindsorTanARGB8, .icon_color = GColorWhiteARGB8, .rival = 29, .name="Wyoming", .shortname="WYO " },
+*/
 };
 #else
 const Team TEAMS[] = {
+  /*
   { .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .rival = 77, .name="PLACEHOLDER", .shortname="PLCH" },
   { .logo_res_id = RESOURCE_ID_AIRFORCE, .color = GColorWhiteARGB8, .rival = 10, .name="Air Force", .shortname="AFA " },
   { .logo_res_id = RESOURCE_ID_AKRON, .color = GColorBlackARGB8, .rival = 54, .name="Akron", .shortname="AKRN" },
@@ -313,11 +328,17 @@ const Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_WKU, .color = GColorBlackARGB8, .rival = 70, .name="Western Kentucky", .shortname="WKU " },
   { .logo_res_id = RESOURCE_ID_WVU, .color = GColorWhiteARGB8, .rival = 97, .name="West Virginia", .shortname="WVU " },
   { .logo_res_id = RESOURCE_ID_WYOMING, .color = GColorBlackARGB8, .rival = 29, .name="Wyoming", .shortname="WYO " },
+  */
 };
 #endif
 
+#endif
 
 API_Info API_DATA[] = {
+#ifdef TESTING
+  { .name = "Clemson", .vs_id = 1, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+  { .name = "South Carolina", .vs_id = 0, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+#endif
   { .ranking = 26, .name="NA" },
   { .name = "Air Force", .vs_id = 10, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "Akron", .vs_id = 54, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
@@ -344,7 +365,10 @@ API_Info API_DATA[] = {
   { .ranking = 26, .name="NA" },
   { .ranking = 26, .name="NA" },
   { .name = "Cincinnati", .vs_id = 66, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+  #ifdef TESTING
+  #else
   { .name = "Clemson", .vs_id = 108, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+  #endif
   { .name = "Coastal Carolina", .vs_id = 58, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "Colorado", .vs_id = 29, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "Colorado State", .vs_id = 28, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
@@ -426,7 +450,10 @@ API_Info API_DATA[] = {
   { .name = "San José State", .vs_id = 38, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "SMU", .vs_id = 114, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "South Alabama", .vs_id = 122, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+  #ifdef TESTING
+  #else
   { .name = "South Carolina", .vs_id = 26, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
+  #endif
   { .name = "USC", .vs_id = 86, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "Southern Miss", .vs_id = 57, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .name = "Stanford", .vs_id = 21, .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
@@ -477,7 +504,11 @@ API_Info API_DATA[] = {
 // full 154-team NUM_TEAMS. Use this (not NUM_TEAMS) when iterating/parsing
 // so the small test roster doesn't require touching parser code as the
 // real roster grows.
+#ifdef TESTING
+const size_t API_DATA_COUNT = 2;
+#else
 const size_t API_DATA_COUNT = sizeof(API_DATA) / sizeof(API_DATA[0]);
+#endif
 
 // Define the count based on the array
 const size_t TEAMS_COUNT = sizeof(TEAMS) / sizeof(TEAMS[0]);
