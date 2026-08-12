@@ -66,7 +66,7 @@ uint16_t hor_2 = 550;
 uint16_t time_h = 620;
 #if PBL_DISPLAY_HEIGHT > 180
 uint16_t time_w = 75;
-uint16_t time_x = 150;
+uint16_t time_x = 155;
 uint16_t time_y = 70;
 uint16_t icon_bump = 9; //10;
 uint16_t hr_thick = 2;
@@ -137,8 +137,8 @@ void globals_prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
-  settings.FavoriteTeam = 1;
-  settings.BeatTeam = 0;
+  settings.FavoriteTeam = 108;
+  settings.BeatTeam = 26;
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
@@ -400,7 +400,12 @@ void globals_prv_update_display() {
   }
 
   if (settings.winBool){
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), API_DATA[settings.FavoriteTeam].wins > 6);
+    if(API_DATA[settings.FavoriteTeam].wins > 6){
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
+    }
+    else{
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
+    }
   }
 
 

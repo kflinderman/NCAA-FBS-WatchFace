@@ -16,6 +16,7 @@ Champion
 #include "globals.h"
 #include "drawing.h"
 #include "outbox_queue.h"
+#include "timekeeping.h"
 
 /**
  * CFBD sync protocol (team-by-team, split by sync type)
@@ -358,6 +359,10 @@ void api_request_cfbd_light_sync(void) {
 bool api_should_full_sync(void) {
   time_t now = time(NULL);
 
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+  
   // Never synced, or more than 24 hours since last full sync
   if (settings.api && (!settings.cfbd.api_data_valid ||
                        (now - settings.cfbd.last_full_sync_ts >= 86400))) {
@@ -374,6 +379,11 @@ bool api_should_full_sync(void) {
 }
 
 bool api_should_light_sync(void) {
+  
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+  
   if (cfbd_light_sync_pending) {
     return false;
   }
@@ -601,13 +611,17 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
 
   //Create Ranking resources
+  #ifdef PBL_ROUND
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 40, 25), sizeof(RoundRectData));
+  #else
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 40, 25), sizeof(RoundRectData));
+  #endif
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
   rect_beat_data->fill_color = GColorWhite;
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
   layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
-
   s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 40, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  
 
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
@@ -619,9 +633,14 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   // one (or none) is ever resident instead of both permanently.
   s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = NULL;
 
+  #ifdef PBL_ROUND
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - 50, logo_bounds.size.h - 20, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - 30, logo_bounds.size.h - 20, 12, 12, NULL, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  #else
   s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - 30, 0, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
   s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - 30, logo_bounds.size.h - 20, 12, 12, NULL, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-
+  #endif
+  
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
 }

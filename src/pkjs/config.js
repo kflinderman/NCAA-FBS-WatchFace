@@ -1042,12 +1042,12 @@ module.exports = [
         "defaultValue": false,
         "messageKey": "winBool"
       },
-      {
-        "type": "toggle",
-        "label": "Conference Champion Marking",
-        "defaultValue": false,
-        "messageKey": "confBool"
-      },
+      //{
+        //"type": "toggle",
+        //"label": "Conference Champion Marking",
+        //"defaultValue": false,
+        //"messageKey": "confBool"
+      //},
       {
         "type": "toggle",
         "label": "Bowl Win Marking",

@@ -42,6 +42,8 @@ void update_time() {
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
+  animation_beat_team_layer();
+  
   time_t now = time(NULL);
   if(tick_time->tm_min % settings.watchUpdate == 0){
     update_time();
@@ -62,7 +64,8 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
 
     // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-    if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
+    if (api_should_full_sync() || !settings.cfbd.api_data_valid) {
+    //if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
       api_request_cfbd_full_sync();
     }
 
@@ -244,19 +247,35 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_COUNTDOWN] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "00:88", s_font, GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_SCORE] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "88|00", s_font, GTextAlignmentCenter, window_layer);
+  
+  #ifdef PBL_ROUND
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (time_w-25), ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 3, ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_DAY] = drawing_text_set(bounds.size.w / 2 - (time_w-25), ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_HOUR] = drawing_text_set(bounds.size.w / 2 + 3, ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #else
   s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (time_w-25), bounds.size.h - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_DAY] = drawing_text_set(bounds.size.w / 2 - (time_w-25), bounds.size.h - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_HOUR] = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #endif
   #else
   s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_42));
   s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_COUNTDOWN] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "00:88", s_font, GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_SCORE] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "88|00", s_font, GTextAlignmentCenter, window_layer);
+  
+  #ifdef PBL_ROUND
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (time_w-10), ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2, ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_DAY] = drawing_text_set(bounds.size.w / 2 - (time_w-10), ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_HOUR] = drawing_text_set(bounds.size.w / 2, ((bounds.size.h * time_h) / 1000) - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #else
   s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (time_w-10), bounds.size.h - 18, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2, bounds.size.h - 18, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_DAY] = drawing_text_set(bounds.size.w / 2 - (time_w-10), bounds.size.h - 18, 40, 16, GColorBlack, "Days", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_HOUR] = drawing_text_set(bounds.size.w / 2, bounds.size.h - 18, 40, 16, GColorBlack, "Hour", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #endif
   #endif
 
   animation_hide_text(true, true, false);
