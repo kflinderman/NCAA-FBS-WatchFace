@@ -26,7 +26,7 @@ typedef struct {
   uint8_t postseasonLosses;
   bool completed;
   unsigned long gametime;
-  const char *name;
+  //const char *name;
 } API_Info;
 	
 typedef struct {

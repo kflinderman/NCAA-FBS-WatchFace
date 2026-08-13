@@ -160,7 +160,7 @@ static void build_request_team_data(DictionaryIterator *iter) {
   uint16_t team_index = (uint16_t)cfbd_current_team_index;
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
   dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
-  dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, API_DATA[team_index].name);
+  dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, TEAMS[team_index].name);
   dict_write_uint8(iter, MESSAGE_KEY_CFBD_TEAM_DATA_TYPE, (uint8_t)cfbd_current_sync_type);
 }
 

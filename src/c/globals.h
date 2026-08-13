@@ -40,7 +40,7 @@ typedef struct ClaySettings {
   uint16_t countdownCustomTime;
   uint8_t countdownDisplay;
   bool api;
-  char api_key[128];
+  char api_key[65];
   bool api_quiet;
   bool scoreDisplayBool;
   uint16_t scoreUpdate;
