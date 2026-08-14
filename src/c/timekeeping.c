@@ -78,14 +78,14 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
     // I might need to look into if both countdown and scores are chosen + they're on different screens
     if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
-      time_t target_time = (time_t)API_DATA[settings.FavoriteTeam].gametime;
+      time_t target_time = (time_t)TEAMS[settings.FavoriteTeam].gametime;
       int32_t seconds_diff = (int32_t)(target_time - now);
       int32_t minutes_diff = seconds_diff / 60;
       if (minutes_diff <= 0) gametime = true;
       else gametime = false;
       //I need to find out if the game is completed.
 
-      if (api_should_light_sync() && gametime && !API_DATA[settings.FavoriteTeam].completed) {
+      if (api_should_light_sync() && gametime && !TEAMS[settings.FavoriteTeam].completed) {
         api_request_cfbd_light_sync();
       }
 
@@ -183,7 +183,7 @@ bool timekeeping_countdown() {
   }
   // API Time
   else if (settings.countdownTime == 2) {
-    target_time = (time_t)API_DATA[settings.FavoriteTeam].gametime;
+    target_time = (time_t)TEAMS[settings.FavoriteTeam].gametime;
   }
   // Saturday Noon Eastern Time (Default)
   else {
@@ -257,6 +257,7 @@ bool timekeeping_countdown() {
 }
 
 void timeDate_draw(Layer *window_layer, GRect bounds){
+  
   #if PBL_DISPLAY_HEIGHT > 180
   s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
   s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - time_w, (bounds.size.h * time_h) / 1000, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
@@ -304,6 +305,8 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   #endif
 
   s_layers[LAYER_VERT] = drawing_line_draw(bounds, (bounds.size.w * hor_1) / 1000, (bounds.size.h * vert_1) / 1000, (bounds.size.w * hor_1) / 1000, (bounds.size.h * vert_2) / 1000, 1, GColorBlack, window_layer);
+  
+  APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after drawing vert: %d", (int)heap_bytes_free());
   #else
   #if PBL_DISPLAY_HEIGHT > 180
   // Create the TextLayer for the time and date
@@ -315,5 +318,5 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   #endif
 
   s_layers[LAYER_HOR] = drawing_line_draw(bounds, (bounds.size.w * hor_1) / 1000, (bounds.size.h * vert_2) / 1000, (bounds.size.w * hor_2) / 1000, (bounds.size.h * vert_2) / 1000, 1, GColorBlack, window_layer);
-
+  APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after drawing hor: %d", (int)heap_bytes_free());
 }

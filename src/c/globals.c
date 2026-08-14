@@ -247,7 +247,7 @@ void globals_prv_update_display() {
     settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
   }
   else if (settings.hardcodeRival == 2){
-    if (API_DATA[settings.FavoriteTeam].vs_id == -1){
+    if (TEAMS[settings.FavoriteTeam].vs_id == -1){
       if (settings.opponentSelect == 1){
         #if defined(DEBUG)
         APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Rival)");
@@ -271,7 +271,7 @@ void globals_prv_update_display() {
       #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
       #endif
-      settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
+      settings.BeatTeam = TEAMS[settings.FavoriteTeam].vs_id;
     }
   }
 
@@ -395,10 +395,10 @@ void globals_prv_update_display() {
   }
 
   if (settings.rankingBool){
-    if (API_DATA[settings.FavoriteTeam].ranking <= 25 && API_DATA[settings.FavoriteTeam].ranking > 0){
+    if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
 
       static char s_rank_buffer[3];
-      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", API_DATA[settings.FavoriteTeam].ranking);
+      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", TEAMS[settings.FavoriteTeam].ranking);
       text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
 
       layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
@@ -411,7 +411,7 @@ void globals_prv_update_display() {
   }
 
   if (settings.winBool){
-    if(API_DATA[settings.FavoriteTeam].wins > 6){
+    if(TEAMS[settings.FavoriteTeam].wins > 6){
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
     }
     else{
@@ -425,10 +425,10 @@ void globals_prv_update_display() {
     // ever resident at a time (created below, right before use), instead
     // of preloading both BOWL and CHAMP permanently at startup.
     uint32_t target_res_id = 0;
-    if(API_DATA[settings.FavoriteTeam].postseasonGames >= 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 1){
+    if(TEAMS[settings.FavoriteTeam].postseasonGames >= 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 1){
       target_res_id = RESOURCE_ID_BOWL;
     }
-    else if (API_DATA[settings.FavoriteTeam].postseasonLosses < 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 3){
+    else if (TEAMS[settings.FavoriteTeam].postseasonLosses < 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 3){
       target_res_id = RESOURCE_ID_CHAMP;
     }
 

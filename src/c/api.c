@@ -29,7 +29,7 @@ Champion
  * Light sync fetches only this week's games, on its own cadence
  * (settings.cfbd.last_light_sync_ts, independent of full sync's timing).
  *
- * Each sync type, once JS has fetched its data, walks API_DATA[] one team
+ * Each sync type, once JS has fetched its data, walks TEAMS[] one team
  * at a time exactly like before - but now there are two independent walk
  * types (CFBD_TEAM_DATA_GAMES, CFBD_TEAM_DATA_RECORDS), each updating only
  * the fields it's responsible for:
@@ -38,15 +38,15 @@ Champion
  *   2. C starts (or, if a walk of the other type is already running,
  *      defers) a walk of that type: team cursor to 0, sends
  *      REQUEST_CFBD_TEAM_DATA with CFBD_TEAM_INDEX + CFBD_TEAM_NAME +
- *      CFBD_TEAM_DATA_TYPE for API_DATA[0].
+ *      CFBD_TEAM_DATA_TYPE for TEAMS[0].
  *   3. JS looks team_name up in whichever cache matches the requested
  *      type (already-fetched, not re-fetched) and replies with just that
  *      type's fields - opponent/score/gametime for games, or
  *      rank/wins/postseason for records.
  *   4. C applies whichever fields are present (their presence alone
  *      tells it what to apply - no separate branch needed) to
- *      API_DATA[team_index], then requests the next index, repeating
- *      until API_DATA_COUNT is reached, then starts whatever walk was
+ *      TEAMS[team_index], then requests the next index, repeating
+ *      until TEAMS_COUNT is reached, then starts whatever walk was
  *      deferred in step 2, if any.
  *
  * This means at most one small AppMessage dictionary (well under the
@@ -81,7 +81,7 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type);
 /**
  * Look up a team by name in the full TEAMS[] roster (used to resolve an
  * opponent name to a logo/color entry for drawing - separate from
- * API_DATA[], which only holds the teams actively tracked on the watch).
+ * TEAMS[], which only holds the teams actively tracked on the watch).
  * Returns NULL if the opponent isn't in the curated TEAMS[] roster (this
  * is expected/common - most opponents won't be).
  */
@@ -165,7 +165,7 @@ static void build_request_team_data(DictionaryIterator *iter) {
 }
 
 /**
- * Queues REQUEST_CFBD_TEAM_DATA for API_DATA[cfbd_current_team_index],
+ * Queues REQUEST_CFBD_TEAM_DATA for TEAMS[cfbd_current_team_index],
  * asking JS for that one team's data (games or records/rankings,
  * depending on cfbd_current_sync_type). Assumes cfbd_current_team_index
  * is valid (checked by the caller before setting it).
@@ -173,7 +173,7 @@ static void build_request_team_data(DictionaryIterator *iter) {
 static void request_team_data(void) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
-          cfbd_current_team_index + 1, (int)API_DATA_COUNT, API_DATA[cfbd_current_team_index].name,
+          cfbd_current_team_index + 1, (int)TEAMS_COUNT, TEAMS[cfbd_current_team_index].name,
           cfbd_current_sync_type);
   #endif
 
@@ -200,7 +200,7 @@ static void start_team_walk(CFBDTeamDataType type) {
     return;
   }
 
-  if (API_DATA_COUNT == 0) {
+  if (TEAMS_COUNT == 0) {
     cfbd_team_walk_complete(type);
     return;
   }
@@ -211,14 +211,14 @@ static void start_team_walk(CFBDTeamDataType type) {
 }
 
 /**
- * Called once all of API_DATA[] has been walked for the given sync type.
+ * Called once all of TEAMS[] has been walked for the given sync type.
  * Updates whichever timestamp that type owns, then starts any walk that
  * got deferred while this one was running.
  */
 static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
-          type, (int)API_DATA_COUNT);
+          type, (int)TEAMS_COUNT);
   #endif
 
   cfbd_current_team_index = -1;
@@ -437,7 +437,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
     #if defined(DEBUG)
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)API_DATA_COUNT);
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)TEAMS_COUNT);
     #endif
 
     apply_api_usage_from_message(iterator);
@@ -454,7 +454,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
   if (records_ready_tuple) {
     #if defined(DEBUG)
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - requesting %d teams", (int)API_DATA_COUNT);
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - requesting %d teams", (int)TEAMS_COUNT);
     #endif
 
     apply_api_usage_from_message(iterator);
@@ -464,7 +464,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
-  // Per-team response: apply this team's data to API_DATA[team_index],
+  // Per-team response: apply this team's data to TEAMS[team_index],
   // then move on to the next team (or finish). Which fields are present
   // depends on which walk type is running - a games-type response won't
   // include rank/wins/postseason, and a records-type response won't
@@ -482,7 +482,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       return;
     }
 
-    if (team_index >= API_DATA_COUNT) {
+    if (team_index >= TEAMS_COUNT) {
       #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team data index %d out of range", team_index);
       #endif
@@ -490,7 +490,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       return;
     }
 
-    API_Info *info = &API_DATA[team_index];
+    Team *info = &TEAMS[team_index];
 
     Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
     Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
@@ -542,7 +542,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     #endif
 
     uint16_t next_index = team_index + 1;
-    if (next_index < API_DATA_COUNT) {
+    if (next_index < TEAMS_COUNT) {
       cfbd_current_team_index = next_index;
       request_team_data();
     } else {
@@ -564,7 +564,7 @@ void api_score_display() {
   // 2. Only s_temp_buffer3 needs memory for formatted score "XX|YY\0"
   static char s_score_buffer[6];
 
-  if (API_DATA[settings.FavoriteTeam].vs_id == -1) {
+  if (TEAMS[settings.FavoriteTeam].vs_id == -1) {
     home_str = "BYE";
     away_str = "WEEK";
     // Copy constant string directly instead of snprintf
@@ -572,11 +572,11 @@ void api_score_display() {
   } else {
     // Zero-copy! Point directly to existing string constants
     home_str = TEAMS[settings.FavoriteTeam].shortname;
-    away_str = TEAMS[API_DATA[settings.FavoriteTeam].vs_id].shortname;
+    away_str = TEAMS[TEAMS[settings.FavoriteTeam].vs_id].shortname;
 
     // Clamp scores cleanly
-    int score1 = API_DATA[settings.FavoriteTeam].score;
-    int score2 = API_DATA[settings.FavoriteTeam].vs_score;
+    int score1 = TEAMS[settings.FavoriteTeam].score;
+    int score2 = TEAMS[settings.FavoriteTeam].vs_score;
     if (score1 > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
     if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
 

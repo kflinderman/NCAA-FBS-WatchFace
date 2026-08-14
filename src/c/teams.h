@@ -11,10 +11,21 @@ typedef struct {
   uint8_t icon_color;
   #endif
   uint8_t rival;
+  int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
+  uint8_t score;
+  uint8_t vs_score;
+  uint8_t ranking;
+  uint8_t wins;
+  uint8_t postseasonGames;
+  uint8_t postseasonWins;
+  uint8_t postseasonLosses;
+  bool completed;
+  unsigned long gametime;
   const char *name;
   const char *shortname;
 } Team;
 
+/*
 typedef struct {
   int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
   uint8_t score;
@@ -28,6 +39,7 @@ typedef struct {
   unsigned long gametime;
   //const char *name;
 } API_Info;
+*/
 	
 typedef struct {
   uint32_t next_season_first_game_ts;
@@ -47,8 +59,8 @@ typedef struct {
 } CFBDState;
 
 // DECLARE the variables here
-extern const Team TEAMS[];
+extern Team TEAMS[];
 extern const size_t TEAMS_COUNT;
-extern API_Info API_DATA[];
-extern const size_t API_DATA_COUNT;
+//extern API_Info API_DATA[];
+//extern const size_t API_DATA_COUNT;
 extern CFBDState cfbd_state;
