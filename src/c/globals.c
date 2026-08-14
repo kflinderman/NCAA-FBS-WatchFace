@@ -196,8 +196,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
+  if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 0;
 }
 
 void globals_prv_update_display() {

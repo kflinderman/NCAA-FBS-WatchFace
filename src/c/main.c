@@ -49,7 +49,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
   #endif
-  s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, bounds.size.h * 0.025, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, (bounds.size.h * 25) / 1000, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
   s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
 
   #if defined(PBL_HEALTH)
