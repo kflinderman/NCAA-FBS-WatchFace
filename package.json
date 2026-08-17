@@ -141,7 +141,14 @@
                     "memoryFormat": "Smallest",
                     "name": "B1G",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -419,7 +426,14 @@
                     "memoryFormat": "Smallest",
                     "name": "BIG12",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -467,7 +481,14 @@
                     "memoryFormat": "Smallest",
                     "name": "ACC",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -475,7 +496,14 @@
                     "memoryFormat": "Smallest",
                     "name": "AMERICAN",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -491,7 +519,14 @@
                     "memoryFormat": "Smallest",
                     "name": "CUSA",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -499,7 +534,14 @@
                     "memoryFormat": "Smallest",
                     "name": "CHAOS",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -523,7 +565,14 @@
                     "memoryFormat": "Smallest",
                     "name": "INDEPENDENT",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -642,7 +691,14 @@
                     "memoryFormat": "Smallest",
                     "name": "MAC",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -650,7 +706,14 @@
                     "memoryFormat": "Smallest",
                     "name": "MW",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -682,7 +745,14 @@
                     "memoryFormat": "Smallest",
                     "name": "METEOR",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -913,7 +983,14 @@
                     "memoryFormat": "Smallest",
                     "name": "PAC12",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -969,7 +1046,14 @@
                     "memoryFormat": "Smallest",
                     "name": "SEC",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -1041,7 +1125,14 @@
                     "memoryFormat": "Smallest",
                     "name": "SUNBELT",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -1370,7 +1461,6 @@
                     "name": "BAGB",
                     "spaceOptimization": "memory",
                     "targetPlatforms": [
-                        "aplite",
                         "diorite",
                         "flint"
                     ],
@@ -1381,7 +1471,14 @@
                     "memoryFormat": "Smallest",
                     "name": "BAG",
                     "spaceOptimization": "memory",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {

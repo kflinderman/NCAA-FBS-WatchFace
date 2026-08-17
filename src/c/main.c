@@ -49,9 +49,12 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- DRAWING FUNCTIONS --------");
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
   #endif
-  s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - bitmap_size) / 2, (bounds.size.h * 25) / 1000, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
-  s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, bitmap_size, bitmap_size, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-
+  s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - BITMAP_SIZE) / 2, (bounds.size.h * 25) / 1000, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
+  
+  #ifndef PBL_PLATFORM_APLITE
+  s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  #endif
+  
   #if defined(PBL_HEALTH)
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Health");
@@ -62,7 +65,9 @@ static void main_window_load(Window *window) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Weather");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   weather_draw(window_layer, bounds);
+  #endif
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Team to Beat");
@@ -98,7 +103,6 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
   #endif
   api_icon_draw(window_layer, bounds);
-  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after drawing api: %d", (int)heap_bytes_free());
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");
@@ -106,6 +110,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Applying Saved Settings");
   #endif
   globals_prv_update_display();
+  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after settings: %d", (int)heap_bytes_free());
 
   // Make sure the time and date are displayed from the start
   #if defined(DEBUG)

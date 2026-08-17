@@ -497,11 +497,13 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
     Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
     Tuple *completed_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_COMPLETED);
+    #ifndef PBL_PLATFORM_APLITE
     Tuple *rank_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
     Tuple *wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
     Tuple *ps_games_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
     Tuple *ps_wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
     Tuple *ps_losses_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_LOSSES);
+    #endif
 
     // Only a games-type response includes the opponent field at all (even
     // an empty-string opponent for a bye week) - a records-type response
@@ -529,11 +531,13 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (vs_score_tuple) info->vs_score = (uint16_t)vs_score_tuple->value->int32;
     if (gametime_tuple) info->gametime = (uint32_t)gametime_tuple->value->int32;
     if (completed_tuple) info->completed = (completed_tuple->value->int32 != 0);
+    #ifndef PBL_PLATFORM_APLITE
     if (rank_tuple) info->ranking = (uint16_t)rank_tuple->value->int32;
     if (wins_tuple) info->wins = (uint16_t)wins_tuple->value->int32;
     if (ps_games_tuple) info->postseasonGames = (uint16_t)ps_games_tuple->value->int32;
     if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
+    #endif
 
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
@@ -603,9 +607,9 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
   //168
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 19), (bounds.size.h * vert_2) / 1000 + 3, 8, 14, NULL, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 19), (bounds.size.h * VERT_2) / 1000 + 3, 8, 14, NULL, window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 10), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, NULL, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 10), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
   //+ 14
   #endif
 

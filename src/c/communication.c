@@ -46,13 +46,14 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(quietTimeEnd),
   SF(animationsBatt),
   SF(animationsCustom),
+  #if defined(PBL_HEALTH)
   SF(healthQuiet),
   SF(stepsBool),
   SF(hrBool),
   SF(stepsGoalBool),
   SF(stepsGoal),
+  #endif
   SF2(hardcodeRivalBool, hardcodeRival), // messageKey/field names diverge
-  SF(bagBool),
   SF(animationDelay),
   SF(countdownBool),
   SF(countdownTime),
@@ -66,14 +67,17 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(scoreLocation),
   SF(opponentSelect),
   SF(customOpponent),
+  #ifndef PBL_PLATFORM_APLITE
   SF(weatherBool),
   SF(weatherQuiet),
   SF(weatherUnits),
+  SF(bagBool),
   SF(rankingBool),
   SF(winBool),
   SF(confBool),
   SF(bowlBool),
   SF(champBool),
+  #endif
   SF(watchUpdate),
 };
 
@@ -135,8 +139,10 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   //#endif
   configuration_callback(iterator, context);
+  api_cfbd_callback(iterator, context);  
+  #ifndef PBL_PLATFORM_APLITE
   weather_callback(iterator, context);
-  api_cfbd_callback(iterator, context);
+  #endif
 }
 
 void inbox_dropped_callback(AppMessageResult reason, void *context) {

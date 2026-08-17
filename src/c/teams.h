@@ -14,11 +14,13 @@ typedef struct {
   int16_t vs_id; // index into TEAMS[]; -1 means no opponent (bye week, or opponent not in TEAMS[])
   uint8_t score;
   uint8_t vs_score;
+  #ifndef PBL_PLATFORM_APLITE
   uint8_t ranking;
   uint8_t wins;
   uint8_t postseasonGames;
   uint8_t postseasonWins;
   uint8_t postseasonLosses;
+  #endif
   bool completed;
   unsigned long gametime;
   const char *name;

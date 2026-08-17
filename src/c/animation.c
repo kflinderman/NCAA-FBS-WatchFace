@@ -102,24 +102,24 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time_h, 0, 1000);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), date_h, 0, 1000);
-  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], rect_h, 0, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), vert_2, 3, 1000);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), vert_2, 3, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), VERT_2, 3, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), VERT_2, 3, 1000);
 
 #ifdef PBL_RECT
   LinePoints *points = (LinePoints *)layer_get_data(s_layers[LAYER_VERT]);
-  points->y1 = (unBounds.size.h * vert_1) / 1000 - bound_diff;
-  points->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
+  points->y1 = (unBounds.size.h * VERT_1) / 1000 - bound_diff;
+  points->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_VERT]);
 #endif
 
   LinePoints *points2 = (LinePoints *)layer_get_data(s_layers[LAYER_HOR]);
-  points2->y1 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
-  points2->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
+  points2->y1 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
+  points2->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_HOR]);
 }
 

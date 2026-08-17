@@ -26,13 +26,14 @@ typedef struct ClaySettings {
   uint16_t quietTimeEnd;
   uint8_t animationsBatt;
   uint8_t animationsCustom;
+  #if defined(PBL_HEALTH)
   bool healthQuiet;
   bool stepsBool;
   bool hrBool;
   bool stepsGoalBool;
   uint16_t stepsGoal;
+  #endif
   uint8_t hardcodeRival;
-  bool bagBool;
   bool animationDelay;
   bool countdownBool;
   uint8_t countdownTime;
@@ -48,14 +49,17 @@ typedef struct ClaySettings {
   bool opponentBool;
   uint8_t opponentSelect;
   uint16_t customOpponent;
+  #ifndef PBL_PLATFORM_APLITE
   bool weatherBool;
   bool weatherQuiet;
   bool weatherUnits;
+  bool bagBool;
   bool rankingBool;
   bool winBool;
   bool confBool;
   bool bowlBool;
   bool champBool;
+  #endif
   uint8_t watchUpdate;
   CFBDState cfbd;
 } ClaySettings;
@@ -79,8 +83,6 @@ typedef enum {
   TEXT_LAYER_TIME,
   TEXT_LAYER_DATE,
   TEXT_LAYER_BEAT,
-  TEXT_LAYER_WEATHER,
-  TEXT_LAYER_CONDITIONS,
   TEXT_LAYER_HOME,
   TEXT_LAYER_AWAY,
   //TEXT_LAYER_DAY,
@@ -88,6 +90,8 @@ typedef enum {
   //TEXT_LAYER_COUNTDOWN,
   //TEXT_LAYER_SCORE,
   #ifndef PBL_PLATFORM_APLITE
+  TEXT_LAYER_WEATHER,
+  TEXT_LAYER_CONDITIONS,
   TEXT_LAYER_RANK,
   #endif
   #if defined(PBL_HEALTH)
@@ -113,11 +117,11 @@ typedef enum {
   // shown - now a single slot that's created/destroyed as the state
   // changes (see sensor_battery_handler in sensors.c).
   GBITMAP_LAYER_BATT,
-  GBITMAP_LAYER_BAG,
   // Same consolidation: API status was 2 GBitmaps (API_LOW/API_EMPTY),
   // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
   GBITMAP_LAYER_API,
   #ifndef PBL_PLATFORM_APLITE
+  GBITMAP_LAYER_BAG,
   GBITMAP_LAYER_WIN,
   // Same consolidation: the postseason badge was 2 GBitmaps
   // (BOWL/CHAMP), now 1 slot swapped on demand (see the bowlBool block
@@ -136,10 +140,10 @@ typedef enum {
   BITMAP_LAYER_BEAT_TEAM,
   BITMAP_LAYER_BT,
   BITMAP_LAYER_BATT,
-  BITMAP_LAYER_BAG,
-  BITMAP_LAYER_BAGB,
   BITMAP_LAYER_API,
   #ifndef PBL_PLATFORM_APLITE
+  BITMAP_LAYER_BAG,
+  BITMAP_LAYER_BAGB,
   BITMAP_LAYER_WIN,
   BITMAP_LAYER_TROPHY,
   #endif
@@ -187,8 +191,10 @@ extern BatteryChargeState s_battery_state;
 extern bool s_bt_history;
 extern int16_t s_batt_history;
 extern int32_t current_time_integer;
+#ifndef PBL_PLATFORM_APLITE
 extern int16_t temperatureValue;
 extern int16_t conditionValue;
+#endif
 
 /*******************************************
 	* CFBD score state — NOT persisted (live
@@ -202,8 +208,7 @@ extern int16_t conditionValue;
 //extern bool scoreCompleted;
 //extern bool scoreValid; // false until the first successful response arrives
 
-extern uint16_t beat_spot;
-extern uint16_t beat_primary;
+extern uint8_t beat_spot, beat_primary;
 
 /*******************************************
  * Layout constants — values differ by shape/size,
@@ -211,17 +216,87 @@ extern uint16_t beat_primary;
  * Declared here so animation.c (unobstructed-area
  * repositioning) and main.c (initial layout) agree.
  *******************************************/
+
 #ifdef PBL_ROUND
-  extern uint16_t rect_h, date_h, vert_2, hor_1, hor_2, time_h;
+  #define RECT_H    660
+  #define DATE_H    840
+  #define VERT_2    930
+  #define HOR_1     450
+  #define HOR_2     550
+  #define TIME_H    620
+  #if PBL_DISPLAY_HEIGHT > 180
+    #define TIME_W    75
+    #define TIME_X    155
+    #define TIME_Y    70
+    #define ICON_BUMP 9
+    #define HR_THICK  2
+    #define HR_W      0
+    #define STEPX1    16
+    #define STEPX2    95
+    #define STEPY     50
+  #else
+    #define TIME_W    60
+    #define TIME_X    120
+    #define TIME_Y    50
+    #define ICON_BUMP 7
+    #define HR_THICK  1
+    #define HR_W      1
+    #define STEPX1    12
+    #define STEPX2    67
+    #define STEPY     37
+  #endif
 #else
-  extern uint16_t rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
+  #define RECT_H    720
+  #define DATE_W    810
+  #define TIME_H    700
+  #if PBL_DISPLAY_HEIGHT > 180
+    #define DATE_H    720
+    #define TIME_W    92
+    #define TIME_X    160
+    #define TIME_Y    70
+    #define VERT_1    820
+    #define VERT_2    900
+    #define HOR_1     830
+    #define HOR_2     920
+    #define HR_THICK  2
+    #define HR_W      0
+    #define STEPX1    16
+    #define STEPX2    95
+    #define STEPY     50
+    #define ICON_BUMP 1
+  #else
+    #define DATE_H    740
+    #define TIME_W    72
+    #define TIME_X    120
+    #define TIME_Y    50
+    #define VERT_1    850
+    #define VERT_2    930
+    #define HOR_1     860
+    #define HOR_2     970
+    #define HR_THICK  1
+    #define HR_W      1
+    #define STEPX1    12
+    #define STEPX2    67
+    #define STEPY     37
+    #define ICON_BUMP 4
+  #endif
 #endif
-extern uint16_t icon_bump;
-extern uint16_t time_w, time_x, time_y;
-extern uint16_t hr_thick;
-extern bool hr_w;
-extern uint16_t stepx1, stepx2, stepy;
-extern uint16_t bitmap_size;
+
+#if PBL_DISPLAY_HEIGHT > 180
+#define BITMAP_SIZE 160
+#else
+#define BITMAP_SIZE 115
+#endif
+
+/*
+#ifdef PBL_ROUND
+  extern const uint16_t rect_h, date_h, vert_2, hor_1, hor_2, time_h;
+#else
+  extern const uint16_t rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
+#endif
+extern const uint8_t icon_bump, time_w, time_x, time_y, hr_thick, stepx1, stepx2, stepy, bitmap_size;
+extern const bool hr_w;
+*/
 
 /*******************************************
  * Settings persistence + display application

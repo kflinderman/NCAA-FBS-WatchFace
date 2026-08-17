@@ -9,7 +9,7 @@
 
 
 #ifdef PBL_PLATFORM_APLITE
-
+//#define DEBUG
 #else
 #define DEBUG
 #endif
@@ -47,87 +47,7 @@ int32_t current_time_integer;
 int16_t temperatureValue = 0;
 int16_t conditionValue = 0;
 
-//char scoreHomeTeam[32] = "";
-//char scoreAwayTeam[32] = "";
-//int16_t scoreHomePoints = 0;
-//int16_t scoreAwayPoints = 0;
-//bool scoreCompleted = false;
-//bool scoreValid = false;
-
-uint16_t beat_spot;
-uint16_t beat_primary;
-
-#ifdef PBL_ROUND
-uint16_t rect_h = 660;
-uint16_t date_h = 840;
-uint16_t vert_2 = 930;
-uint16_t hor_1 = 450;
-uint16_t hor_2 = 550;
-uint16_t time_h = 620;
-  #if PBL_DISPLAY_HEIGHT > 180
-  uint16_t time_w = 75;
-  uint16_t time_x = 155;
-  uint16_t time_y = 70;
-  uint16_t icon_bump = 9; //10;
-  uint16_t hr_thick = 2;
-  bool hr_w = 0;
-  uint16_t stepx1 = 16;
-  uint16_t stepx2 = 95;
-  uint16_t stepy = 50;
-  #else
-  uint16_t time_w = 60;
-  uint16_t time_x = 120;
-  uint16_t time_y = 50;
-  uint16_t icon_bump = 7;
-  uint16_t hr_thick = 1;
-  bool hr_w = 1;
-  uint16_t stepx1 = 12;
-  uint16_t stepx2 = 67;
-  uint16_t stepy = 37;
-  #endif
-#else
-uint16_t rect_h = 720;
-uint16_t date_w = 810;
-//uint16_t icon_bump = 4;//5
-uint16_t time_h = 700;
-  #if PBL_DISPLAY_HEIGHT > 180
-  uint16_t date_h = 720;
-  uint16_t time_w = 92;
-  uint16_t time_x = 160;
-  uint16_t time_y = 70;
-  uint16_t vert_1 = 820;
-  uint16_t vert_2 = 900;
-  uint16_t hor_1 = 830;
-  uint16_t hor_2 = 920;
-  uint16_t hr_thick = 2;
-  bool hr_w = 0;
-  uint16_t stepx1 = 16;
-  uint16_t stepx2 = 95;
-  uint16_t stepy = 50;
-  uint16_t icon_bump = 1;
-  #else
-  uint16_t date_h = 740;
-  uint16_t time_w = 72;
-  uint16_t time_x = 120;
-  uint16_t time_y = 50;
-  uint16_t vert_1 = 850;
-  uint16_t vert_2 = 930;
-  uint16_t hor_1 = 860;
-  uint16_t hor_2 = 970;
-  uint16_t hr_thick = 1;
-  bool hr_w = 1;
-  uint16_t stepx1 = 12;
-  uint16_t stepx2 = 67;
-  uint16_t stepy = 37;
-  uint16_t icon_bump = 4;
-  #endif
-#endif
-
-#if PBL_DISPLAY_HEIGHT > 180
-uint16_t bitmap_size = 160;
-#else
-uint16_t bitmap_size = 115;
-#endif
+uint8_t beat_spot, beat_primary;
 
 void globals_prv_default_settings() {
   settings.DisconnectVibration = 3;
@@ -145,13 +65,14 @@ void globals_prv_default_settings() {
   settings.quietTimeEnd = 630;
   settings.animationsBatt = 0;
   settings.animationsCustom = 30;
+  #if defined(PBL_HEALTH)
   settings.healthQuiet = false;
   settings.stepsBool = false;
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
+  #endif
   settings.hardcodeRival = 0;
-  settings.bagBool = false;
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
@@ -166,14 +87,17 @@ void globals_prv_default_settings() {
   settings.opponentBool = false;
   settings.opponentSelect = 0;
   settings.customOpponent = 0;
+  #ifndef PBL_PLATFORM_APLITE
   settings.weatherBool = false;
   settings.weatherQuiet = false;
   settings.weatherUnits = 0;
+  settings.bagBool = false;
   settings.rankingBool = false;
   settings.winBool = false;
   settings.confBool = false;
   settings.bowlBool = false;
   settings.champBool = false;
+  #endif
   settings.cfbd.next_season_first_game_ts = 0;
   settings.cfbd.current_season_year = 0;
   settings.cfbd.last_full_sync_ts = 0;
@@ -218,16 +142,6 @@ void globals_prv_update_display() {
 
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
-
-  // Update beat team layer position
-  #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
-  #endif
-  if (s_layers[LAYER_BEAT_RECT]) {
-    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
-    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
-  }
 
   // Update favorite team logo
   #if defined(DEBUG)
@@ -275,7 +189,7 @@ void globals_prv_update_display() {
     }
   }
 
-  // 1. Resolve primary (displayed) and secondary team indices
+  // Resolve primary (displayed) and secondary team indices
   uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
   uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
 
@@ -283,22 +197,15 @@ void globals_prv_update_display() {
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
   #endif
 
-  // 2. Main Window Background
+  // Main Window Background
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
 
-  // 3. Update Logos
-  /*
-  if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
-    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
-  }
-  if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
-    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
-  }
-  */
+  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP before logos: %d", (int)heap_bytes_free());
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
 
-  // 4. Setup Accent / Icon Colors
+  // Setup Accent / Icon Colors
+  #ifndef PBL_PLATFORM_APLITE
   GColor primary_icon_color;
   #if defined(PBL_COLOR)
   primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
@@ -310,8 +217,21 @@ void globals_prv_update_display() {
     primary_icon_color = GColorWhite;
   }
   #endif
+  #endif
   
+  // Update beat team layer position
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
+  #endif
+  if (s_layers[LAYER_BEAT_RECT]) {
+    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
+    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
+    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
+  }
+  
+  #ifndef PBL_PLATFORM_APLITE
   display_setupBag(primary_icon_color);
+  #endif
 
   #if defined(PBL_HEALTH)
   #if defined(DEBUG)
@@ -327,8 +247,10 @@ void globals_prv_update_display() {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], primary_icon_color);
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], primary_icon_color);
+  #endif
 
   // 5. Update Secondary Badge Fill
   if (s_layers[LAYER_BEAT_TEAM]) {
@@ -350,7 +272,9 @@ void globals_prv_update_display() {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   weather_update();
+  #endif
 
   bool timeTrue = true;
   if (settings.countdownBool){

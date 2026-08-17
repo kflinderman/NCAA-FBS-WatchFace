@@ -158,6 +158,175 @@ Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_WVU, .color = GColorChromeYellowARGB8, .icon_color = GColorBlackARGB8, .rival = 97, .vs_id = 97, .name="West Virginia", .shortname="WVU ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
   { .logo_res_id = RESOURCE_ID_WYOMING, .color = GColorWindsorTanARGB8, .icon_color = GColorWhiteARGB8, .rival = 29, .vs_id = 29, .name="Wyoming", .shortname="WYO ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
 };
+#elif defined(PBL_PLATFORM_APLITE)
+Team TEAMS[] = {
+  {},
+  //{ .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .rival = 0, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_AIRFORCE, .color = GColorWhiteARGB8, .rival = 10, .name="Air Force", .shortname="AFA ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Army
+  { .logo_res_id = RESOURCE_ID_AKRON, .color = GColorBlackARGB8, .rival = 54, .name="Akron", .shortname="AKRN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kent State
+  { .logo_res_id = RESOURCE_ID_ALABAMA, .color = GColorWhiteARGB8, .rival = 11, .name="Alabama", .shortname="BAMA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Auburn
+  {},
+  //{ .logo_res_id = RESOURCE_ID_AMERICAN, .color = GColorWhiteARGB8, .rival = 4, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_APPSTATE, .color = GColorBlackARGB8, .rival = 40, .name="App State", .shortname="APP ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Georgia Southern
+  { .logo_res_id = RESOURCE_ID_ARIZONA, .color = GColorBlackARGB8, .rival = 7, .name="Arizona", .shortname="ZONA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Arizona State
+  { .logo_res_id = RESOURCE_ID_ARIZONAST, .color = GColorWhiteARGB8, .rival = 6, .name="Arizona State", .shortname="ASU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Arizona
+  { .logo_res_id = RESOURCE_ID_ARKANSAS, .color = GColorBlackARGB8, .rival = 73, .name="Arkansas", .shortname="ARK ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ole Miss
+  { .logo_res_id = RESOURCE_ID_ARKANSASST, .color = GColorBlackARGB8, .rival = 72, .name="Arkansas State", .shortname="AKST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Memphis
+  { .logo_res_id = RESOURCE_ID_ARMY, .color = GColorBlackARGB8, .rival = 76, .name="Army", .shortname="ARMY", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Navy
+  { .logo_res_id = RESOURCE_ID_AUBURN, .color = GColorBlackARGB8, .rival = 3, .name="Auburn", .shortname="AUB ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Alabama
+  {},
+  //{ .logo_res_id = RESOURCE_ID_B1G, .color = GColorWhiteARGB8, .rival = 12, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_BALLST, .color = GColorBlackARGB8, .rival = 87, .name="Ball State", .shortname="BALL", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Northern Illinois
+  { .logo_res_id = RESOURCE_ID_BAYLOR, .color = GColorWhiteARGB8, .rival = 113, .name="Baylor", .shortname="BAY ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // TCU
+  {},
+  //{ .logo_res_id = RESOURCE_ID_BIG12, .color = GColorWhiteARGB8, .rival = 15, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_BOISEST, .color = GColorBlackARGB8, .rival = 38, .name="Boise State", .shortname="BSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Fresno State
+  { .logo_res_id = RESOURCE_ID_BOSTONCOLLEGE, .color = GColorBlackARGB8, .rival = 85, .name="Boston College", .shortname="BC  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Notre Dame
+  { .logo_res_id = RESOURCE_ID_BOWLINGGREEN, .color = GColorWhiteARGB8, .rival = 120, .name="Bowling Green", .shortname="BGSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Toledo
+  { .logo_res_id = RESOURCE_ID_BUFFALO, .color = GColorWhiteARGB8, .rival = 114, .name="Buffalo", .shortname="BUFF", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Temple
+  { .logo_res_id = RESOURCE_ID_BYU, .color = GColorBlackARGB8, .rival = 137, .name="BYU", .shortname="BYU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Utah
+  { .logo_res_id = RESOURCE_ID_CAL, .color = GColorWhiteARGB8, .rival = 110, .name="California", .shortname="CAL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Stanford
+  { .logo_res_id = RESOURCE_ID_CENTRALMICHIGAN, .color = GColorWhiteARGB8, .rival = 147, .name="Central Michigan", .shortname="CMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Western Michigan
+  { .logo_res_id = RESOURCE_ID_CFB, .color = GColorWhiteARGB8, .rival = 23, .name="PLACEHOLDER", .shortname="PLCH" },
+  {},
+  //{ .logo_res_id = RESOURCE_ID_CHAOS, .color = GColorBlackARGB8, .rival = 24, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_CINCI, .color = GColorBlackARGB8, .rival = 65, .name="Cincinnati", .shortname="CIN ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Miami (OH)
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .rival = 108, .name="Clemson", .shortname="CLEM", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // South Carolina
+  { .logo_res_id = RESOURCE_ID_COASTAL, .color = GColorWhiteARGB8, .rival = 5, .name="Coastal Carolina", .shortname="CCU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // App State
+  { .logo_res_id = RESOURCE_ID_COLORADO, .color = GColorBlackARGB8, .rival = 29, .name="Colorado", .shortname="CU  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Colorado State
+  { .logo_res_id = RESOURCE_ID_COLORADOST, .color = GColorBlackARGB8, .rival = 28, .name="Colorado State", .shortname="CSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Colorado
+  {},
+  //{ .logo_res_id = RESOURCE_ID_CUSA, .color = GColorWhiteARGB8, .rival = 30, .name="PLACEHOLDER", .shortname="PLCH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true },
+  { .logo_res_id = RESOURCE_ID_DELEWARE, .color = GColorBlackARGB8, .rival = 86, .name="Delaware", .shortname="DEL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Old Dominion
+  { .logo_res_id = RESOURCE_ID_DUKE, .color = GColorBlackARGB8, .rival = 132, .name="Duke", .shortname="DUKE", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // North Carolina
+  { .logo_res_id = RESOURCE_ID_EASTERNMICHIGAN, .color = GColorBlackARGB8, .rival = 22, .name="Eastern Michigan", .shortname="EMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Central Michigan
+  { .logo_res_id = RESOURCE_ID_ECU, .color = GColorBlackARGB8, .rival = 78, .name="East Carolina", .shortname="ECU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // NC State
+  { .logo_res_id = RESOURCE_ID_FAU, .color = GColorBlackARGB8, .rival = 36, .name="Florida Atlantic", .shortname="FAU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // FIU
+  { .logo_res_id = RESOURCE_ID_FIU, .color = GColorBlackARGB8, .rival = 35, .name="Florida International", .shortname="FIU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // FAU
+  { .logo_res_id = RESOURCE_ID_FLORIDA, .color = GColorBlackARGB8, .rival = 39, .name="Florida", .shortname="UF  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Florida State
+  { .logo_res_id = RESOURCE_ID_FRESNOST, .color = GColorBlackARGB8, .rival = 104, .name="Fresno State", .shortname="FRES", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // San José State
+  { .logo_res_id = RESOURCE_ID_FSU, .color = GColorBlackARGB8, .rival = 37, .name="Florida State", .shortname="FSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Florida
+  { .logo_res_id = RESOURCE_ID_GEORGIASOUTHERN, .color = GColorBlackARGB8, .rival = 41, .name="Georgia Southern", .shortname="GASO", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Georgia State
+  { .logo_res_id = RESOURCE_ID_GEORGIAST, .color = GColorBlackARGB8, .rival = 40, .name="Georgia State", .shortname="GSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Georgia Southern
+  { .logo_res_id = RESOURCE_ID_GEORGIATECH, .color = GColorWhiteARGB8, .rival = 128, .name="Georgia Tech", .shortname="GT  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Georgia
+  { .logo_res_id = RESOURCE_ID_HAWAII, .color = GColorBlackARGB8, .rival = 138, .name="Hawai'i", .shortname="HAW ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Wyoming
+  { .logo_res_id = RESOURCE_ID_HOUSTON, .color = GColorBlackARGB8, .rival = 98, .name="Houston", .shortname="HOU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // SMU
+  { .logo_res_id = RESOURCE_ID_ILLINOIS, .color = GColorWhiteARGB8, .rival = 84, .name="Illinois", .shortname="ILL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Northwestern
+  {},
+  //{ .logo_res_id = RESOURCE_ID_INDEPENDENT, .color = GColorWhiteARGB8, .rival = 46, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_INDIANA, .color = GColorWhiteARGB8, .rival = 97, .name="Indiana", .shortname="IND ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Purdue
+  { .logo_res_id = RESOURCE_ID_IOWA, .color = GColorBlackARGB8, .rival = 49, .name="Iowa", .shortname="IOWA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Iowa State
+  { .logo_res_id = RESOURCE_ID_IOWAST, .color = GColorBlackARGB8, .rival = 48, .name="Iowa State", .shortname="ISU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Iowa
+  { .logo_res_id = RESOURCE_ID_JAXST, .color = GColorBlackARGB8, .rival = 53, .name="Jacksonville State", .shortname="JSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kennesaw State
+  { .logo_res_id = RESOURCE_ID_JMU, .color = GColorBlackARGB8, .rival = 86, .name="James Madison", .shortname="JMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Old Dominion
+  { .logo_res_id = RESOURCE_ID_KANSAS, .color = GColorBlackARGB8, .rival = 56, .name="Kansas", .shortname="KU  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kansas State
+  { .logo_res_id = RESOURCE_ID_KENNESAWST, .color = GColorWhiteARGB8, .rival = 50, .name="Kennesaw State", .shortname="KSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Jacksonville State
+  { .logo_res_id = RESOURCE_ID_KENTST, .color = GColorBlackARGB8, .rival = 2, .name="Kent State", .shortname="KENT", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Akron
+  { .logo_res_id = RESOURCE_ID_KENTUCKY, .color = GColorBlackARGB8, .rival = 59, .name="Kentucky", .shortname="UK  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Louisville
+  { .logo_res_id = RESOURCE_ID_KSTATE, .color = GColorBlackARGB8, .rival = 52, .name="Kansas State", .shortname="KSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kansas
+  { .logo_res_id = RESOURCE_ID_LATECH, .color = GColorBlackARGB8, .rival = 122, .name="Louisiana Tech", .shortname="LT  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Southern Miss
+  { .logo_res_id = RESOURCE_ID_LIBERTY, .color = GColorBlackARGB8, .rival = 86, .name="Liberty", .shortname="LIB ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Old Dominion
+  { .logo_res_id = RESOURCE_ID_LOUISVILLE, .color = GColorBlackARGB8, .rival = 55, .name="Louisville", .shortname="LOU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kentucky
+  { .logo_res_id = RESOURCE_ID_LSU, .color = GColorWhiteARGB8, .rival = 82, .name="LSU", .shortname="LSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ole Miss
+  {},
+  //{ .logo_res_id = RESOURCE_ID_MAC, .color = GColorWhiteARGB8, .rival = 61, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_MARSHALL, .color = GColorBlackARGB8, .rival = 149, .name="Marshall", .shortname="HERD", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // West Virginia
+  { .logo_res_id = RESOURCE_ID_MARYLAND, .color = GColorBlackARGB8, .rival = 95, .name="Maryland", .shortname="MD  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Penn State
+  { .logo_res_id = RESOURCE_ID_MEMPHIS, .color = GColorBlackARGB8, .rival = 121, .name="Memphis", .shortname="MEM ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UAB
+  {},
+  //{ .logo_res_id = RESOURCE_ID_METEOR, .color = GColorWhiteARGB8, .rival = 65, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_MIAMIOH, .color = GColorBlackARGB8, .rival = 25, .name="Miami (OH)", .shortname="M-OH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Cincinnati
+  { .logo_res_id = RESOURCE_ID_MIAMI, .color = GColorBlackARGB8, .rival = 39, .name="Miami", .shortname="MIA ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Florida State
+  { .logo_res_id = RESOURCE_ID_MICHIGAN, .color = GColorBlackARGB8, .rival = 92, .name="Michigan", .shortname="MICH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ohio State
+  { .logo_res_id = RESOURCE_ID_MICHIGANST, .color = GColorBlackARGB8, .rival = 67, .name="Michigan State", .shortname="MSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Michigan
+  { .logo_res_id = RESOURCE_ID_MIDTENNST, .color = GColorBlackARGB8, .rival = 150, .name="Middle Tennessee", .shortname="MTSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Western Kentucky
+  { .logo_res_id = RESOURCE_ID_MINNESOTA, .color = GColorBlackARGB8, .rival = 148, .name="Minnesota", .shortname="MINN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Wisconsin
+  { .logo_res_id = RESOURCE_ID_MISSOURIST, .color = GColorBlackARGB8, .rival = 74, .name="Missouri State", .shortname="MOST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Missouri
+  { .logo_res_id = RESOURCE_ID_MISSST, .color = GColorBlackARGB8, .rival = 82, .name="Mississippi State", .shortname="MSST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ole Miss
+  { .logo_res_id = RESOURCE_ID_MISSOURI, .color = GColorBlackARGB8, .rival = 52, .name="Missouri", .shortname="MIZZ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Kansas
+  {},
+  //{ .logo_res_id = RESOURCE_ID_MW, .color = GColorWhiteARGB8, .rival = 75, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_NAVY, .color = GColorBlackARGB8, .rival = 10, .name="Navy", .shortname="NAVY", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Army
+  { .logo_res_id = RESOURCE_ID_NCAA, .color = GColorWhiteARGB8, .rival = 77, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_NCST, .color = GColorBlackARGB8, .rival = 132, .name="NC State", .shortname="NCST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // North Carolina
+  { .logo_res_id = RESOURCE_ID_NDSU, .color = GColorBlackARGB8, .rival = 71, .name="North Dakota State", .shortname="NDSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Minnesota
+  { .logo_res_id = RESOURCE_ID_NEBRASKA, .color = GColorBlackARGB8, .rival = 48, .name="Nebraska", .shortname="NEB ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Iowa
+  { .logo_res_id = RESOURCE_ID_NEVADA, .color = GColorWhiteARGB8, .rival = 133, .name="Nevada", .shortname="NEV ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UNLV
+  { .logo_res_id = RESOURCE_ID_NEWMEXICO, .color = GColorBlackARGB8, .rival = 83, .name="New Mexico", .shortname="UNM ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // New Mexico State
+  { .logo_res_id = RESOURCE_ID_NEWMEXICOST, .color = GColorBlackARGB8, .rival = 82, .name="New Mexico State", .shortname="NMSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // New Mexico
+  { .logo_res_id = RESOURCE_ID_NIU, .color = GColorBlackARGB8, .rival = 13, .name="Northern Illinois", .shortname="NIU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ball State
+  { .logo_res_id = RESOURCE_ID_NORTHWESTERN, .color = GColorBlackARGB8, .rival = 45, .name="Northwestern", .shortname="NU  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Illinois
+  { .logo_res_id = RESOURCE_ID_NOTREDAME, .color = GColorBlackARGB8, .rival = 107, .name="Notre Dame", .shortname="ND  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // USC
+  { .logo_res_id = RESOURCE_ID_ODU, .color = GColorBlackARGB8, .rival = 51, .name="Old Dominion", .shortname="ODU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // James Madison
+  { .logo_res_id = RESOURCE_ID_OHIO, .color = GColorWhiteARGB8, .rival = 66, .name="Ohio", .shortname="OHIO", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Miami (OH)
+  { .logo_res_id = RESOURCE_ID_OKST, .color = GColorWhiteARGB8, .rival = 93, .name="Oklahoma State", .shortname="OKST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Oklahoma
+  { .logo_res_id = RESOURCE_ID_OLEMISS, .color = GColorBlackARGB8, .rival = 73, .name="Ole Miss", .shortname="MISS", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Mississippi State
+  { .logo_res_id = RESOURCE_ID_OREGON, .color = GColorWhiteARGB8, .rival = 91, .name="Oregon", .shortname="ORE ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Oregon State
+  { .logo_res_id = RESOURCE_ID_OREGONST, .color = GColorWhiteARGB8, .rival = 90, .name="Oregon State", .shortname="ORST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Oregon
+  { .logo_res_id = RESOURCE_ID_OHIOST, .color = GColorWhiteARGB8, .rival = 67, .name="Ohio State", .shortname="OSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Michigan
+  { .logo_res_id = RESOURCE_ID_OKLAHOMA, .color = GColorWhiteARGB8, .rival = 115, .name="Oklahoma", .shortname="OU  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Texas
+  {},
+  //{ .logo_res_id = RESOURCE_ID_PAC12, .color = GColorWhiteARGB8, .rival = 94, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_PENNST, .color = GColorWhiteARGB8, .rival = 92, .name="Penn State", .shortname="PSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Ohio State
+  { .logo_res_id = RESOURCE_ID_PITT, .color = GColorBlackARGB8, .rival = 149, .name="Pittsburgh", .shortname="PITT", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // West Virginia
+  { .logo_res_id = RESOURCE_ID_PURDUE, .color = GColorWhiteARGB8, .rival = 47, .name="Purdue", .shortname="PUR ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Indiana
+  { .logo_res_id = RESOURCE_ID_RICE, .color = GColorWhiteARGB8, .rival = 44, .name="Rice", .shortname="RICE", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Houston
+  { .logo_res_id = RESOURCE_ID_RUTGERS, .color = GColorBlackARGB8, .rival = 63, .name="Rutgers", .shortname="RUTG", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Maryland
+  { .logo_res_id = RESOURCE_ID_SACST, .color = GColorBlackARGB8, .rival = 21, .name="Sacramento State", .shortname="SAC ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Cal
+  { .logo_res_id = RESOURCE_ID_SHSU, .color = GColorBlackARGB8, .rival = 118, .name="Sam Houston", .shortname="SHSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Stephen F. Austin / Texas State
+  { .logo_res_id = RESOURCE_ID_SDSU, .color = GColorBlackARGB8, .rival = 38, .name="San Diego State", .shortname="SDSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Fresno State
+  {},
+  //{ .logo_res_id = RESOURCE_ID_SEC, .color = GColorWhiteARGB8, .rival = 103, .name="PLACEHOLDER", .shortname="PLCH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true },
+  { .logo_res_id = RESOURCE_ID_SJSU, .color = GColorBlackARGB8, .rival = 38, .name="San José State", .shortname="SJSU", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Fresno State
+  { .logo_res_id = RESOURCE_ID_SMU, .color = GColorBlackARGB8, .rival = 113, .name="SMU", .shortname="SMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // TCU
+  { .logo_res_id = RESOURCE_ID_USA, .color = GColorWhiteARGB8, .rival = 121, .name="South Alabama", .shortname="USA ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Troy
+  { .logo_res_id = RESOURCE_ID_GAMECOCK, .color = GColorBlackARGB8, .rival = 26, .name="South Carolina", .shortname="SC  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Clemson
+  { .logo_res_id = RESOURCE_ID_SOUTHERNCAL, .color = GColorBlackARGB8, .rival = 125, .name="USC", .shortname="USC ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UCLA
+  { .logo_res_id = RESOURCE_ID_SOUTHERNMISS, .color = GColorWhiteARGB8, .rival = 57, .name="Southern Miss", .shortname="USM ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Louisiana Tech
+  { .logo_res_id = RESOURCE_ID_STANFORD, .color = GColorBlackARGB8, .rival = 21, .name="Stanford", .shortname="STAN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Cal
+  {},
+  //{ .logo_res_id = RESOURCE_ID_SUNBELT, .color = GColorWhiteARGB8, .rival = 111, .name="PLACEHOLDER", .shortname="PLCH" },
+  { .logo_res_id = RESOURCE_ID_SYRACUSE, .color = GColorWhiteARGB8, .rival = 126, .name="Syracuse", .shortname="CUSE", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Boston College / Pittsburgh
+  { .logo_res_id = RESOURCE_ID_TCU, .color = GColorBlackARGB8, .rival = 14, .name="TCU", .shortname="TCU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Baylor
+  { .logo_res_id = RESOURCE_ID_TEMPLE, .color = GColorBlackARGB8, .rival = 19, .name="Temple", .shortname="TEMP", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Buffalo
+  { .logo_res_id = RESOURCE_ID_TENNESSEE, .color = GColorWhiteARGB8, .rival = 3, .name="Tennessee", .shortname="TENN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Alabama
+  { .logo_res_id = RESOURCE_ID_TEXAS, .color = GColorBlackARGB8, .rival = 93, .name="Texas", .shortname="TEX ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Oklahoma
+  { .logo_res_id = RESOURCE_ID_ATM, .color = GColorBlackARGB8, .rival = 115, .name="Texas A&M", .shortname="A&M ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Texas
+  { .logo_res_id = RESOURCE_ID_TEXASST, .color = GColorBlackARGB8, .rival = 119, .name="Texas State", .shortname="TXST", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UTSA
+  { .logo_res_id = RESOURCE_ID_TEXASTECH, .color = GColorBlackARGB8, .rival = 14, .name="Texas Tech", .shortname="TTU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // TCU / Baylor
+  { .logo_res_id = RESOURCE_ID_TOLEDO, .color = GColorWhiteARGB8, .rival = 18, .name="Toledo", .shortname="TOL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Bowling Green
+  { .logo_res_id = RESOURCE_ID_TROY, .color = GColorWhiteARGB8, .rival = 106, .name="Troy", .shortname="TROY", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // South Alabama
+  { .logo_res_id = RESOURCE_ID_TULANE, .color = GColorBlackARGB8, .rival = 60, .name="Tulane", .shortname="TULN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // LSU
+  { .logo_res_id = RESOURCE_ID_TULSA, .color = GColorWhiteARGB8, .rival = 88, .name="Tulsa", .shortname="TLSA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Oklahoma State
+  { .logo_res_id = RESOURCE_ID_UAB, .color = GColorBlackARGB8, .rival = 64, .name="UAB", .shortname="UAB ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Memphis
+  { .logo_res_id = RESOURCE_ID_UCF, .color = GColorWhiteARGB8, .rival = 135, .name="UCF", .shortname="UCF ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // USF
+  { .logo_res_id = RESOURCE_ID_UCLA, .color = GColorWhiteARGB8, .rival = 107, .name="UCLA", .shortname="UCLA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // USC
+  { .logo_res_id = RESOURCE_ID_UCONN, .color = GColorBlackARGB8, .rival = 129, .name="UConn", .shortname="CONN", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UMass
+  { .logo_res_id = RESOURCE_ID_UGA, .color = GColorBlackARGB8, .rival = 42, .name="Georgia", .shortname="UGA ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Georgia Tech
+  { .logo_res_id = RESOURCE_ID_ULL, .color = GColorBlackARGB8, .rival = 130, .name="Louisiana", .shortname="ULL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // ULM
+  { .logo_res_id = RESOURCE_ID_ULM, .color = GColorBlackARGB8, .rival = 129, .name="UL Monroe", .shortname="ULM ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Louisiana
+  { .logo_res_id = RESOURCE_ID_UMASS, .color = GColorBlackARGB8, .rival = 127, .name="Massachusetts", .shortname="MASS", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UConn
+  { .logo_res_id = RESOURCE_ID_UNCC, .color = GColorWhiteARGB8, .rival = 5, .name="Charlotte", .shortname="CLT ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // App State
+  { .logo_res_id = RESOURCE_ID_UNC, .color = GColorWhiteARGB8, .rival = 78, .name="North Carolina", .shortname="UNC ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // NC State
+  { .logo_res_id = RESOURCE_ID_UNLV, .color = GColorBlackARGB8, .rival = 81, .name="UNLV", .shortname="UNLV", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Nevada
+  { .logo_res_id = RESOURCE_ID_UNT, .color = GColorBlackARGB8, .rival = 105, .name="North Texas", .shortname="UNT ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // SMU
+  { .logo_res_id = RESOURCE_ID_USF, .color = GColorWhiteARGB8, .rival = 124, .name="South Florida", .shortname="USF ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // UCF
+  { .logo_res_id = RESOURCE_ID_UTAH, .color = GColorBlackARGB8, .rival = 20, .name="Utah", .shortname="UTAH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // BYU
+  { .logo_res_id = RESOURCE_ID_UTAHST, .color = GColorWhiteARGB8, .rival = 136, .name="Utah State", .shortname="USU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Utah
+  { .logo_res_id = RESOURCE_ID_UTEP, .color = GColorWhiteARGB8, .rival = 82, .name="UTEP", .shortname="UTEP", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // New Mexico State
+  { .logo_res_id = RESOURCE_ID_UTSA, .color = GColorBlackARGB8, .rival = 118, .name="UTSA", .shortname="UTSA", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Texas State
+  { .logo_res_id = RESOURCE_ID_UVA, .color = GColorWhiteARGB8, .rival = 142, .name="Virginia", .shortname="UVA ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Virginia Tech
+  { .logo_res_id = RESOURCE_ID_VANDY, .color = GColorBlackARGB8, .rival = 113, .name="Vanderbilt", .shortname="VAND", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Tennessee
+  { .logo_res_id = RESOURCE_ID_VT, .color = GColorBlackARGB8, .rival = 140, .name="Virginia Tech", .shortname="VT  ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Virginia
+  { .logo_res_id = RESOURCE_ID_WAKE, .color = GColorWhiteARGB8, .rival = 132, .name="Wake Forest", .shortname="WAKE", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // North Carolina
+  { .logo_res_id = RESOURCE_ID_WASHINGTON, .color = GColorBlackARGB8, .rival = 144, .name="Washington", .shortname="WASH", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Washington State
+  { .logo_res_id = RESOURCE_ID_WASHINGTONST, .color = GColorBlackARGB8, .rival = 143, .name="Washington State", .shortname="WSU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Washington
+  { .logo_res_id = RESOURCE_ID_WESTERNMICHIGAN, .color = GColorBlackARGB8, .rival = 22, .name="Western Michigan", .shortname="WMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Central Michigan
+  { .logo_res_id = RESOURCE_ID_WISCONSIN, .color = GColorBlackARGB8, .rival = 71, .name="Wisconsin", .shortname="WIS ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Minnesota
+  { .logo_res_id = RESOURCE_ID_WKU, .color = GColorBlackARGB8, .rival = 70, .name="Western Kentucky", .shortname="WKU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Middle Tennessee
+  { .logo_res_id = RESOURCE_ID_WVU, .color = GColorWhiteARGB8, .rival = 96, .name="West Virginia", .shortname="WVU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Pittsburgh
+  { .logo_res_id = RESOURCE_ID_WYOMING, .color = GColorBlackARGB8, .rival = 29, .name="Wyoming", .shortname="WYO ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Colorado State
+};
 #else
 Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .rival = 0, .name="PLACEHOLDER", .shortname="PLCH" },
