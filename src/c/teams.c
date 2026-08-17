@@ -187,7 +187,8 @@ Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_BYU, .color = GColorBlackARGB8, .rival = 137, .name="BYU", .shortname="BYU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Utah
   { .logo_res_id = RESOURCE_ID_CAL, .color = GColorWhiteARGB8, .rival = 110, .name="California", .shortname="CAL ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Stanford
   { .logo_res_id = RESOURCE_ID_CENTRALMICHIGAN, .color = GColorWhiteARGB8, .rival = 147, .name="Central Michigan", .shortname="CMU ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Western Michigan
-  { .logo_res_id = RESOURCE_ID_CFB, .color = GColorWhiteARGB8, .rival = 23, .name="PLACEHOLDER", .shortname="PLCH" },
+  {},
+  //{ .logo_res_id = RESOURCE_ID_CFB, .color = GColorWhiteARGB8, .rival = 23, .name="PLACEHOLDER", .shortname="PLCH" },
   {},
   //{ .logo_res_id = RESOURCE_ID_CHAOS, .color = GColorBlackARGB8, .rival = 24, .name="PLACEHOLDER", .shortname="PLCH" },
   { .logo_res_id = RESOURCE_ID_CINCI, .color = GColorBlackARGB8, .rival = 65, .name="Cincinnati", .shortname="CIN ", .score = 0, .vs_score = 0, .gametime = 0, .completed = true }, // Miami (OH)

@@ -166,7 +166,6 @@
                     "file": "fonts/LECO 1976 Regular.ttf",
                     "name": "LECO_CUSTOM_42",
                     "targetPlatforms": [
-                        "aplite",
                         "basalt",
                         "chalk",
                         "diorite",
@@ -418,7 +417,14 @@
                     "memoryFormat": "Smallest",
                     "name": "CFB",
                     "spaceOptimization": "storage",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {

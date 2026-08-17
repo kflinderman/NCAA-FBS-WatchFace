@@ -162,6 +162,7 @@ typedef enum {
   #ifndef PBL_PLATFORM_APLITE
   LAYER_RANK_RECT,
   #endif
+  LAYER_SCORE_I,
   #ifdef PBL_RECT
   LAYER_VERT,
   #endif

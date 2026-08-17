@@ -200,7 +200,7 @@ void globals_prv_update_display() {
   // Main Window Background
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
 
-  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP before logos: %d", (int)heap_bytes_free());
+  APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP before logos: %d", (int)heap_bytes_free());
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
 
