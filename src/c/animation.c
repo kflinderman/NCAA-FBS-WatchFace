@@ -19,15 +19,15 @@ static void animation_beat_team_stopped(Animation *animation, bool finished, voi
   }
 }
 
-void animation_hide_text(bool count, bool score, bool time){
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_DAY]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOUR]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_COUNTDOWN]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_SCORE]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time);
-}
+// animation_hide_text() removed: TIME/COUNTDOWN/SCORE and HOME/AWAY/DAY/
+// HOUR were merged into shared layer slots (TEXT_LAYER_TIME and
+// TEXT_LAYER_HOME/AWAY respectively) since each group occupied the same
+// position and was never shown simultaneously. With one layer per
+// position instead of three, there's nothing left to hide/show - the
+// layer just always displays whichever mode's text was last written to
+// it (see update_time()'s guard in timekeeping.c, and
+// timekeeping_countdown()/api_score_display(), which only run when
+// their own mode is the active one).
 
 void animation_beat_team_layer(void) {
   static bool returning = false;
@@ -49,25 +49,27 @@ void animation_beat_team_layer(void) {
   GRect rect_to   = returning ? rect_pos_start : rect_pos_end;
 
   // Unified Text Visibility Logic
+  // TEXT_LAYER_TIME never needs hiding - one of update_time()/
+  // timekeeping_countdown()/api_score_display() always keeps it holding
+  // valid content for whichever mode is active. TEXT_LAYER_HOME/AWAY
+  // (merged with the old DAY/HOUR sub-labels) still needs a real hidden
+  // state though, for the case where neither countdown nor score is
+  // active and only the plain clock should show.
   uint8_t target_mode = returning ? 1 : 2;
 
   bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
   bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
 
   if (show_countdown) {
-    if (settings.countdownDisplay != target_mode) {
-      animation_hide_text(false, true, true);
-    } else {
-      animation_hide_text(true, true, false);
-    }
+    bool sub_labels_hidden = (settings.countdownDisplay == target_mode);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
   }
 
   if (show_score) {
-    if (settings.scoreLocation != target_mode) {
-      animation_hide_text(true, false, true);
-    } else {
-      animation_hide_text(true, true, false);
-    }
+    bool sub_labels_hidden = (settings.scoreLocation == target_mode);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
   }
 
   // Schedule Layer Animations

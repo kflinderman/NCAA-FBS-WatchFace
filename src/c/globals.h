@@ -83,11 +83,13 @@ typedef enum {
   TEXT_LAYER_CONDITIONS,
   TEXT_LAYER_HOME,
   TEXT_LAYER_AWAY,
-  TEXT_LAYER_DAY,
-  TEXT_LAYER_HOUR,
-  TEXT_LAYER_COUNTDOWN,
-  TEXT_LAYER_SCORE,
+  //TEXT_LAYER_DAY,
+  //TEXT_LAYER_HOUR,
+  //TEXT_LAYER_COUNTDOWN,
+  //TEXT_LAYER_SCORE,
+  #ifndef PBL_PLATFORM_APLITE
   TEXT_LAYER_RANK,
+  #endif
   #if defined(PBL_HEALTH)
   TEXT_LAYER_HR,
   TEXT_LAYER_STEP,
@@ -115,11 +117,13 @@ typedef enum {
   // Same consolidation: API status was 2 GBitmaps (API_LOW/API_EMPTY),
   // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
   GBITMAP_LAYER_API,
+  #ifndef PBL_PLATFORM_APLITE
   GBITMAP_LAYER_WIN,
   // Same consolidation: the postseason badge was 2 GBitmaps
   // (BOWL/CHAMP), now 1 slot swapped on demand (see the bowlBool block
   // in globals.c).
   GBITMAP_LAYER_TROPHY,
+  #endif
   #if defined(PBL_HEALTH)
   GBITMAP_LAYER_FOOTBALL,
   #endif
@@ -135,8 +139,10 @@ typedef enum {
   BITMAP_LAYER_BAG,
   BITMAP_LAYER_BAGB,
   BITMAP_LAYER_API,
+  #ifndef PBL_PLATFORM_APLITE
   BITMAP_LAYER_WIN,
   BITMAP_LAYER_TROPHY,
+  #endif
   #if defined(PBL_HEALTH)
   BITMAP_LAYER_FOOTBALL,
   #endif
@@ -149,7 +155,9 @@ typedef enum {
   LAYER_HOR,
   LAYER_BEAT_TEAM,
   LAYER_BEAT_RECT,
+  #ifndef PBL_PLATFORM_APLITE
   LAYER_RANK_RECT,
+  #endif
   #ifdef PBL_RECT
   LAYER_VERT,
   #endif

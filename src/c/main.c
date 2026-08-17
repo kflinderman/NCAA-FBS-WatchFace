@@ -83,7 +83,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Date and Time");
   #endif
   timeDate_draw(window_layer, bounds);
-
+  
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Bluetooth");
   #endif
@@ -98,6 +98,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing API");
   #endif
   api_icon_draw(window_layer, bounds);
+  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after drawing api: %d", (int)heap_bytes_free());
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "-------- INFORMATION FILL --------");

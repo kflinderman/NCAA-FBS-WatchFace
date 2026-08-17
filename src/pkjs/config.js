@@ -1023,42 +1023,49 @@ module.exports = [
       {
         "type": "heading",
         "defaultValue": "API Extras",
-        "id": "api_extras"
+        "id": "api_extras",
+        "capabilities": ["NOT_APLITE"]
       },
       {
         "type": "text",
         "id": "superlatives",
-        "defaultValue": "Add small markings for season superlatives"
+        "defaultValue": "Add small markings for season superlatives",
+        "capabilities": ["NOT_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Display Ranking",
         "defaultValue": false,
-        "messageKey": "rankingBool"
+        "messageKey": "rankingBool",
+        "capabilities": ["NOT_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Winning Season Marking",
         "defaultValue": false,
-        "messageKey": "winBool"
+        "messageKey": "winBool",
+        "capabilities": ["NOT_APLITE"]
       },
       //{
         //"type": "toggle",
         //"label": "Conference Champion Marking",
         //"defaultValue": false,
-        //"messageKey": "confBool"
+        //"messageKey": "confBool",
+        "capabilities": ["NOT_APLITE"]
       //},
       {
         "type": "toggle",
         "label": "Bowl Win Marking",
         "defaultValue": false,
-        "messageKey": "bowlBool"
+        "messageKey": "bowlBool",
+        "capabilities": ["NOT_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Champion Marking",
         "defaultValue": false,
-        "messageKey": "champBool"
+        "messageKey": "champBool",
+        "capabilities": ["NOT_APLITE"]
       }
     ]
   },

@@ -367,7 +367,11 @@ void globals_prv_update_display() {
     }
     after_time = timekeeping_countdown();
     if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
-      animation_hide_text(false, true, true);
+      // Countdown active: HOME/AWAY (merged with Day/Hour sub-labels)
+      // visible; TEXT_LAYER_TIME already holds the countdown value from
+      // timekeeping_countdown() above and needs no hide/show toggle.
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
       timeTrue = false;
     }
   }
@@ -385,15 +389,23 @@ void globals_prv_update_display() {
     }
     api_score_display();
     if (settings.scoreLocation != 1){
-      animation_hide_text(true, false, true);
+      // Score active: HOME/AWAY visible; TEXT_LAYER_TIME already holds
+      // the score text from api_score_display() above.
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
       timeTrue = false;
     }
   }
 
   if (timeTrue){
-    animation_hide_text(true, true, false);
+    // Neither countdown nor score is active - HOME/AWAY hidden, plain
+    // clock shows in TEXT_LAYER_TIME (kept current by update_time()'s
+    // own guard in timekeeping.c).
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
   }
 
+  #ifndef PBL_PLATFORM_APLITE
   if (settings.rankingBool){
     if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
 
@@ -444,6 +456,7 @@ void globals_prv_update_display() {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
     }
   }
+  #endif
 
   #if defined(PBL_HEALTH)
   #if defined(DEBUG)

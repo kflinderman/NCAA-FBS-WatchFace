@@ -96,7 +96,14 @@
                     "memoryFormat": "Smallest",
                     "name": "CHAMP",
                     "spaceOptimization": "memory",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -104,7 +111,14 @@
                     "memoryFormat": "Smallest",
                     "name": "BOWL",
                     "spaceOptimization": "memory",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {
@@ -112,7 +126,14 @@
                     "memoryFormat": "Smallest",
                     "name": "WIN",
                     "spaceOptimization": "memory",
-                    "targetPlatforms": null,
+                    "targetPlatforms": [
+                        "basalt",
+                        "chalk",
+                        "diorite",
+                        "emery",
+                        "gabbro",
+                        "flint"
+                    ],
                     "type": "bitmap"
                 },
                 {

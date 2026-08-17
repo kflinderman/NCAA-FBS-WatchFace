@@ -1,7 +1,7 @@
 #pragma once
 #include <pebble.h>
 
-void animation_hide_text(bool count, bool score, bool time);
+//void animation_hide_text(bool score, bool time);
 
 void animation_beat_team_layer(void);
 

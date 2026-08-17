@@ -588,8 +588,9 @@ void api_score_display() {
   }
   text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], home_str);
   text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], away_str);
-  
-  text_layer_set_text(s_text_layers[TEXT_LAYER_SCORE], s_score_buffer);
+  // TEXT_LAYER_TIME now also serves as the score text - see the
+  // TIME/COUNTDOWN/SCORE merge notes in globals.h.
+  text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_buffer);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){
@@ -611,6 +612,7 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
 
   //Create Ranking resources
+  #ifndef PBL_PLATFORM_APLITE
   #ifdef PBL_ROUND
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 40, 25), sizeof(RoundRectData));
   #else
@@ -643,4 +645,5 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
+  #endif
 }
