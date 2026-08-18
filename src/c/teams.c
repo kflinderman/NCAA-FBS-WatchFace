@@ -1,7 +1,7 @@
 // teams.c
 #include "teams.h" // Include the header to get the 'Team' type
 
-
+#ifdef TESTING
 #if defined(PBL_COLOR)
 Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_ACC, .color = GColorWhiteARGB8, .icon_color = GColorBlackARGB8, .rival = 77, .vs_id = 77, .name="PLACEHOLDER", .shortname="PLCH", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
