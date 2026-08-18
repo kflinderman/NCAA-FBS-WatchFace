@@ -150,9 +150,11 @@ void globals_prv_update_display() {
   if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
+  #ifndef PBL_PLATFORM_APLITE
   if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
+  #endif
 
   if (settings.hardcodeRival == 1){
     #if defined(DEBUG)
@@ -191,7 +193,9 @@ void globals_prv_update_display() {
 
   // Resolve primary (displayed) and secondary team indices
   uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  #ifndef PBL_PLATFORM_APLITE
   uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
+  #endif
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
@@ -200,9 +204,10 @@ void globals_prv_update_display() {
   // Main Window Background
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
 
-  APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP before logos: %d", (int)heap_bytes_free());
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
+  #ifndef PBL_PLATFORM_APLITE
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
+  #endif
 
   // Setup Accent / Icon Colors
   #ifndef PBL_PLATFORM_APLITE
@@ -253,6 +258,7 @@ void globals_prv_update_display() {
   #endif
 
   // 5. Update Secondary Badge Fill
+  #ifndef PBL_PLATFORM_APLITE
   if (s_layers[LAYER_BEAT_TEAM]) {
     RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
     if (beat_data) {
@@ -260,13 +266,16 @@ void globals_prv_update_display() {
       layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
     }
   }
+  #endif
 
   if (s_bitmap_layers[BITMAP_LAYER_LOGO]) {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_LOGO], s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
+  #ifndef PBL_PLATFORM_APLITE
   if (s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]) {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
+  #endif
 
 
   #if defined(DEBUG)

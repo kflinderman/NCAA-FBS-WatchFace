@@ -68,6 +68,7 @@ void display_main_time_layer(Layer *window_layer, GRect bounds){
   layer_add_child(window_layer, s_layers[LAYER_RECT]);
 }
 
+#ifndef PBL_PLATFORM_APLITE
 void display_beatteam(Layer *window_layer, GRect bounds){
   // Here's where I increased the size of the moving box FYI. Started at bounds.size.h / 2 + 50
   s_layers[LAYER_BEAT_TEAM] = layer_create_with_data(GRect(-bounds.size.w - 10, 0, bounds.size.w + 10, bounds.size.h / 2 + 100), sizeof(RoundRectData));
@@ -88,3 +89,4 @@ void display_beatteam(Layer *window_layer, GRect bounds){
   s_bitmap_layers[BITMAP_LAYER_BAGB] = drawing_bitmap_set(0, 0, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]));
   #endif
 }
+#endif

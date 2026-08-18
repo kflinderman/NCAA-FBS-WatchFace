@@ -4,6 +4,7 @@
 #include "timekeeping.h"
 
 
+#ifndef PBL_PLATFORM_APLITE
 // Animation complete handler
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
@@ -87,6 +88,7 @@ void animation_beat_team_layer(void) {
   // Toggle State
   returning = !returning;
 }
+#endif
 
 static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, uint16_t bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
@@ -106,7 +108,9 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
+  #ifndef PBL_PLATFORM_APLITE
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
+  #endif
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), VERT_2, 3, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), VERT_2, 3, 1000);
 

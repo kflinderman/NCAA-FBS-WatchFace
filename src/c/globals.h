@@ -110,7 +110,6 @@ extern bool noHR;
 
 typedef enum {
   GBITMAP_LAYER_LOGO,
-  GBITMAP_LAYER_BEAT_TEAM,
   GBITMAP_LAYER_BT,
   // BATT was 3 separate GBitmaps (BATT_CRG/BATT_EMPTY/BATT_LOW) all kept
   // resident in RAM at once even though only one battery state is ever
@@ -121,6 +120,7 @@ typedef enum {
   // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
   GBITMAP_LAYER_API,
   #ifndef PBL_PLATFORM_APLITE
+  GBITMAP_LAYER_BEAT_TEAM,
   GBITMAP_LAYER_BAG,
   GBITMAP_LAYER_WIN,
   // Same consolidation: the postseason badge was 2 GBitmaps
@@ -137,11 +137,11 @@ extern GBitmap* s_gbitmap_layers[NUM_GBITMAP_LAYERS];
 
 typedef enum {
   BITMAP_LAYER_LOGO,
-  BITMAP_LAYER_BEAT_TEAM,
   BITMAP_LAYER_BT,
   BITMAP_LAYER_BATT,
   BITMAP_LAYER_API,
   #ifndef PBL_PLATFORM_APLITE
+  BITMAP_LAYER_BEAT_TEAM,
   BITMAP_LAYER_BAG,
   BITMAP_LAYER_BAGB,
   BITMAP_LAYER_WIN,
@@ -157,9 +157,9 @@ extern BitmapLayer* s_bitmap_layers[NUM_BITMAP_LAYERS];
 typedef enum {
   LAYER_RECT,
   LAYER_HOR,
-  LAYER_BEAT_TEAM,
   LAYER_BEAT_RECT,
   #ifndef PBL_PLATFORM_APLITE
+  LAYER_BEAT_TEAM,
   LAYER_RANK_RECT,
   #endif
   LAYER_SCORE_I,

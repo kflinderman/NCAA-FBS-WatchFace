@@ -122,9 +122,11 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
   }
 }
 
+#ifndef PBL_PLATFORM_APLITE
 void timer_callback(void *data) {
   animation_beat_team_layer();
 }
+#endif
 
 // Pure C converter from UTC components to epoch seconds (bypasses missing timegm)
 static time_t utc_to_epoch(int year, int mon, int mday, int hour, int min) {
@@ -309,7 +311,7 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   s_font = fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS);
   s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, ((bounds.size.h * TIME_H) / 1000) - 3, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   
-  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2, 100, bounds.size.w / 2, 150, 3, GColorBlack, window_layer);
+  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2, 100, bounds.size.w / 2, 150, 5, GColorBlack, window_layer);
   
   //s_text_layers[TEXT_LAYER_COUNTDOWN] = drawing_text_set(bounds.size.w / 2 - time_w, ((bounds.size.h * time_h) / 1000) - 3, time_x, time_y, GColorBlack, "00:88", s_font, GTextAlignmentCenter, window_layer);
   //s_text_layers[TEXT_LAYER_SCORE] = drawing_text_set(bounds.size.w / 2 - time_w, ((bounds.size.h * time_h) / 1000) - 3, time_x, time_y, GColorBlack, "88|00", s_font, GTextAlignmentCenter, window_layer);

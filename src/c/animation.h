@@ -2,8 +2,9 @@
 #include <pebble.h>
 
 //void animation_hide_text(bool score, bool time);
-
+#ifndef PBL_PLATFORM_APLITE
 void animation_beat_team_layer(void);
+#endif
 
 // Subscribes this window's unobstructed-area handlers. Call once from
 // main_window_load() after all layers exist.
