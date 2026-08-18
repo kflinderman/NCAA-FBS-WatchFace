@@ -17,6 +17,7 @@ static void sensor_trigger_vibration(uint8_t type) {
 /*********************/
 /* Accelerometer     */
 /*********************/
+#ifndef PBL_PLATFORM_APLITE
 void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   if (num_samples == 0 || data == NULL) return;
   // Use the last sample in the batch for current reading
@@ -43,6 +44,7 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   }
   s_prev_y = curr_y;
 }
+#endif
 
 /******************/
 /* Bluetooth      */
@@ -74,9 +76,9 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
   //182
-  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 9), (bounds.size.h * vert_2) / 1000, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 9), (bounds.size.h * VERT_2) / 1000, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump + 5), (bounds.size.h * vert_2) / 1000 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 5), (bounds.size.h * VERT_2) / 1000 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   //+ 9
   #endif
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), s_bt_connected);
@@ -147,9 +149,9 @@ void sensor_battery_draw(Layer *window_layer, GRect bounds){
 
   #if PBL_DISPLAY_HEIGHT > 180
   //168
-  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump - 4), (bounds.size.h * vert_2) / 1000, 8, 14, NULL, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 4), (bounds.size.h * VERT_2) / 1000, 8, 14, NULL, window_layer);
   #else
-  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * hor_2) / 1000 - (icon_bump - 2), (bounds.size.h * vert_2) / 1000 + 3, 4, 7, NULL, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 2), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
   //+ 2
   #endif
 }

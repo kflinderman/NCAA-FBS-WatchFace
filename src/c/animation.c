@@ -4,6 +4,7 @@
 #include "timekeeping.h"
 
 
+#ifndef PBL_PLATFORM_APLITE
 // Animation complete handler
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
@@ -19,15 +20,15 @@ static void animation_beat_team_stopped(Animation *animation, bool finished, voi
   }
 }
 
-void animation_hide_text(bool count, bool score, bool time){
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_DAY]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOUR]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_COUNTDOWN]), count);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_SCORE]), score);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time);
-}
+// animation_hide_text() removed: TIME/COUNTDOWN/SCORE and HOME/AWAY/DAY/
+// HOUR were merged into shared layer slots (TEXT_LAYER_TIME and
+// TEXT_LAYER_HOME/AWAY respectively) since each group occupied the same
+// position and was never shown simultaneously. With one layer per
+// position instead of three, there's nothing left to hide/show - the
+// layer just always displays whichever mode's text was last written to
+// it (see update_time()'s guard in timekeeping.c, and
+// timekeeping_countdown()/api_score_display(), which only run when
+// their own mode is the active one).
 
 void animation_beat_team_layer(void) {
   static bool returning = false;
@@ -49,25 +50,27 @@ void animation_beat_team_layer(void) {
   GRect rect_to   = returning ? rect_pos_start : rect_pos_end;
 
   // Unified Text Visibility Logic
+  // TEXT_LAYER_TIME never needs hiding - one of update_time()/
+  // timekeeping_countdown()/api_score_display() always keeps it holding
+  // valid content for whichever mode is active. TEXT_LAYER_HOME/AWAY
+  // (merged with the old DAY/HOUR sub-labels) still needs a real hidden
+  // state though, for the case where neither countdown nor score is
+  // active and only the plain clock should show.
   uint8_t target_mode = returning ? 1 : 2;
 
   bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
   bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
 
   if (show_countdown) {
-    if (settings.countdownDisplay != target_mode) {
-      animation_hide_text(false, true, true);
-    } else {
-      animation_hide_text(true, true, false);
-    }
+    bool sub_labels_hidden = (settings.countdownDisplay == target_mode);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
   }
 
   if (show_score) {
-    if (settings.scoreLocation != target_mode) {
-      animation_hide_text(true, false, true);
-    } else {
-      animation_hide_text(true, true, false);
-    }
+    bool sub_labels_hidden = (settings.scoreLocation == target_mode);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
   }
 
   // Schedule Layer Animations
@@ -85,6 +88,7 @@ void animation_beat_team_layer(void) {
   // Toggle State
   returning = !returning;
 }
+#endif
 
 static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, uint16_t bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
@@ -100,24 +104,26 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), time_h, 0, 1000);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), date_h, 0, 1000);
-  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], rect_h, 0, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
+  #ifndef PBL_PLATFORM_APLITE
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), vert_2, 3, 1000);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), vert_2, 3, 1000);
+  #endif
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), VERT_2, 3, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), VERT_2, 3, 1000);
 
 #ifdef PBL_RECT
   LinePoints *points = (LinePoints *)layer_get_data(s_layers[LAYER_VERT]);
-  points->y1 = (unBounds.size.h * vert_1) / 1000 - bound_diff;
-  points->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
+  points->y1 = (unBounds.size.h * VERT_1) / 1000 - bound_diff;
+  points->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_VERT]);
 #endif
 
   LinePoints *points2 = (LinePoints *)layer_get_data(s_layers[LAYER_HOR]);
-  points2->y1 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
-  points2->y2 = (unBounds.size.h * vert_2) / 1000 - bound_diff;
+  points2->y1 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
+  points2->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
   layer_mark_dirty(s_layers[LAYER_HOR]);
 }
 

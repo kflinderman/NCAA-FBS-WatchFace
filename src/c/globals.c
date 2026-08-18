@@ -9,7 +9,7 @@
 
 
 #ifdef PBL_PLATFORM_APLITE
-
+//#define DEBUG
 #else
 #define DEBUG
 #endif
@@ -47,87 +47,7 @@ int32_t current_time_integer;
 int16_t temperatureValue = 0;
 int16_t conditionValue = 0;
 
-//char scoreHomeTeam[32] = "";
-//char scoreAwayTeam[32] = "";
-//int16_t scoreHomePoints = 0;
-//int16_t scoreAwayPoints = 0;
-//bool scoreCompleted = false;
-//bool scoreValid = false;
-
-uint16_t beat_spot;
-uint16_t beat_primary;
-
-#ifdef PBL_ROUND
-uint16_t rect_h = 660;
-uint16_t date_h = 840;
-uint16_t vert_2 = 930;
-uint16_t hor_1 = 450;
-uint16_t hor_2 = 550;
-uint16_t time_h = 620;
-  #if PBL_DISPLAY_HEIGHT > 180
-  uint16_t time_w = 75;
-  uint16_t time_x = 155;
-  uint16_t time_y = 70;
-  uint16_t icon_bump = 9; //10;
-  uint16_t hr_thick = 2;
-  bool hr_w = 0;
-  uint16_t stepx1 = 16;
-  uint16_t stepx2 = 95;
-  uint16_t stepy = 50;
-  #else
-  uint16_t time_w = 60;
-  uint16_t time_x = 120;
-  uint16_t time_y = 50;
-  uint16_t icon_bump = 7;
-  uint16_t hr_thick = 1;
-  bool hr_w = 1;
-  uint16_t stepx1 = 12;
-  uint16_t stepx2 = 67;
-  uint16_t stepy = 37;
-  #endif
-#else
-uint16_t rect_h = 720;
-uint16_t date_w = 810;
-//uint16_t icon_bump = 4;//5
-uint16_t time_h = 700;
-  #if PBL_DISPLAY_HEIGHT > 180
-  uint16_t date_h = 720;
-  uint16_t time_w = 92;
-  uint16_t time_x = 160;
-  uint16_t time_y = 70;
-  uint16_t vert_1 = 820;
-  uint16_t vert_2 = 900;
-  uint16_t hor_1 = 830;
-  uint16_t hor_2 = 920;
-  uint16_t hr_thick = 2;
-  bool hr_w = 0;
-  uint16_t stepx1 = 16;
-  uint16_t stepx2 = 95;
-  uint16_t stepy = 50;
-  uint16_t icon_bump = 1;
-  #else
-  uint16_t date_h = 740;
-  uint16_t time_w = 72;
-  uint16_t time_x = 120;
-  uint16_t time_y = 50;
-  uint16_t vert_1 = 850;
-  uint16_t vert_2 = 930;
-  uint16_t hor_1 = 860;
-  uint16_t hor_2 = 970;
-  uint16_t hr_thick = 1;
-  bool hr_w = 1;
-  uint16_t stepx1 = 12;
-  uint16_t stepx2 = 67;
-  uint16_t stepy = 37;
-  uint16_t icon_bump = 4;
-  #endif
-#endif
-
-#if PBL_DISPLAY_HEIGHT > 180
-uint16_t bitmap_size = 160;
-#else
-uint16_t bitmap_size = 115;
-#endif
+uint8_t beat_spot, beat_primary;
 
 void globals_prv_default_settings() {
   settings.DisconnectVibration = 3;
@@ -145,13 +65,14 @@ void globals_prv_default_settings() {
   settings.quietTimeEnd = 630;
   settings.animationsBatt = 0;
   settings.animationsCustom = 30;
+  #if defined(PBL_HEALTH)
   settings.healthQuiet = false;
   settings.stepsBool = false;
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
+  #endif
   settings.hardcodeRival = 0;
-  settings.bagBool = false;
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
@@ -166,14 +87,17 @@ void globals_prv_default_settings() {
   settings.opponentBool = false;
   settings.opponentSelect = 0;
   settings.customOpponent = 0;
+  #ifndef PBL_PLATFORM_APLITE
   settings.weatherBool = false;
   settings.weatherQuiet = false;
   settings.weatherUnits = 0;
+  settings.bagBool = false;
   settings.rankingBool = false;
   settings.winBool = false;
   settings.confBool = false;
   settings.bowlBool = false;
   settings.champBool = false;
+  #endif
   settings.cfbd.next_season_first_game_ts = 0;
   settings.cfbd.current_season_year = 0;
   settings.cfbd.last_full_sync_ts = 0;
@@ -196,8 +120,8 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 1;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 0;
+  if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 0;
 }
 
 void globals_prv_update_display() {
@@ -219,16 +143,6 @@ void globals_prv_update_display() {
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
-  // Update beat team layer position
-  #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
-  #endif
-  if (s_layers[LAYER_BEAT_RECT]) {
-    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
-    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
-  }
-
   // Update favorite team logo
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Favorite Team");
@@ -236,9 +150,11 @@ void globals_prv_update_display() {
   if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
+  #ifndef PBL_PLATFORM_APLITE
   if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
+  #endif
 
   if (settings.hardcodeRival == 1){
     #if defined(DEBUG)
@@ -247,7 +163,7 @@ void globals_prv_update_display() {
     settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
   }
   else if (settings.hardcodeRival == 2){
-    if (API_DATA[settings.FavoriteTeam].vs_id == -1){
+    if (TEAMS[settings.FavoriteTeam].vs_id == -1){
       if (settings.opponentSelect == 1){
         #if defined(DEBUG)
         APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Rival)");
@@ -271,34 +187,30 @@ void globals_prv_update_display() {
       #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
       #endif
-      settings.BeatTeam = API_DATA[settings.FavoriteTeam].vs_id;
+      settings.BeatTeam = TEAMS[settings.FavoriteTeam].vs_id;
     }
   }
 
-  // 1. Resolve primary (displayed) and secondary team indices
+  // Resolve primary (displayed) and secondary team indices
   uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  #ifndef PBL_PLATFORM_APLITE
   uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
+  #endif
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
   #endif
 
-  // 2. Main Window Background
+  // Main Window Background
   window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
 
-  // 3. Update Logos
-  /*
-  if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
-    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
-  }
-  if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
-    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
-  }
-  */
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
+  #ifndef PBL_PLATFORM_APLITE
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
+  #endif
 
-  // 4. Setup Accent / Icon Colors
+  // Setup Accent / Icon Colors
+  #ifndef PBL_PLATFORM_APLITE
   GColor primary_icon_color;
   #if defined(PBL_COLOR)
   primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
@@ -310,8 +222,21 @@ void globals_prv_update_display() {
     primary_icon_color = GColorWhite;
   }
   #endif
+  #endif
   
+  // Update beat team layer position
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
+  #endif
+  if (s_layers[LAYER_BEAT_RECT]) {
+    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
+    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
+    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
+  }
+  
+  #ifndef PBL_PLATFORM_APLITE
   display_setupBag(primary_icon_color);
+  #endif
 
   #if defined(PBL_HEALTH)
   #if defined(DEBUG)
@@ -327,10 +252,13 @@ void globals_prv_update_display() {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], primary_icon_color);
   text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], primary_icon_color);
+  #endif
 
   // 5. Update Secondary Badge Fill
+  #ifndef PBL_PLATFORM_APLITE
   if (s_layers[LAYER_BEAT_TEAM]) {
     RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
     if (beat_data) {
@@ -338,19 +266,24 @@ void globals_prv_update_display() {
       layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
     }
   }
+  #endif
 
   if (s_bitmap_layers[BITMAP_LAYER_LOGO]) {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_LOGO], s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
+  #ifndef PBL_PLATFORM_APLITE
   if (s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]) {
     bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
+  #endif
 
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   weather_update();
+  #endif
 
   bool timeTrue = true;
   if (settings.countdownBool){
@@ -367,7 +300,11 @@ void globals_prv_update_display() {
     }
     after_time = timekeeping_countdown();
     if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
-      animation_hide_text(false, true, true);
+      // Countdown active: HOME/AWAY (merged with Day/Hour sub-labels)
+      // visible; TEXT_LAYER_TIME already holds the countdown value from
+      // timekeeping_countdown() above and needs no hide/show toggle.
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
       timeTrue = false;
     }
   }
@@ -385,20 +322,28 @@ void globals_prv_update_display() {
     }
     api_score_display();
     if (settings.scoreLocation != 1){
-      animation_hide_text(true, false, true);
+      // Score active: HOME/AWAY visible; TEXT_LAYER_TIME already holds
+      // the score text from api_score_display() above.
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
       timeTrue = false;
     }
   }
 
   if (timeTrue){
-    animation_hide_text(true, true, false);
+    // Neither countdown nor score is active - HOME/AWAY hidden, plain
+    // clock shows in TEXT_LAYER_TIME (kept current by update_time()'s
+    // own guard in timekeeping.c).
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
   }
 
+  #ifndef PBL_PLATFORM_APLITE
   if (settings.rankingBool){
-    if (API_DATA[settings.FavoriteTeam].ranking <= 25 && API_DATA[settings.FavoriteTeam].ranking > 0){
+    if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
 
       static char s_rank_buffer[3];
-      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", API_DATA[settings.FavoriteTeam].ranking);
+      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", TEAMS[settings.FavoriteTeam].ranking);
       text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
 
       layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
@@ -411,7 +356,7 @@ void globals_prv_update_display() {
   }
 
   if (settings.winBool){
-    if(API_DATA[settings.FavoriteTeam].wins > 6){
+    if(TEAMS[settings.FavoriteTeam].wins > 6){
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
     }
     else{
@@ -425,10 +370,10 @@ void globals_prv_update_display() {
     // ever resident at a time (created below, right before use), instead
     // of preloading both BOWL and CHAMP permanently at startup.
     uint32_t target_res_id = 0;
-    if(API_DATA[settings.FavoriteTeam].postseasonGames >= 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 1){
+    if(TEAMS[settings.FavoriteTeam].postseasonGames >= 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 1){
       target_res_id = RESOURCE_ID_BOWL;
     }
-    else if (API_DATA[settings.FavoriteTeam].postseasonLosses < 1 && API_DATA[settings.FavoriteTeam].postseasonWins == 3){
+    else if (TEAMS[settings.FavoriteTeam].postseasonLosses < 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 3){
       target_res_id = RESOURCE_ID_CHAMP;
     }
 
@@ -444,6 +389,7 @@ void globals_prv_update_display() {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
     }
   }
+  #endif
 
   #if defined(PBL_HEALTH)
   #if defined(DEBUG)

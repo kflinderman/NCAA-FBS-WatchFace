@@ -1,3 +1,5 @@
+#ifndef PBL_PLATFORM_APLITE
+
 #include "weather.h"
 #include "globals.h"
 #include "drawing.h"
@@ -102,11 +104,12 @@ void weather_draw(Layer *window_layer, GRect bounds){
   
   #if PBL_DISPLAY_HEIGHT > 180
   s_wIcon = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WEATHER_ICONS_18));
-  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 65, ((bounds.size.h * time_h) / 1000) - 20, 35, 38, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 69, ((bounds.size.h * time_h) / 1000) - 40, 35, 35, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 65, ((bounds.size.h * TIME_H) / 1000) - 20, 35, 38, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 69, ((bounds.size.h * TIME_H) / 1000) - 40, 35, 35, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
   #else
   s_wIcon = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WEATHER_ICONS_12));
-  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 46, ((bounds.size.h * time_h) / 1000) - 20, 26, 32, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 51, ((bounds.size.h * time_h) / 1000) - 34, 23, 23, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 46, ((bounds.size.h * TIME_H) / 1000) - 20, 26, 32, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 51, ((bounds.size.h * TIME_H) / 1000) - 34, 23, 23, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
   #endif
 }
+#endif
