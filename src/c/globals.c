@@ -8,13 +8,6 @@
 #include "api.h"
 
 
-#ifdef PBL_PLATFORM_APLITE
-//#define DEBUG
-#else
-#define DEBUG
-#endif
-
-
 /*******************************************
  * Definitions for all extern globals
  *******************************************/
@@ -35,6 +28,7 @@ Layer* s_layers[NUM_GENERIC_LAYERS];
 //GFont s_gfont[NUM_GFONT];
 GFont s_font, s_wIcon;
 
+char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_away_text[5], s_day_text[5], s_hour_text[5];
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
@@ -49,6 +43,17 @@ int16_t conditionValue = 0;
 
 uint8_t beat_spot, beat_primary;
 
+
+void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow){
+  text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], leftText);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], rightText);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], mainText);
+
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), extras);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), extras);
+  layer_set_hidden(s_layers[LAYER_SCORE_I], Ishow);
+}
+
 void globals_prv_default_settings() {
   settings.DisconnectVibration = 3;
   settings.ReconnectVibration = 1;
@@ -57,8 +62,13 @@ void globals_prv_default_settings() {
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
   settings.DisplayTeam = 0;
+  #ifdef TESTING
+  settings.FavoriteTeam = 1;
+  settings.BeatTeam = 0;
+  #else
   settings.FavoriteTeam = 108;
   settings.BeatTeam = 26;
+  #endif
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
@@ -120,8 +130,14 @@ void globals_prv_load_settings() {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
+  #ifdef TESTING
   if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 1;
   if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 0;
+  #else
+  if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 108;
+  if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 26;
+  #endif
+  
 }
 
 void globals_prv_update_display() {
@@ -284,7 +300,7 @@ void globals_prv_update_display() {
   #ifndef PBL_PLATFORM_APLITE
   weather_update();
   #endif
-
+  
   bool timeTrue = true;
   if (settings.countdownBool){
     #if defined(DEBUG)
@@ -303,9 +319,18 @@ void globals_prv_update_display() {
       // Countdown active: HOME/AWAY (merged with Day/Hour sub-labels)
       // visible; TEXT_LAYER_TIME already holds the countdown value from
       // timekeeping_countdown() above and needs no hide/show toggle.
+      globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
+      timeTrue = false;
+      /*
+      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_day_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_hour_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_countdown_text);
+      
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
+      layer_set_hidden(s_layers[LAYER_SCORE_I], true);
       timeTrue = false;
+      */
     }
   }
 
@@ -324,9 +349,18 @@ void globals_prv_update_display() {
     if (settings.scoreLocation != 1){
       // Score active: HOME/AWAY visible; TEXT_LAYER_TIME already holds
       // the score text from api_score_display() above.
+      globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
+      timeTrue = false;
+      /*
+      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_home_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_away_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_text);
+      
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
+      layer_set_hidden(s_layers[LAYER_SCORE_I], false);
       timeTrue = false;
+      */
     }
   }
 
@@ -334,8 +368,14 @@ void globals_prv_update_display() {
     // Neither countdown nor score is active - HOME/AWAY hidden, plain
     // clock shows in TEXT_LAYER_TIME (kept current by update_time()'s
     // own guard in timekeeping.c).
+
+    globals_what2show("", "", s_time_text, true, true);
+    /*
+    text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_time_text);
     layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
     layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
+    layer_set_hidden(s_layers[LAYER_SCORE_I], true);
+    */
   }
 
   #ifndef PBL_PLATFORM_APLITE

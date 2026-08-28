@@ -10,7 +10,7 @@ typedef enum {
 // Typically called on app launch or manual user refresh
 void api_request_cfbd_full_sync(void);
 
-void format_2digits(char *buf, int val);
+void api_format_2digits(char *buf, int val);
 
 // Request light CFBD sync (this week's games/records/rankings, applied to
 // API_DATA[] one team at a time via a follow-up per-team exchange)

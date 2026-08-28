@@ -61,16 +61,54 @@ void animation_beat_team_layer(void) {
   bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
   bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
 
+  
+  bool timeTrue = true;
+  
   if (show_countdown) {
     bool sub_labels_hidden = (settings.countdownDisplay == target_mode);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
+    //if(!sub_labels_hidden){
+      globals_what2show(s_day_text, s_hour_text, s_countdown_text, !sub_labels_hidden, sub_labels_hidden);
+      timeTrue = false;
+      /*
+      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_day_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_hour_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_countdown_text);
+
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
+      layer_set_hidden(s_layers[LAYER_SCORE_I], true);
+      timeTrue = false;
+      */
+    //}
   }
 
   if (show_score) {
     bool sub_labels_hidden = (settings.scoreLocation == target_mode);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), sub_labels_hidden);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), sub_labels_hidden);
+    //if(!sub_labels_hidden){
+      globals_what2show(s_home_text, s_away_text, s_score_text, !sub_labels_hidden, !sub_labels_hidden);
+      timeTrue = false;
+      /*
+      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_home_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_away_text);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_text);
+
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
+      layer_set_hidden(s_layers[LAYER_SCORE_I], false);
+      timeTrue = false;
+      */
+    //}
+  }
+  
+  if(timeTrue){
+    globals_what2show("", "", s_time_text, true, true);
+    /*
+    text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_time_text);
+
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
+    layer_set_hidden(s_layers[LAYER_SCORE_I], true);
+    */
   }
 
   // Schedule Layer Animations
@@ -90,10 +128,17 @@ void animation_beat_team_layer(void) {
 }
 #endif
 
-static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, uint16_t bump, uint16_t bmp_ratio_permil) {
+static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, int bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
   move_frame.origin.y = (((tmp_bounds.size.h * origin_permil) / 1000) + bump) - (diff * bmp_ratio_permil) / 1000;
   layer_set_frame(tmp_layer, move_frame);
+}
+
+static void animation_linemove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t Y1RATIO, uint16_t Y2RATIO) {
+  LinePoints *pointsMove = (LinePoints *)layer_get_data(tmp_layer);
+  pointsMove->y1 = (tmp_bounds.size.h * Y1RATIO) / 1000 - diff;
+  pointsMove->y2 = (tmp_bounds.size.h * Y2RATIO) / 1000 - diff;
+  layer_mark_dirty(tmp_layer);
 }
 
 void animation_prv_unobstructed_change(AnimationProgress progress, void *context) {
@@ -104,28 +149,45 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, 0, 1000);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
-  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
+  #if PBL_DISPLAY_HEIGHT > 180
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -2, 1000);
+  
+  #ifdef PBL_ROUND
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, 8, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, 8, 1000);
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), 1000, -16, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), 1000, -16, 1000);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_VERT], VERT_1, VERT_2);
+  #endif
+  
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -5, 1000);
+  
+  #ifdef PBL_ROUND
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, TIME_Y - 20, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, TIME_Y - 20, 1000);
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), 1000, -14, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), 1000, -14, 1000);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_VERT], VERT_1, VERT_2);
+  #endif
+  #endif
+  
   #ifndef PBL_PLATFORM_APLITE
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
   #endif
+  
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), VERT_2, 3, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), VERT_2, 3, 1000);
-
-#ifdef PBL_RECT
-  LinePoints *points = (LinePoints *)layer_get_data(s_layers[LAYER_VERT]);
-  points->y1 = (unBounds.size.h * VERT_1) / 1000 - bound_diff;
-  points->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
-  layer_mark_dirty(s_layers[LAYER_VERT]);
-#endif
-
-  LinePoints *points2 = (LinePoints *)layer_get_data(s_layers[LAYER_HOR]);
-  points2->y1 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
-  points2->y2 = (unBounds.size.h * VERT_2) / 1000 - bound_diff;
-  layer_mark_dirty(s_layers[LAYER_HOR]);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_HOR], VERT_2, VERT_2);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_SCORE_I], VERT_3, VERT_4);
 }
+
+  
 
 void animation_subscribe_unobstructed_area(void) {
   UnobstructedAreaHandlers handlers = {

@@ -4,6 +4,14 @@
 #include "structure.h"
 
 
+#define TESTING
+
+#ifdef PBL_PLATFORM_APLITE
+//#define DEBUG
+#else
+#define DEBUG
+#endif
+
 #define SETTINGS_KEY 1
 #define NUM_TEAMS 154
 
@@ -180,6 +188,8 @@ extern GFont s_gfont[NUM_GFONT];
 */
 extern GFont s_font, s_wIcon;
 
+extern char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_away_text[5], s_day_text[5], s_hour_text[5];
+
 /*******************************************
  * Sensor / state variables
  *******************************************/
@@ -218,6 +228,8 @@ extern uint8_t beat_spot, beat_primary;
  * repositioning) and main.c (initial layout) agree.
  *******************************************/
 
+
+
 #ifdef PBL_ROUND
   #define RECT_H    660
   #define DATE_H    840
@@ -235,6 +247,8 @@ extern uint8_t beat_spot, beat_primary;
     #define STEPX1    16
     #define STEPX2    95
     #define STEPY     50
+    #define VERT_3    720
+    #define VERT_4    850
   #else
     #define TIME_W    60
     #define TIME_X    120
@@ -245,6 +259,8 @@ extern uint8_t beat_spot, beat_primary;
     #define STEPX1    12
     #define STEPX2    67
     #define STEPY     37
+    #define VERT_3    710
+    #define VERT_4    860
   #endif
 #else
   #define RECT_H    720
@@ -257,6 +273,8 @@ extern uint8_t beat_spot, beat_primary;
     #define TIME_Y    70
     #define VERT_1    820
     #define VERT_2    900
+    #define VERT_3    790
+    #define VERT_4    940
     #define HOR_1     830
     #define HOR_2     920
     #define HR_THICK  2
@@ -272,6 +290,8 @@ extern uint8_t beat_spot, beat_primary;
     #define TIME_Y    50
     #define VERT_1    850
     #define VERT_2    930
+    #define VERT_3    770
+    #define VERT_4    920
     #define HOR_1     860
     #define HOR_2     970
     #define HR_THICK  1
@@ -298,6 +318,8 @@ extern uint8_t beat_spot, beat_primary;
 extern const uint8_t icon_bump, time_w, time_x, time_y, hr_thick, stepx1, stepx2, stepy, bitmap_size;
 extern const bool hr_w;
 */
+
+void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow);
 
 /*******************************************
  * Settings persistence + display application
