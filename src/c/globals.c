@@ -402,6 +402,9 @@ void globals_prv_update_display() {
     else{
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
     }
+    #ifdef TESTING
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
+    #endif
   }
 
 
@@ -416,6 +419,9 @@ void globals_prv_update_display() {
     else if (TEAMS[settings.FavoriteTeam].postseasonLosses < 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 3){
       target_res_id = RESOURCE_ID_CHAMP;
     }
+    #ifdef TESTING
+    target_res_id = RESOURCE_ID_BOWL;
+    #endif
 
     // Single Pass UI Update
     if (target_res_id != 0) {
