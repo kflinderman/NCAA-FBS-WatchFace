@@ -1512,6 +1512,14 @@
                     "type": "bitmap"
                 },
                 {
+                    "file": "images/football-black.png",
+                    "memoryFormat": "Smallest",
+                    "name": "football_black",
+                    "spaceOptimization": "memory",
+                    "targetPlatforms": null,
+                    "type": "bitmap"
+                },
+                {
                     "file": "images/football-color.png",
                     "memoryFormat": "Smallest",
                     "name": "football",

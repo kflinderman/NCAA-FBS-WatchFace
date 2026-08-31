@@ -555,28 +555,29 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   }
 }
 
-void format_2digits(char *buf, int val) {
+void api_format_2digits(char *buf, int val) {
   buf[0] = '0' + ((val / 10) % 10);
   buf[1] = '0' + (val % 10);
 }
 
 void api_score_display() {
   // 1. Direct pointers replace s_temp_buffer1 and s_temp_buffer2
-  const char *home_str;
-  const char *away_str;
+  
+  //const char *home_str;
+  //const char *away_str;
 
   // 2. Only s_temp_buffer3 needs memory for formatted score "XX|YY\0"
-  static char s_score_buffer[6];
+  //static char s_score_buffer[6];
 
   if (TEAMS[settings.FavoriteTeam].vs_id == -1) {
-    home_str = "BYE";
-    away_str = "WEEK";
+    snprintf(s_day_text, sizeof(s_home_text), "BYE");
+    snprintf(s_hour_text, sizeof(s_away_text), "WEEK");
     // Copy constant string directly instead of snprintf
-    memcpy(s_score_buffer, "00|00", 6);
+    memcpy(s_score_text, "00|00", 6);
   } else {
     // Zero-copy! Point directly to existing string constants
-    home_str = TEAMS[settings.FavoriteTeam].shortname;
-    away_str = TEAMS[TEAMS[settings.FavoriteTeam].vs_id].shortname;
+    strncpy(s_home_text, TEAMS[settings.FavoriteTeam].shortname, sizeof(s_home_text) - 1);
+    strncpy(s_away_text, TEAMS[TEAMS[settings.FavoriteTeam].vs_id].shortname, sizeof(s_away_text) - 1);
 
     // Clamp scores cleanly
     int score1 = TEAMS[settings.FavoriteTeam].score;
@@ -585,21 +586,19 @@ void api_score_display() {
     if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
 
     // Manual string building for "XX|YY" without snprintf
-    format_2digits(&s_score_buffer[0], score1);
-    s_score_buffer[2] = '|';
-    format_2digits(&s_score_buffer[3], score2);
-    s_score_buffer[5] = '\0';
+    api_format_2digits(&s_score_text[0], score1);
+    s_score_text[2] = ' ';
+    api_format_2digits(&s_score_text[3], score2);
+    s_score_text[5] = '\0';
   }
-  text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], home_str);
-  text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], away_str);
+  //text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], home_str);
+  //text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], away_str);
   // TEXT_LAYER_TIME now also serves as the score text - see the
   // TIME/COUNTDOWN/SCORE merge notes in globals.h.
-  text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_buffer);
+  //text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_buffer);
 }
 
 void api_icon_draw(Layer *window_layer, GRect bounds){
-  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-
   // No GBitmap created here - api_update_status_indicator() creates
   // whichever status icon actually applies, so only one (or none) is
   // ever resident instead of both APILOW and APIEMPTY permanently.
@@ -617,6 +616,8 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   //Create Ranking resources
   #ifndef PBL_PLATFORM_APLITE
+  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  
   #ifdef PBL_ROUND
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 40, 25), sizeof(RoundRectData));
   #else

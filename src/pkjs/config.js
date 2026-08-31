@@ -37,14 +37,14 @@ module.exports = [
         "label": "Bag",
         "defaultValue": false,
         "description": "Are you embarrased by your team?",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
 	    {
 		    "type": "select",
 		    "messageKey": "FavoriteTeam",
 		    "defaultValue": 108,
 		    "label": "Favorite Team",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"],
+        "capabilities": ["NOT_PLATFORM_APLITE"],
 		    "options": [
           { "label": "ACC", "value": 0 },
           { "label": "Air Force", "value": 1 },
@@ -206,7 +206,7 @@ module.exports = [
 		    "messageKey": "FavoriteTeam",
 		    "defaultValue": 108,
 		    "label": "Favorite Team",
-        "capabilities": ["aplite"],
+        "capabilities": ["PLATFORM_APLITE"],
 		    "options": [
           { "label": "Air Force", "value": 1 },
           { "label": "Akron", "value": 2 },
@@ -365,7 +365,7 @@ module.exports = [
 		    "messageKey": "BeatTeam",
 		    "defaultValue": 26,
 		    "label": "Beat Team",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"],
+        "capabilities": ["NOT_PLATFORM_APLITE"],
 		    "options": [
           { "label": "ACC", "value": 0 },
           { "label": "Air Force", "value": 1 },
@@ -527,7 +527,7 @@ module.exports = [
 		    "messageKey": "BeatTeam",
 		    "defaultValue": 26,
 		    "label": "Beat Team",
-        "capabilities": ["aplite"],
+        "capabilities": ["PLATFORM_APLITE"],
 		    "options": [
           { "label": "Air Force", "value": 1 },
           { "label": "Akron", "value": 2 },
@@ -696,7 +696,7 @@ module.exports = [
         "defaultValue": 26,
         "label": "Custom Team",
         "messageKey": "customOpponent",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"],
+        "capabilities": ["NOT_PLATFORM_APLITE"],
         "options": [
           { "label": "ACC", "value": 0 },
           { "label": "Air Force", "value": 1 },
@@ -858,7 +858,7 @@ module.exports = [
         "defaultValue": 26,
         "label": "Custom Team",
         "messageKey": "customOpponent",
-        "capabilities": ["aplite"],
+        "capabilities": ["PLATFORM_APLITE"],
 		    "options": [
           { "label": "Air Force", "value": 1 },
           { "label": "Akron", "value": 2 },
@@ -1472,48 +1472,48 @@ module.exports = [
         "type": "heading",
         "defaultValue": "API Extras",
         "id": "api_extras",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "text",
         "id": "superlatives",
         "defaultValue": "Add small markings for season superlatives",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Display Ranking",
         "defaultValue": false,
         "messageKey": "rankingBool",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Winning Season Marking",
         "defaultValue": false,
         "messageKey": "winBool",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       //{
         //"type": "toggle",
         //"label": "Conference Champion Marking",
         //"defaultValue": false,
         //"messageKey": "confBool",
-        //"capabilities": ["NOT_APLITE"]
+        //"capabilities": ["NOT_PLATFORM_APLITE"]
       //},
       {
         "type": "toggle",
         "label": "Bowl Win Marking",
         "defaultValue": false,
         "messageKey": "bowlBool",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Champion Marking",
         "defaultValue": false,
         "messageKey": "champBool",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       }
     ]
   },
@@ -1523,28 +1523,28 @@ module.exports = [
       {
         "type": "heading",
         "defaultValue": "Weather",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Weather",
         "messageKey": "weatherBool",
         "defaultValue": false,
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
         "type": "toggle",
         "label": "Pause Updates During Quiet Time",
         "messageKey": "weatherQuiet",
         "defaultValue": false,
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"]
+        "capabilities": ["NOT_PLATFORM_APLITE"]
       },
       {
 	      "type": "radiogroup",
 	      "label": "Units",
         "messageKey": "weatherUnits",
 		    "defaultValue": "0",
-        "capabilities": ["basalt", "chalk", "diorite", "emery", "flint", "gabbro"],
+        "capabilities": ["NOT_PLATFORM_APLITE"],
 	      "options": [
 	  	    { 
 		        "label": "Fahrenheit", 
