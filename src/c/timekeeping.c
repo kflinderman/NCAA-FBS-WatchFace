@@ -142,6 +142,10 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
         */
       }
     }
+
+    #ifdef TESTING
+    animation_beat_team_layer();
+    #endif
   }
 }
 
