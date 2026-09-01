@@ -17,7 +17,6 @@ static void sensor_trigger_vibration(uint8_t type) {
 /*********************/
 /* Accelerometer     */
 /*********************/
-#ifndef PBL_PLATFORM_APLITE
 void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   if (num_samples == 0 || data == NULL) return;
   // Use the last sample in the batch for current reading
@@ -44,7 +43,6 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   }
   s_prev_y = curr_y;
 }
-#endif
 
 /******************/
 /* Bluetooth      */

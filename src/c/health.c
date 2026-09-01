@@ -21,6 +21,9 @@ void health_heartRateHandler(void) {
   else{
     hrvalue = 70;
   }
+  #ifdef TESTING
+    hrvalue = 70;
+  #endif
 
   if (hrvalue > 0) {
     static char s_hr_buffer[4];

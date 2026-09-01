@@ -196,6 +196,7 @@ extern char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5]
 extern int16_t s_prev_y;
 extern bool s_bt_connected;
 extern bool s_animation;
+extern bool s_favorite_team_data_missing;
 extern bool after_time;
 extern bool gametime;
 extern BatteryChargeState s_battery_state;
@@ -329,3 +330,11 @@ void globals_prv_default_settings(void);
 void globals_prv_save_settings(void);
 void globals_prv_load_settings(void);
 void globals_prv_update_display(void);
+
+/*******************************************
+ * FavoriteTeam data persistence (globals.c)
+ * — see PersistedTeamCache in teams.h for the
+ * recently-used-teams cache this reads/writes.
+ *******************************************/
+void globals_prv_save_team_data(void);
+void globals_prv_load_team_data(void);
