@@ -3,8 +3,6 @@
 #pragma once
 #include <pebble.h>
 
-
-// Struct to represent a team
 typedef struct {
   uint32_t black;
   uint32_t white;

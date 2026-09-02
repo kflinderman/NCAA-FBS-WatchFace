@@ -1,8 +1,3 @@
-/**
- * CFBD API module for batched data fetching
- * Handles season detection, data aggregation, and API call optimization
- */
-
 var cfbd = (function() {
   // In-memory cache for this session (survives across multiple calls)
   var cache = {
@@ -20,24 +15,8 @@ var cfbd = (function() {
     BATCH_DELAY: 100  // ms between requests to avoid hammering API
   };
 
-  // Queued callbacks for an in-flight determineSeasonAndBoundary() call.
-  // null when no call is in progress. Lets syncFullCFBD and syncLightCFBD
-  // both ask for the season/boundary at (near) the same time - as they
-  // now can, since a missing-team-data force-resync makes both fire
-  // together - without each kicking off its own redundant calendar +
-  // next-season-boundary fetch. See determineSeasonAndBoundary() below.
   var seasonDeterminationCallbacks = null;
 
-  /**
-   * Persistent (localStorage-backed) tracking of API calls made this
-   * calendar month. Incremented once per real HTTP request (see
-   * trackApiCall(), called from xhrAuth below) - not derived from how
-   * many AppMessages the watch sends, since a single light/full sync can
-   * make a variable number of underlying calls. This is corrected against
-   * CFBD's own GET /info usedCalls/monthlyLimit periodically (see
-   * fetchUserInfo, called from syncFullCFBD) so any local drift gets
-   * fixed up on the next full sync.
-   */
   var USAGE_STORAGE_KEY = 'cfbd_api_usage';
 
   function loadUsage() {
@@ -66,10 +45,6 @@ var cfbd = (function() {
     var month = now.getMonth();
 
     if (usage.year !== year || usage.month !== month) {
-      // New calendar month locally - best-effort reset. The next full
-      // sync's GET /info correction confirms this against CFBD's own
-      // records; this just keeps the watch's counter from showing a
-      // stale high number for the first day or so of a new month.
       usage.year = year;
       usage.month = month;
       usage.used = 0;
@@ -79,9 +54,6 @@ var cfbd = (function() {
     saveUsage();
   }
 
-  /**
-   * Helper: XHR with Bearer auth (from index.js, duplicated for isolation)
-   */
   function xhrAuth(url, apiKey, callback, errorCallback) {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -108,13 +80,6 @@ var cfbd = (function() {
     xhr.send();
   }
 
-  /**
-   * GET /info - the authenticated user's Patreon level and monthly API
-   * call usage (monthlyLimit/remainingCalls/usedCalls/resetAt). Used only
-   * during a full sync to correct the locally-tracked usage counter
-   * against CFBD's own records - NOT called on every sync, so it doesn't
-   * add to the call budget it's meant to help conserve.
-   */
   function fetchUserInfo(apiKey, callback) {
     var url = constants.API_BASE + '/info';
     xhrAuth(url, apiKey, function(data) {
@@ -125,10 +90,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /calendar for a year to determine if we're in season
-   * Returns: { isInSeason: bool, startDate: Date, endDate: Date, week: int }
-   */
   function fetchCalendar(year, apiKey, callback) {
     var url = constants.API_BASE + '/calendar?year=' + year;
     
@@ -183,11 +144,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * Shared by fetchSeasonGames: drops CFBD's "NA" placeholder entries
-   * (TBD/unscheduled opponents) and trims each game down to just the
-   * fields the watch needs.
-   */
   function trimGames(data) {
     return data
       .filter(function(game) {
@@ -209,17 +165,6 @@ var cfbd = (function() {
       });
   }
 
-  /**
-   * GET /games for an entire year/seasonType - no week filter, no team
-   * filter. API_DATA[] tracks the full ~140-team FBS roster (not just the
-   * user's favorite/beat team), so a per-team CFBD call would mean 100+
-   * HTTP requests every light sync. Fetching the whole season in one
-   * call and picking each team's latest game client-side (see
-   * findLatestTeamGame in index.js) keeps this at one call for the
-   * regular season, plus one more only when the postseason fallback
-   * actually needs it - regardless of roster size or how often the
-   * displayed team changes.
-   */
   function fetchSeasonGames(year, seasonType, apiKey, callback) {
     var url = constants.API_BASE + '/games?year=' + year +
         '&seasonType=' + seasonType + '&classification=fbs';
@@ -277,10 +222,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /rankings for a year (current/latest poll)
-   * Returns: [ { year, week, poll, ranks: [ { rank, team, ... }, ... ] }, ... ]
-   */
   function fetchRankings(year, week, postseason, apiKey, callback) {
     if (postseason){
       var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=postseason&week=' + week;
@@ -336,28 +277,8 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * Phase 1: Determine current season year + next season's first game timestamp
-   * 
-   * Logic:
-   *   1. Fetch calendar for current year
-   *   2. If in season: use this year, fetch first game of *next* year to store as boundary
-   *   3. If NOT in season: fetch calendar for last year, check if in that season window
-   *      - If in last year's window: use last year (postseason), fetch next year's first game
-   *      - If not: this is offseason between seasons, fetch next year's first game as boundary
-   */
-  // Public entry point: shares one in-flight determineSeasonAndBoundaryImpl()
-  // call across concurrent callers instead of letting each start its own.
-  // syncFullCFBD and syncLightCFBD can both land here within the same
-  // tick (a missing-team-data force-resync makes that the normal case
-  // now, not a rare race), and without this, each would independently
-  // pay for a calendar fetch + a next-season first-game fetch - exactly
-  // the duplicate "Grabbing full regular season for <next year>" calls
-  // you'd otherwise see twice in the logs for one sync cycle.
   function determineSeasonAndBoundary(apiKey, callback) {
     if (seasonDeterminationCallbacks) {
-      // Already in progress - piggyback on it instead of starting a
-      // second, redundant round trip.
       console.log('Season/boundary determination already in progress - reusing it');
       seasonDeterminationCallbacks.push(callback);
       return;
@@ -417,11 +338,6 @@ var cfbd = (function() {
           } else {
             // Offseason: use next year, fetch its first game
             console.error('No Schedules Found');
-            // Match the 4-arg (year, nextSeasonTs, seasonDates, weekDates)
-            // signature every other call site uses - a bare callback([])
-            // would silently pass year=[] and leave the rest undefined,
-            // crashing downstream (e.g. cache.weekDates.length) instead of
-            // failing here where the cause is clear.
             callback(null, null, null, null);
             return; // Stops execution, fetchNextSeasonBoundary is never called
           }
@@ -430,13 +346,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * Helper: Fetch the first game (by date) of a given year's season.
-   * Only called from determineSeasonAndBoundary, near season transitions -
-   * not part of the regular light-sync cadence - so reusing the
-   * whole-season fetch here (rather than a week-scoped one) keeps this
-   * file to a single fetch function without adding meaningful call volume.
-   */
   function fetchFirstGameOfYear(year, apiKey, callback) {
     fetchSeasonGames(year, 'regular', apiKey, function(games) {
       if (games.length === 0) {
@@ -450,11 +359,6 @@ var cfbd = (function() {
     });
   }
 
-  /**
- * Helper: given the cached season info, figure out which (year, week)
- * we should be fetching, and whether we're in the offseason.
- * Returns: { year, week, offseason }
- */
   function determineCurrentWeek(cache) {
     var now = new Date();
     var nowTs = Math.floor(now.getTime() / 1000);
@@ -491,8 +395,6 @@ var cfbd = (function() {
           };
         }
       }
-      // Fallback: inside seasonDates but didn't land inside any single week's
-      // start/end (gaps between weeks happen) - use the last known week.
       var fallbackEntry = cache.weekDates[cache.weekDates.length - 1];
       console.log('In season but between week boundaries - using last known week ' + fallbackEntry[0]);
       return {
@@ -518,33 +420,18 @@ var cfbd = (function() {
   return {
     cache: cache,
 
-    /**
-     * Full workflow: calendar + records + rankings. Records/rankings moved
-     * here from the (now games-only) light sync - they don't change fast
-     * enough within a week to need their own sync cadence, so they ride
-     * along with the daily full sync instead.
-     * Call on app launch and periodically (e.g., daily).
-     */
     syncFullCFBD: function(apiKey, callback) {
       console.log('=== CFBD Full Sync Start ===');
 
       determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
 
-        // No schedule data was found for either the current or prior year
-        // (see determineSeasonAndBoundary's offseason branch) - cache is
-        // not populated, so stop here rather than let determineCurrentWeek
-        // run against unset year/weekDates further down.
         if (year === null) {
           console.log('Full sync aborted - no season boundary available');
           callback(null);
           return;
         }
 
-        // Correct the locally-tracked usage counter against CFBD's own
-        // records. Only done here (full sync), not on every light sync,
-        // so this correction call doesn't itself eat into the budget
-        // it's meant to help conserve.
         fetchUserInfo(apiKey, function(info) {
           if (info && typeof info.usedCalls === 'number') {
             usage.used = info.usedCalls;
@@ -560,9 +447,6 @@ var cfbd = (function() {
             console.log('CFBD usage correction skipped - GET /info unavailable or unlimited plan');
           }
 
-          // cache is populated by determineSeasonAndBoundary above, so
-          // determineCurrentWeek can run now - rankings are week-scoped,
-          // records aren't, but both are fetched here together.
           var target = determineCurrentWeek(cache);
 
           var expected = 2;
@@ -603,27 +487,6 @@ var cfbd = (function() {
       console.log('=== CFBD Full Sync End ===');
     },
 
-    /**
-   * Lighter refresh: fetches the whole regular season in one call (games
-   * for all ~140 FBS teams don't fit any smaller unit that's still cheap
-   * to fetch: API_DATA[] tracks the full roster, not just the user's
-   * favorite/beat team, so anything scoped per-team or per-week would
-   * multiply into 100+ calls or miss games depending on bye weeks/bowl
-   * scheduling). Also fetches the whole postseason in a second call, but
-   * only once the calendar's actually past the regular season - no need
-   * to pay for that call all year. Each team's actual latest game is
-   * then picked out of this cached pool client-side, per team, as
-   * REQUEST_CFBD_TEAM_DATA comes in (see findLatestTeamGame in
-   * index.js) - no further CFBD calls needed regardless of roster size
-   * or how often the displayed team changes.
-   *
-   * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates
-   * already populated (normally true after a prior syncFullCFBD call this
-   * session). If the JS worker restarted and light sync fires first -
-   * which can happen, since the watch decides to sync based on its own
-   * persisted timestamps, not on what this JS session has done - that
-   * cache would be empty, so run determineSeasonAndBoundary first.
-   */
     syncLightCFBD: function(apiKey, callback) {
       function fetchAndReturn() {
         var target = determineCurrentWeek(cache);

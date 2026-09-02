@@ -112,7 +112,6 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Applying Saved Settings");
   #endif
   globals_prv_update_display();
-  //APP_LOG(APP_LOG_LEVEL_ERROR, "HEAP after settings: %d", (int)heap_bytes_free());
 
   // Make sure the time and date are displayed from the start
   #if defined(DEBUG)
@@ -231,8 +230,6 @@ static void init() {
 
 // Deinitializes the app
 static void deinit() {
-  //bluetooth_connection_service_unsubscribe();
-
   accel_data_service_unsubscribe();
   connection_service_unsubscribe();
   battery_state_service_unsubscribe();

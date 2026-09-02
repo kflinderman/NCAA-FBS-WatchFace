@@ -22,9 +22,10 @@ static const char* const WEATHER_ICONS[] = {
 };
 
 void weather_temp_update(){
+  //Determine whether to show temperature information
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), !settings.weatherBool);
-  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), !settings.weatherBool);
 
+  //If not, exit
   if (!settings.weatherBool) {
     return;
   }
@@ -32,14 +33,17 @@ void weather_temp_update(){
   uint8_t tempTemperature = temperatureValue;
   char unit = 'F';
 
+  //Determine temperature units
   if (settings.weatherUnits){
     unit = 'C';
   }
   else{
+    //Convert to F
     tempTemperature = ((temperatureValue * 9) / 5) + 32;
     unit = 'F';
   }
 
+  //Add buffer to text layer
   static char s_temp_buffer[5];
   snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%d%c", tempTemperature, unit);
   text_layer_set_text(s_text_layers[TEXT_LAYER_WEATHER], s_temp_buffer);
@@ -47,20 +51,26 @@ void weather_temp_update(){
 }
 
 void weather_conditions_update() {
+  //Determine whether to show conditions information
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), !settings.weatherBool);
   if (settings.weatherBool) {
     static char s_temp_buffer[8];
     uint8_t max_idx = (uint8_t)(sizeof(WEATHER_ICONS) / sizeof(WEATHER_ICONS[0])) - 1;
+    
+    //Determine condition position in array
     uint8_t idx = (conditionValue >= 0 && conditionValue <= max_idx) ? (uint8_t)conditionValue : max_idx;
     snprintf(s_temp_buffer, sizeof(s_temp_buffer), "%s", WEATHER_ICONS[idx]);
     text_layer_set_text(s_text_layers[TEXT_LAYER_CONDITIONS], s_temp_buffer);
   }
 }
 
+//Main function to call weather screen updates
 void weather_update(){
   weather_temp_update();
   weather_conditions_update();
 }
 
+//Get weather information from phone
 void weather_callback(DictionaryIterator *iterator, void *context){
   bool weather_changed = false;
 
@@ -83,12 +93,16 @@ void weather_callback(DictionaryIterator *iterator, void *context){
     weather_changed = true;
   }
 
+  //If we got an update trigger screen update
   if (weather_changed){
     weather_update();
   }
 }
 
+//First function to draw all necessary items.
 void weather_draw(Layer *window_layer, GRect bounds){
+  
+  //Determine text/icon color based on Favorite team
   GColor icon_color;
   #if defined(PBL_COLOR)
   icon_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color};
@@ -101,7 +115,7 @@ void weather_draw(Layer *window_layer, GRect bounds){
   }
   #endif
   
-  
+  //Draw layers based on large or small screen
   #if PBL_DISPLAY_HEIGHT > 180
   s_wIcon = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_FONT_WEATHER_ICONS_18));
   s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 65, ((bounds.size.h * TIME_H) / 1000) - 20, 35, 38, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
@@ -111,5 +125,9 @@ void weather_draw(Layer *window_layer, GRect bounds){
   s_text_layers[TEXT_LAYER_WEATHER] = drawing_text_set(bounds.size.w / 2 + 46, ((bounds.size.h * TIME_H) / 1000) - 20, 26, 32, icon_color, "100F", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_CONDITIONS] = drawing_text_set(bounds.size.w / 2 + 51, ((bounds.size.h * TIME_H) / 1000) - 34, 23, 23, icon_color, WEATHER_ICONS[13], s_wIcon, GTextAlignmentCenter, window_layer);
   #endif
+  
+  //hide layers
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), true);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), true);
 }
 #endif

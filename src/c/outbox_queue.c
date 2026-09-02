@@ -1,4 +1,3 @@
-// src/c/outbox_queue.c
 #include "outbox_queue.h"
 
 #define OUTBOX_QUEUE_MAX 8
@@ -21,10 +20,6 @@ static void outbox_queue_try_send(void) {
   DictionaryIterator *iter;
   AppMessageResult begin_result = app_message_outbox_begin(&iter);
   if (begin_result != APP_MSG_OK) {
-    // Outbox genuinely busy (shouldn't happen given outbox_busy already
-    // gates this, but AppMessage state can be affected by other things
-    // like a Bluetooth disconnect) - drop this one item and try the next
-    // rather than getting stuck.
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox queue: begin failed (%d) - dropping this item", begin_result);
     #endif
@@ -43,8 +38,6 @@ static void outbox_queue_try_send(void) {
     outbox_busy = false;
     outbox_queue_try_send();
   }
-  // On success, outbox_busy stays true until outbox_queue_on_result() is
-  // called from outbox_sent_callback/outbox_failed_callback.
 }
 
 bool outbox_queue_send(OutboxBuilderFn builder) {

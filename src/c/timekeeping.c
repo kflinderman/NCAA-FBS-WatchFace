@@ -21,16 +21,6 @@ void update_time() {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
 
-  // Time handler
-  // TEXT_LAYER_TIME now also serves as the countdown-timer and score
-  // text (merged - same position, never shown simultaneously). This
-  // runs every tick regardless of which mode is active, so it must only
-  // overwrite the slot with the clock string when time mode is actually
-  // the one being displayed - otherwise it stomps on countdown/score
-  // text a moment after timekeeping_countdown()/api_score_display()
-  // wrote it (this exact scenario happens at every app launch, since
-  // main_window_load() calls update_time() right after
-  // globals_prv_update_display() already set the correct mode's text).
   bool countdown_active = settings.countdownBool &&
     (!settings.scoreDisplayBool || !after_time) && settings.countdownDisplay != 1;
   bool score_active = settings.scoreDisplayBool &&
@@ -40,12 +30,6 @@ void update_time() {
     //static char s_buffer[8];
     strftime(s_time_text, sizeof(s_time_text), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
     globals_what2show("", "", s_time_text, true, true);
-    /*
-    text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_time_text);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
-    layer_set_hidden(s_layers[LAYER_SCORE_I], true);
-    */
   }
 
   // Month/day handler
@@ -64,7 +48,9 @@ void update_time() {
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  //animation_beat_team_layer();
+  #ifdef TESTING
+  animation_beat_team_layer();
+  #endif
   
   time_t now = time(NULL);
   if(tick_time->tm_min % settings.watchUpdate == 0){
@@ -86,30 +72,16 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       }
     }
     #endif
-
-    // HERE
     
     // Check if we should sync CFBD data (e.g., once daily at 2 AM)
     if (api_should_full_sync() || !settings.cfbd.api_data_valid) {
-    //if ((tick_time->tm_hour == 2 && tick_time->tm_min == 0 && api_should_full_sync()) || !settings.cfbd.api_data_valid) {
       api_request_cfbd_full_sync();
     }
 
     if (settings.countdownBool){
       after_time = timekeeping_countdown();
       if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
-        // Countdown active: HOME/AWAY (merged with Day/Hour sub-labels)
-        // should be visible.
         globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
-        /*
-        text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_day_text);
-        text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_hour_text);
-        text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_countdown_text);
-
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
-        layer_set_hidden(s_layers[LAYER_SCORE_I], true);
-        */
       }
     }
 
@@ -128,18 +100,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
 
       api_score_display();
       if (settings.scoreLocation != 1){
-        // Score active: HOME/AWAY visible (already holding home_str/
-        // away_str content from api_score_display() above).
         globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
-        /*
-        text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_home_text);
-        text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_away_text);
-        text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_text);
-
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
-        layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
-        layer_set_hidden(s_layers[LAYER_SCORE_I], false);
-        */
       }
     }
 
@@ -204,12 +165,6 @@ static time_t get_saturday_noon_eastern_utc(struct tm *now_tm) {
 
 // Primary Countdown Function
 bool timekeeping_countdown() {
-  // 1. Replaced temp buffers 1 & 2 with lightweight pointers
-  //const char *label_top;
-  //const char *label_bot;
-  
-  // 2. Shrink buffer 3 to the exact size needed for "XX:YY\0"
-  //static char s_countdown_buffer[6];
 
   time_t now = time(NULL);
   struct tm *now_tm = localtime(&now);
@@ -285,15 +240,6 @@ bool timekeeping_countdown() {
   api_format_2digits(&s_countdown_text[3], secondplace);
   s_countdown_text[5] = '\0';
 
-  // Apply to text layers - HOME/AWAY now also serve as the countdown's
-  // Day/Hour sub-labels, and TIME also serves as the countdown value,
-  // since they occupy the same positions and are never shown
-  // simultaneously (visibility for HOME/AWAY is handled by the callers
-  // of this function; TIME never needs hiding).
-  //text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], label_top);
-  //text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], label_bot);
-  //text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_countdown_buffer);
-
   return afterwards;
 }
 
@@ -328,9 +274,6 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   #endif
   #endif
 
-  // Default state: HOME/AWAY hidden until countdown or score mode
-  // explicitly shows them (TEXT_LAYER_TIME needs no such default - it
-  // always holds valid content, set moments later by update_time()).
   layer_set_hidden(s_layers[LAYER_SCORE_I], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);

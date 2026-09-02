@@ -1,5 +1,5 @@
 #include "drawing.h"
-#include "structure.h"
+#include "globals.h"
 
 static void drawing_line_update_proc(Layer *layer, GContext *ctx) {
   LinePoints *points = (LinePoints *)layer_get_data(layer);

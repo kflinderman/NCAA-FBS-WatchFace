@@ -4,7 +4,7 @@
 #include "drawing.h"
 #include "timekeeping.h"
 
-
+//Function to easy trigger vibrations
 static void sensor_trigger_vibration(uint8_t type) {
   switch (type) {
     case 1: vibes_short_pulse(); break;
@@ -23,6 +23,7 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
 
+  //Check to make sure animations are on, quiet time is not active, and battery is charged enough
   if (settings.animationSensitivity != 0 &&
       !s_animation &&
       abs(delta) > settings.animationSensitivity &&
@@ -77,7 +78,6 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
   s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 9), (bounds.size.h * VERT_2) / 1000, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   #else
   s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 5), (bounds.size.h * VERT_2) / 1000 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
-  //+ 9
   #endif
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), s_bt_connected);
 }
@@ -90,9 +90,6 @@ void sensor_battery_handler(BatteryChargeState state) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
   #endif
-  // Resource ID rather than GBitmap*: only one battery-state GBitmap is
-  // ever resident at a time (created below, right before use), instead
-  // of preloading all three states permanently at startup.
   uint32_t target_res_id = 0;
 
   // Charging State
@@ -139,17 +136,12 @@ void sensor_battery_handler(BatteryChargeState state) {
 }
 
 void sensor_battery_draw(Layer *window_layer, GRect bounds){
-  // No GBitmap created here - sensor_battery_handler() creates whichever
-  // one state actually applies the first time it runs (Pebble calls the
-  // subscribed handler once immediately on subscribe), so only one
-  // battery-state bitmap is ever resident instead of all three.
+  // Create Battery GBitmap from resource
   s_gbitmap_layers[GBITMAP_LAYER_BATT] = NULL;
 
   #if PBL_DISPLAY_HEIGHT > 180
-  //168
   s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 4), (bounds.size.h * VERT_2) / 1000, 8, 14, NULL, window_layer);
   #else
   s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 2), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
-  //+ 2
   #endif
 }

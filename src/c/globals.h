@@ -1,15 +1,12 @@
 #pragma once
 #include <pebble.h>
 #include "teams.h"
-#include "structure.h"
 
 
 //#define TESTING
 
-#ifdef PBL_PLATFORM_APLITE
+#ifndef PBL_PLATFORM_APLITE
 //#define DEBUG
-#else
-#define DEBUG
 #endif
 
 #define SETTINGS_KEY 1
@@ -93,10 +90,6 @@ typedef enum {
   TEXT_LAYER_BEAT,
   TEXT_LAYER_HOME,
   TEXT_LAYER_AWAY,
-  //TEXT_LAYER_DAY,
-  //TEXT_LAYER_HOUR,
-  //TEXT_LAYER_COUNTDOWN,
-  //TEXT_LAYER_SCORE,
   #ifndef PBL_PLATFORM_APLITE
   TEXT_LAYER_WEATHER,
   TEXT_LAYER_CONDITIONS,
@@ -119,21 +112,12 @@ extern bool noHR;
 typedef enum {
   GBITMAP_LAYER_LOGO,
   GBITMAP_LAYER_BT,
-  // BATT was 3 separate GBitmaps (BATT_CRG/BATT_EMPTY/BATT_LOW) all kept
-  // resident in RAM at once even though only one battery state is ever
-  // shown - now a single slot that's created/destroyed as the state
-  // changes (see sensor_battery_handler in sensors.c).
   GBITMAP_LAYER_BATT,
-  // Same consolidation: API status was 2 GBitmaps (API_LOW/API_EMPTY),
-  // now 1 slot swapped on demand (see api_update_status_indicator in api.c).
   GBITMAP_LAYER_API,
   #ifndef PBL_PLATFORM_APLITE
   GBITMAP_LAYER_BEAT_TEAM,
   GBITMAP_LAYER_BAG,
   GBITMAP_LAYER_WIN,
-  // Same consolidation: the postseason badge was 2 GBitmaps
-  // (BOWL/CHAMP), now 1 slot swapped on demand (see the bowlBool block
-  // in globals.c).
   GBITMAP_LAYER_TROPHY,
   #endif
   #if defined(PBL_HEALTH)
@@ -178,14 +162,6 @@ typedef enum {
 } LayerID;
 extern Layer* s_layers[NUM_GENERIC_LAYERS];
 
-/*
-typedef enum {
-  GFONT_FONT,
-  GFONT_WICON,
-  NUM_GFONT
-} GFontID;
-extern GFont s_gfont[NUM_GFONT];
-*/
 extern GFont s_font, s_wIcon;
 
 extern char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_away_text[5], s_day_text[5], s_hour_text[5];
@@ -208,18 +184,6 @@ extern int16_t temperatureValue;
 extern int16_t conditionValue;
 #endif
 
-/*******************************************
-	* CFBD score state — NOT persisted (live
-	* data refreshed from the API, unlike
-	* ClaySettings which is user configuration)
- *******************************************/
-//extern char scoreHomeTeam[32];
-//extern char scoreAwayTeam[32];
-//extern int16_t scoreHomePoints;
-//extern int16_t scoreAwayPoints;
-//extern bool scoreCompleted;
-//extern bool scoreValid; // false until the first successful response arrives
-
 extern uint8_t beat_spot, beat_primary;
 
 /*******************************************
@@ -228,8 +192,6 @@ extern uint8_t beat_spot, beat_primary;
  * Declared here so animation.c (unobstructed-area
  * repositioning) and main.c (initial layout) agree.
  *******************************************/
-
-
 
 #ifdef PBL_ROUND
   #define RECT_H    660
@@ -310,16 +272,6 @@ extern uint8_t beat_spot, beat_primary;
 #define BITMAP_SIZE 115
 #endif
 
-/*
-#ifdef PBL_ROUND
-  extern const uint16_t rect_h, date_h, vert_2, hor_1, hor_2, time_h;
-#else
-  extern const uint16_t rect_h, date_w, time_h, date_h, vert_1, vert_2, hor_1, hor_2;
-#endif
-extern const uint8_t icon_bump, time_w, time_x, time_y, hr_thick, stepx1, stepx2, stepy, bitmap_size;
-extern const bool hr_w;
-*/
-
 void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow);
 
 /*******************************************
@@ -338,3 +290,13 @@ void globals_prv_update_display(void);
  *******************************************/
 void globals_prv_save_team_data(void);
 void globals_prv_load_team_data(void);
+
+// Structural items
+typedef struct {
+  uint16_t x1, y1, x2, y2, width;
+  GColor color;
+} LinePoints;
+
+typedef struct {
+  GColor fill_color;
+} RoundRectData;

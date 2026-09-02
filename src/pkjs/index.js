@@ -1,20 +1,3 @@
-// src/pkjs/index.js
-
-/**
- * Pebble's AppMessage outbox only allows one message in flight at a time -
- * calling sendAppMessage again before the previous call's success/error
- * callback has fired can silently fail or drop a message. During an ~8s
- * CFBD light sync (many small team-by-team round trips), that collision
- * window is wide open, so anything else that sends a message in that
- * window - a weather push, or Clay pushing new settings after its config
- * webview closes - can interrupt the sync.
- *
- * This wraps Pebble.sendAppMessage with a FIFO queue: every call (ours or
- * Clay's own internal one) goes through the same queue and only the head
- * of the queue is ever actually in flight. Placed here, before Clay is
- * even required below, so Clay's internal sendAppMessage calls go through
- * this wrapped version too - not just this file's own calls.
- */
 (function() {
   var originalSendAppMessage = Pebble.sendAppMessage.bind(Pebble);
   var sendQueue = [];
@@ -119,9 +102,6 @@ function getWeather() {
   );
 }
 
-// Like xhrRequest, but adds a Bearer auth header. Kept separate from the
-// existing xhrRequest helper (used for the unauthenticated weather API)
-// rather than modifying its shared signature.
 var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
@@ -142,10 +122,6 @@ var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   xhr.send();
 };
 
-// apiKey and teamIndex arrive fresh from the watch on every request (see
-// the REQUEST_SCORE branch below) - neither is cached in localStorage or
-// held in any module-level variable, so nothing persists key material in
-// JS between calls.
 function getScore(apiKey, teamIndex) {
   var teamName = CFBD_TEAM_NAMES[teamIndex];
   if (!teamName) {
@@ -167,8 +143,6 @@ function getScore(apiKey, teamIndex) {
         return;
       }
 
-      // Prefer the most recently started game (covers "in progress" and
-      // "most recently completed" without needing extra date logic here).
       var game = games[games.length - 1];
       sendScoreToWatch(game);
     },
@@ -193,16 +167,6 @@ function sendScoreToWatch(game) {
   );
 }
 
-// Two caches, matching the sync protocol: gamesData holds the whole
-// season's games (regular, plus postseason once the calendar's past the
-// regular season) from the light sync - see syncLightCFBD in cfbd.js for
-// why this is a bulk fetch rather than per-team: API_DATA[] tracks the
-// full ~140-team FBS roster, not just the user's favorite/beat team, so
-// anything scoped per-team would mean 100+ CFBD calls every light sync.
-// recordsRankingsData comes from the (less frequent) full sync.
-// REQUEST_CFBD_TEAM_DATA is served by searching whichever cache matches
-// the requested type - no new API call per team, regardless of roster
-// size or how often the displayed team changes.
 var gamesData = null;
 var recordsRankingsData = null;
 
@@ -224,14 +188,6 @@ function sendCalendarToWatch(calendarData) {
   );
 }
 
-// Scans a pool of games (one seasonType's worth) for teamName's entries
-// and returns the one that best represents their "current" game: the
-// most recent one that's already kicked off (in progress or completed).
-// Comparing by date across every matching entry - rather than assuming
-// one game per week - is what correctly handles a team having more than
-// one entry under the same nominal week (bowl slates, doubleheaders). If
-// none have started yet, falls back to the single earliest upcoming game
-// so there's still something to show.
 function pickTeamGameFromPool(teamName, pool) {
   var matches = pool.filter(function(g) {
     return g.homeTeam === teamName || g.awayTeam === teamName;
@@ -251,14 +207,6 @@ function pickTeamGameFromPool(teamName, pool) {
   return upcoming[0];
 }
 
-// Finds the single most current game for one team out of the cached
-// gamesData pool, handling the postseason correctly: once the calendar's
-// past the regular season, check the team's postseason games first (a
-// team can have more than one bowl/playoff-round entry, which
-// pickTeamGameFromPool's date comparison - not a week lookup - is what
-// finds correctly). If the team has no postseason games at all (didn't
-// make a bowl/the playoff), fall back to their last regular season game
-// so there's still real, current data instead of nothing.
 function findLatestTeamGame(teamName, games) {
   if (games.inPostseason) {
     var postGame = pickTeamGameFromPool(teamName, games.postGames);
@@ -268,10 +216,6 @@ function findLatestTeamGame(teamName, games) {
   return pickTeamGameFromPool(teamName, games.regularGames);
 }
 
-// Converts one game object (home/away fields) into this team's own point
-// of view - { opponent, teamScore, vsScore, gametime, completed } -
-// regardless of whether they played home or away. Pass null for a bye/
-// no-game situation (nulls/zeros/empty string).
 function gameToTeamPerspective(teamName, game) {
   if (!game) {
     return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
@@ -317,12 +261,6 @@ function findTeamRank(teamName, rankings) {
   return 0;
 }
 
-// Handles one REQUEST_CFBD_TEAM_DATA from the watch: looks up teamName in
-// whichever cache matches dataType (no new API call - just searching data
-// already fetched in bulk by that sync type) and sends back only the
-// field subset relevant to dataType - the watch applies whatever fields
-// are present, so a games response never touches record/ranking fields
-// and vice versa.
 function sendTeamData(teamIndex, teamName, dataType) {
   if (dataType === CFBD_TEAM_DATA_TYPE_GAMES) {
     if (!gamesData) {
@@ -407,13 +345,6 @@ Pebble.addEventListener('appmessage',
       });
     }
 
-    // ===== CFBD Light Sync: fetch the whole season's games in bulk
-    // (regular, plus postseason once the calendar's past the regular
-    // season), cache in memory, then tell the watch it's ready. The watch
-    // then requests one team at a time (REQUEST_CFBD_TEAM_DATA below),
-    // each served from this same cached fetch - no repeat API calls no
-    // matter how many teams are tracked or how often the displayed team
-    // changes. =====
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
 
@@ -438,7 +369,6 @@ Pebble.addEventListener('appmessage',
       });
     }
 
-    // ===== Watch requesting one team's data at a time, post-sync =====
     if (e.payload['REQUEST_CFBD_TEAM_DATA']) {
       var teamIndex = e.payload['CFBD_TEAM_INDEX'];
       var teamName = e.payload['CFBD_TEAM_NAME'];

@@ -5,19 +5,6 @@
 #include "api.h"
 #include "outbox_queue.h"
 
-// One entry per Clay-driven ClaySettings field: which AppMessage key feeds
-// it, and where/how big it is in the struct. offsetof/sizeof are computed
-// by the compiler, so adding, removing, or reordering a setting is a single
-// line here - there's no positional index or count to keep in sync by hand
-// (the previous switch(idx) on array position was one edit away from
-// silently writing a value into the wrong field, which is exactly what
-// happened when opponentBool needed to be removed here).
-//
-// message_key is a POINTER to the generated MESSAGE_KEY_* symbol, not the
-// key value itself: MESSAGE_KEY_* are extern const uint32_t (linked, not
-// #define'd), so their value isn't known until link time and can't sit
-// directly in a static initializer - only their address can (a valid
-// link-time constant). Dereference at lookup time in prv_find_field().
 typedef struct {
   const uint32_t *message_key;
   size_t offset;
@@ -130,12 +117,6 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
   if (settings_changed) {
     globals_prv_save_settings();
     if (settings.FavoriteTeam != previous_favorite_team) {
-      // Switched to tracking a different team mid-session - TEAMS[] for
-      // it is still whatever it started with, not this team's data, so
-      // pull in its persisted snapshot if one exists. If none exists
-      // (or it's for yet another team), this sets
-      // s_favorite_team_data_missing so api.c forces an immediate
-      // resync instead of waiting for the usual throttle window.
       globals_prv_load_team_data();
     }
     globals_prv_update_display();

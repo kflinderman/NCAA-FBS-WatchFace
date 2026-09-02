@@ -1566,7 +1566,6 @@
                     "file": "fonts/Weather Icons.ttf",
                     "name": "FONT_WEATHER_ICONS_12",
                     "targetPlatforms": [
-                        "aplite",
                         "basalt",
                         "chalk",
                         "diorite",

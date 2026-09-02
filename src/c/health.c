@@ -63,11 +63,6 @@ void health_stepHandler(){
 
   // Update Goal Progress & Football Position
   if (settings.stepsGoalBool) {
-    // Clamp steps to the goal (so the football never overshoots) and
-    // track goal-reached directly, rather than computing a 0.0-1.0 ratio
-    // first - the cross-multiplication below (steps_clamped * span) /
-    // goal gets the same interpolated position without ever forming a
-    // fractional progress value.
     int32_t steps_clamped = (settings.stepsGoal > 0) ?
       ((int32_t)stepvalue < settings.stepsGoal ? (int32_t)stepvalue : settings.stepsGoal) : 0;
     bool goal_reached = (settings.stepsGoal > 0) && ((int32_t)stepvalue >= settings.stepsGoal);
@@ -133,8 +128,7 @@ void health_draw(Layer *window_layer, GRect bounds){
   uint16_t gaps = (((bounds.size.h * TIME_H) / 1000) - STEPY - 25) / 3;
   uint16_t gaps2 = gaps / 5;
   step_ladder = drawing_multiline_layer_create(bounds, window_layer);
-  //drawing_multiline_add_segment(step_ladder, GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), ((bounds.size.h * time_h) / 1000) - 27), GPoint((bounds.size.w / 2 - stepx2) + (stepx1 / 2), stepy), hr_thick, icon_color);
-
+  
   for (uint16_t x = 0; x < 4; x++) {
     drawing_multiline_add_segment(step_ladder, GPoint(bounds.size.w / 2 - STEPX2, STEPY + (gaps * x)), GPoint((bounds.size.w / 2 - STEPX2) + STEPX1, STEPY + (gaps * x)), 2, icon_color);
 

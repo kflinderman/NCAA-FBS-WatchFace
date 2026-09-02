@@ -32,13 +32,6 @@ char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_awa
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
-// RAM-only (never persisted): true when TEAMS[FavoriteTeam] isn't in the
-// recently-used team cache for this launch - either this is a fresh
-// install, or FavoriteTeam was just switched to a team the cache
-// doesn't (or no longer) has an entry for. Forces an immediate resync
-// in api.c regardless of the normal sync-interval throttle, instead of
-// waiting up to 24h/scoreUpdate-minutes to notice the new team has no
-// data yet.
 bool s_favorite_team_data_missing = false;
 bool after_time = true;
 bool gametime = false;
@@ -132,8 +125,6 @@ void globals_prv_save_settings() {
 
 void globals_prv_load_settings() {
   globals_prv_default_settings();
-  // Only load if the saved struct matches current size
-  // (protects against corrupt data or struct layout changes)
   if (persist_exists(SETTINGS_KEY) && persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
@@ -146,20 +137,9 @@ void globals_prv_load_settings() {
   if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 26;
   #endif
 
-  // TEAMS[] itself is rebuilt from compiled-in defaults on every launch
-  // (RAM-only) - restore FavoriteTeam's last-known dynamic fields before
-  // anything gets drawn, so the watchface shows real data immediately
-  // instead of blanking out until the next scheduled CFBD sync completes.
   globals_prv_load_team_data();
 }
 
-// Moves `entry` to the front (most-recently-used) slot of `cache`,
-// shifting whatever's between the old and new position down by one.
-// If entry.team_index was already cached, that slot's old contents are
-// simply relocated to the front; if not, and the cache is full, this
-// naturally drops the least-recently-used slot off the end. Shared by
-// both save (writing fresh data) and load (just re-promoting an
-// already-cached team that was switched back to).
 static void prv_team_cache_touch(PersistedTeamCache *cache, PersistedTeamData entry) {
   uint8_t found = MAX_CACHED_FAVORITE_TEAMS;
   for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
@@ -176,12 +156,6 @@ static void prv_team_cache_touch(PersistedTeamCache *cache, PersistedTeamData en
   cache->slots[0] = entry;
 }
 
-// Persists FavoriteTeam's current dynamic fields into the recently-used
-// team cache. Called whenever a CFBD team walk finishes (see
-// cfbd_team_walk_complete() in api.c) so the cache stays fresh with
-// whatever the last sync applied. If the cache is already full of
-// MAX_CACHED_FAVORITE_TEAMS *other* teams, this evicts whichever one
-// hasn't been used the longest.
 void globals_prv_save_team_data(void) {
   if (settings.FavoriteTeam >= TEAMS_COUNT) return;
 
@@ -215,21 +189,9 @@ void globals_prv_save_team_data(void) {
   persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
 }
 
-// Restores FavoriteTeam's dynamic fields from the recently-used team
-// cache into TEAMS[], if it's in there. Called from
-// globals_prv_load_settings() (fresh launch) and from
-// configuration_callback() (FavoriteTeam changed mid-session) once
-// settings.FavoriteTeam is known to be in range. A cache hit also
-// re-promotes that team to most-recently-used, so switching among a
-// handful of favorites keeps all of them cached instead of the older
-// ones aging out just from being viewed less often than the others are
-// synced.
 void globals_prv_load_team_data(void) {
   if (settings.FavoriteTeam >= TEAMS_COUNT) return;
   if (!persist_exists(TEAM_DATA_KEY) || persist_get_size(TEAM_DATA_KEY) != sizeof(PersistedTeamCache)) {
-    // Nothing usable on flash yet (fresh install, or a struct-layout
-    // change invalidated the old cache) - flag it so api.c forces a
-    // resync now instead of waiting for the normal throttle.
     s_favorite_team_data_missing = true;
     return;
   }
@@ -267,8 +229,6 @@ void globals_prv_load_team_data(void) {
     return;
   }
 
-  // Not in the cache - never tracked before, or aged out by
-  // MAX_CACHED_FAVORITE_TEAMS more-recently-used teams since.
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "FavoriteTeam %d not in the recently-used cache - forcing resync", settings.FavoriteTeam);
   #endif
@@ -441,31 +401,13 @@ void globals_prv_update_display() {
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
     #endif
-    // Shares api_should_light_sync() with the score block below (rather
-    // than its own separate !api_data_valid check) plus the in-flight
-    // guard in api_request_cfbd_light_sync() - previously these two call
-    // sites could both independently see "no valid data yet" on the same
-    // update_display() pass and fire two REQUEST_CFBD_LIGHT_SYNC in a row.
     if (api_should_light_sync()) {
       api_request_cfbd_light_sync();
     }
     after_time = timekeeping_countdown();
     if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
-      // Countdown active: HOME/AWAY (merged with Day/Hour sub-labels)
-      // visible; TEXT_LAYER_TIME already holds the countdown value from
-      // timekeeping_countdown() above and needs no hide/show toggle.
       globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
       timeTrue = false;
-      /*
-      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_day_text);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_hour_text);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_countdown_text);
-      
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
-      layer_set_hidden(s_layers[LAYER_SCORE_I], true);
-      timeTrue = false;
-      */
     }
   }
 
@@ -486,31 +428,11 @@ void globals_prv_update_display() {
       // the score text from api_score_display() above.
       globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
       timeTrue = false;
-      /*
-      text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], s_home_text);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], s_away_text);
-      text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_score_text);
-      
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), false);
-      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), false);
-      layer_set_hidden(s_layers[LAYER_SCORE_I], false);
-      timeTrue = false;
-      */
     }
   }
 
   if (timeTrue){
-    // Neither countdown nor score is active - HOME/AWAY hidden, plain
-    // clock shows in TEXT_LAYER_TIME (kept current by update_time()'s
-    // own guard in timekeeping.c).
-
     globals_what2show("", "", s_time_text, true, true);
-    /*
-    text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], s_time_text);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
-    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
-    layer_set_hidden(s_layers[LAYER_SCORE_I], true);
-    */
   }
 
   #ifndef PBL_PLATFORM_APLITE
@@ -544,9 +466,6 @@ void globals_prv_update_display() {
 
 
   if (settings.bowlBool){
-    // Resource ID rather than GBitmap*: only one trophy-state GBitmap is
-    // ever resident at a time (created below, right before use), instead
-    // of preloading both BOWL and CHAMP permanently at startup.
     uint32_t target_res_id = 0;
     if(TEAMS[settings.FavoriteTeam].postseasonGames >= 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 1){
       target_res_id = RESOURCE_ID_BOWL;

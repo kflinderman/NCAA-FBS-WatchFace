@@ -1,6 +1,5 @@
 #include "animation.h"
 #include "globals.h"
-#include "structure.h"
 #include "timekeeping.h"
 
 
@@ -73,9 +72,6 @@ void animation_beat_team_layer(void) {
   animation_set_duration((Animation*)anim_rect, 1000);
   animation_schedule((Animation*)anim_rect);
   #else
-  // No layer animation on Aplite — just re-run this function after 1s
-  // to flip target_mode and re-apply text, mirroring what
-  // animation_beat_team_stopped's first phase does on other platforms.
   if (!returning) {
     app_timer_register(3000, (AppTimerCallback)animation_beat_team_layer, NULL);
   } else {

@@ -1,27 +1,6 @@
 module.exports = function (minified) {
   var clayConfig = this;
 
-  // ------------------------------------------------------------------
-  // Visibility tree
-  // ------------------------------------------------------------------
-  // Each node represents one Clay item.
-  //   key:             messageKey (or id, for text/donation_block items)
-  //   condition:       fn(rawValue) -> bool. If present, controls whether
-  //                    this node's CHILDREN are shown (this node must
-  //                    itself be visible for the condition to matter).
-  //   externalKey:     messageKey of ANOTHER item elsewhere in the tree
-  //                    whose truthiness gates this node's OWN visibility,
-  //                    in addition to its parent's visibility.
-  //   children:        nested nodes, hidden automatically if this node
-  //                    is hidden (cascading), and further filtered by
-  //                    `condition` if present.
-  //
-  // A node is visible only if every ancestor is visible AND every
-  // ancestor's condition (if any) evaluates true against that ancestor's
-  // current value. That's what makes "higher hides everything below it"
-  // work automatically, no matter how deep the nesting.
-  // ------------------------------------------------------------------
-
   var isTrue = function (v) { return v === true; };
   var isFalse = function (v) { return v === false; };
   var eq = function (target) {
@@ -159,10 +138,6 @@ module.exports = function (minified) {
     }
   ];
 
-  // ------------------------------------------------------------------
-  // Engine
-  // ------------------------------------------------------------------
-
   function getItem(key) {
     var item = clayConfig.getItemByMessageKey(key);
     if (!item) {
@@ -171,8 +146,6 @@ module.exports = function (minified) {
     return item;
   }
 
-  // Recursively applies visibility down the tree.
-  // parentVisible = whether this node's parent chain allows it to show.
   function applyNode(node, parentVisible) {
     var item = getItem(node.key);
     var ownVisible = parentVisible;
@@ -209,11 +182,6 @@ module.exports = function (minified) {
     });
   }
 
-  // Attach a 'change' listener to every node in the tree (any node's
-  // value could gate its own children, or be an externalKey target for
-  // something elsewhere), and just recompute the whole tree each time.
-  // This guarantees correct cascading no matter how deep or tangled
-  // the dependencies get.
   function attachListeners(nodes) {
     nodes.forEach(function (node) {
       var item = getItem(node.key);
@@ -230,8 +198,6 @@ module.exports = function (minified) {
     attachListeners(tree);
     recomputeAll();
 
-    // --- NEW CODE: Sync scoreUpdate min to watchUpdate value ---
-
     var watchUpdateItem = getItem('watchUpdate');
     var scoreUpdateItem = getItem('scoreUpdate');
 
@@ -244,7 +210,6 @@ module.exports = function (minified) {
         scoreUpdateItem.config.min = newMin;
 
         // 2. Update the actual HTML attribute on the range input
-        // (Clay components expose their input elements via $manipulator)
         if (scoreUpdateItem.$manipulator) {
           scoreUpdateItem.$manipulator.set('@min', newMin);
         }

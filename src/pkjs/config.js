@@ -1,4 +1,3 @@
-// FYI https://github.com/pebble-dev/clay#showing-items-for-specific-platforms-and-features
 module.exports = [
   {
     "type": "heading",
@@ -1494,13 +1493,6 @@ module.exports = [
         "messageKey": "winBool",
         "capabilities": ["NOT_PLATFORM_APLITE"]
       },
-      //{
-        //"type": "toggle",
-        //"label": "Conference Champion Marking",
-        //"defaultValue": false,
-        //"messageKey": "confBool",
-        //"capabilities": ["NOT_PLATFORM_APLITE"]
-      //},
       {
         "type": "toggle",
         "label": "Bowl Win Marking",
