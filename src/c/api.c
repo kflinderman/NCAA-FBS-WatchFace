@@ -240,6 +240,15 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   }
   settings.cfbd.api_data_valid = true;
   globals_prv_save_settings();
+  // Snapshot FavoriteTeam's fields to flash - whichever walk type just
+  // finished (games or records), TEAMS[FavoriteTeam] now holds whatever
+  // it last had plus this walk's updates, so re-persist it here rather
+  // than only on games-type completion.
+  globals_prv_save_team_data();
+  // FavoriteTeam now has real data for this session (even if only one
+  // of games/records has run so far - the other, if pending, will apply
+  // on top shortly) - stop forcing early syncs from api_should_*_sync().
+  s_favorite_team_data_missing = false;
   globals_prv_update_display();
 
   if (cfbd_pending_games_walk) {
@@ -362,7 +371,15 @@ bool api_should_full_sync(void) {
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
     return false;
   }
-  
+
+  // FavoriteTeam has no valid persisted snapshot for this session (fresh
+  // install, or the user just switched to tracking a different team) -
+  // sync now instead of waiting out the normal 24h throttle, which would
+  // otherwise leave the display blank for up to a day.
+  if (settings.api && s_favorite_team_data_missing) {
+    return true;
+  }
+
   // Never synced, or more than 24 hours since last full sync
   if (settings.api && (!settings.cfbd.api_data_valid ||
                        (now - settings.cfbd.last_full_sync_ts >= 86400))) {
@@ -386,6 +403,12 @@ bool api_should_light_sync(void) {
   
   if (cfbd_light_sync_pending) {
     return false;
+  }
+
+  // Same reasoning as api_should_full_sync(): don't wait out the normal
+  // throttle if FavoriteTeam's data is known to be missing this session.
+  if (settings.api && s_favorite_team_data_missing) {
+    return true;
   }
 
   time_t now = time(NULL);

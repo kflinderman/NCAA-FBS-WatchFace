@@ -142,14 +142,16 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
         */
       }
     }
+
+    #ifdef TESTING
+    animation_beat_team_layer();
+    #endif
   }
 }
 
-#ifndef PBL_PLATFORM_APLITE
 void timer_callback(void *data) {
   animation_beat_team_layer();
 }
-#endif
 
 // Pure C converter from UTC components to epoch seconds (bypasses missing timegm)
 static time_t utc_to_epoch(int year, int mon, int mday, int hour, int min) {

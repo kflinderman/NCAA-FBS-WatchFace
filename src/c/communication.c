@@ -95,6 +95,7 @@ static const ClaySettingField *prv_find_field(uint32_t key) {
 
 void configuration_callback(DictionaryIterator *iterator, void *context) {
   bool settings_changed = false;
+  uint8_t previous_favorite_team = settings.FavoriteTeam;
 
   for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
     // 1. API key string assignment
@@ -128,6 +129,15 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
   // Save and apply if any settings were changed
   if (settings_changed) {
     globals_prv_save_settings();
+    if (settings.FavoriteTeam != previous_favorite_team) {
+      // Switched to tracking a different team mid-session - TEAMS[] for
+      // it is still whatever it started with, not this team's data, so
+      // pull in its persisted snapshot if one exists. If none exists
+      // (or it's for yet another team), this sets
+      // s_favorite_team_data_missing so api.c forces an immediate
+      // resync instead of waiting for the usual throttle window.
+      globals_prv_load_team_data();
+    }
     globals_prv_update_display();
   }
 }

@@ -32,6 +32,14 @@ char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_awa
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
+// RAM-only (never persisted): true when TEAMS[FavoriteTeam] isn't in the
+// recently-used team cache for this launch - either this is a fresh
+// install, or FavoriteTeam was just switched to a team the cache
+// doesn't (or no longer) has an entry for. Forces an immediate resync
+// in api.c regardless of the normal sync-interval throttle, instead of
+// waiting up to 24h/scoreUpdate-minutes to notice the new team has no
+// data yet.
+bool s_favorite_team_data_missing = false;
 bool after_time = true;
 bool gametime = false;
 BatteryChargeState s_battery_state;
@@ -137,7 +145,134 @@ void globals_prv_load_settings() {
   if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 108;
   if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 26;
   #endif
-  
+
+  // TEAMS[] itself is rebuilt from compiled-in defaults on every launch
+  // (RAM-only) - restore FavoriteTeam's last-known dynamic fields before
+  // anything gets drawn, so the watchface shows real data immediately
+  // instead of blanking out until the next scheduled CFBD sync completes.
+  globals_prv_load_team_data();
+}
+
+// Moves `entry` to the front (most-recently-used) slot of `cache`,
+// shifting whatever's between the old and new position down by one.
+// If entry.team_index was already cached, that slot's old contents are
+// simply relocated to the front; if not, and the cache is full, this
+// naturally drops the least-recently-used slot off the end. Shared by
+// both save (writing fresh data) and load (just re-promoting an
+// already-cached team that was switched back to).
+static void prv_team_cache_touch(PersistedTeamCache *cache, PersistedTeamData entry) {
+  uint8_t found = MAX_CACHED_FAVORITE_TEAMS;
+  for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+    if (cache->slots[i].team_index == entry.team_index) {
+      found = i;
+      break;
+    }
+  }
+
+  uint8_t shift_end = (found < MAX_CACHED_FAVORITE_TEAMS) ? found : (MAX_CACHED_FAVORITE_TEAMS - 1);
+  for (uint8_t i = shift_end; i > 0; i--) {
+    cache->slots[i] = cache->slots[i - 1];
+  }
+  cache->slots[0] = entry;
+}
+
+// Persists FavoriteTeam's current dynamic fields into the recently-used
+// team cache. Called whenever a CFBD team walk finishes (see
+// cfbd_team_walk_complete() in api.c) so the cache stays fresh with
+// whatever the last sync applied. If the cache is already full of
+// MAX_CACHED_FAVORITE_TEAMS *other* teams, this evicts whichever one
+// hasn't been used the longest.
+void globals_prv_save_team_data(void) {
+  if (settings.FavoriteTeam >= TEAMS_COUNT) return;
+
+  PersistedTeamCache cache;
+  if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
+    persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+  } else {
+    for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+      cache.slots[i].team_index = TEAM_CACHE_EMPTY_SLOT;
+    }
+  }
+
+  Team *fav = &TEAMS[settings.FavoriteTeam];
+  PersistedTeamData entry = {
+    .team_index = settings.FavoriteTeam,
+    .vs_id = fav->vs_id,
+    .score = fav->score,
+    .vs_score = fav->vs_score,
+    #ifndef PBL_PLATFORM_APLITE
+    .ranking = fav->ranking,
+    .wins = fav->wins,
+    .postseasonGames = fav->postseasonGames,
+    .postseasonWins = fav->postseasonWins,
+    .postseasonLosses = fav->postseasonLosses,
+    #endif
+    .completed = fav->completed,
+    .gametime = fav->gametime,
+  };
+
+  prv_team_cache_touch(&cache, entry);
+  persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+}
+
+// Restores FavoriteTeam's dynamic fields from the recently-used team
+// cache into TEAMS[], if it's in there. Called from
+// globals_prv_load_settings() (fresh launch) and from
+// configuration_callback() (FavoriteTeam changed mid-session) once
+// settings.FavoriteTeam is known to be in range. A cache hit also
+// re-promotes that team to most-recently-used, so switching among a
+// handful of favorites keeps all of them cached instead of the older
+// ones aging out just from being viewed less often than the others are
+// synced.
+void globals_prv_load_team_data(void) {
+  if (settings.FavoriteTeam >= TEAMS_COUNT) return;
+  if (!persist_exists(TEAM_DATA_KEY) || persist_get_size(TEAM_DATA_KEY) != sizeof(PersistedTeamCache)) {
+    // Nothing usable on flash yet (fresh install, or a struct-layout
+    // change invalidated the old cache) - flag it so api.c forces a
+    // resync now instead of waiting for the normal throttle.
+    s_favorite_team_data_missing = true;
+    return;
+  }
+
+  PersistedTeamCache cache;
+  persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+
+  for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+    if (cache.slots[i].team_index != settings.FavoriteTeam) continue;
+
+    PersistedTeamData data = cache.slots[i];
+
+    Team *fav = &TEAMS[settings.FavoriteTeam];
+    fav->vs_id = data.vs_id;
+    fav->score = data.score;
+    fav->vs_score = data.vs_score;
+    #ifndef PBL_PLATFORM_APLITE
+    fav->ranking = data.ranking;
+    fav->wins = data.wins;
+    fav->postseasonGames = data.postseasonGames;
+    fav->postseasonWins = data.postseasonWins;
+    fav->postseasonLosses = data.postseasonLosses;
+    #endif
+    fav->completed = data.completed;
+    fav->gametime = data.gametime;
+
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "Restored cached team data for FavoriteTeam %d (was cache slot %d): vsd=%d score=%d-%d completed=%d",
+            settings.FavoriteTeam, i, fav->vs_id, fav->score, fav->vs_score, fav->completed);
+    #endif
+
+    // Re-promote to most-recently-used and persist the reordered cache.
+    prv_team_cache_touch(&cache, data);
+    persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+    return;
+  }
+
+  // Not in the cache - never tracked before, or aged out by
+  // MAX_CACHED_FAVORITE_TEAMS more-recently-used teams since.
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "FavoriteTeam %d not in the recently-used cache - forcing resync", settings.FavoriteTeam);
+  #endif
+  s_favorite_team_data_missing = true;
 }
 
 void globals_prv_update_display() {

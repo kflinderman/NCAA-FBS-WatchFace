@@ -139,7 +139,9 @@ static void main_window_unload(Window *window) {
   destroy_layers_by_kind((void**)s_gbitmap_layers, LAYER_KIND_GBITMAP, NUM_GBITMAP_LAYERS);
 
   // Unload Fonts
+  #if PBL_DISPLAY_HEIGHT > 180
   fonts_unload_custom_font(s_font);
+  #endif
   fonts_unload_custom_font(s_wIcon);
 
   // Destroy BitmapLayer
@@ -189,13 +191,11 @@ static void init() {
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
 
   // Subscribe to continuous accelerometer data for Y-movement detection
-  #ifndef PBL_PLATFORM_APLITE
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Accelerometer");
   #endif
   accel_service_set_sampling_rate(ACCEL_SAMPLING_25HZ);
   accel_data_service_subscribe(5, sensor_accel_data_handler);
-  #endif
 
   // Subscribe to bluetooth connection updates and set initial state
   #if defined(DEBUG)
@@ -233,9 +233,7 @@ static void init() {
 static void deinit() {
   //bluetooth_connection_service_unsubscribe();
 
-  #ifndef PBL_PLATFORM_APLITE
   accel_data_service_unsubscribe();
-  #endif
   connection_service_unsubscribe();
   battery_state_service_unsubscribe();
   unobstructed_area_service_unsubscribe();

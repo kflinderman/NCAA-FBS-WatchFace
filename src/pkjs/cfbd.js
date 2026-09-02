@@ -20,6 +20,14 @@ var cfbd = (function() {
     BATCH_DELAY: 100  // ms between requests to avoid hammering API
   };
 
+  // Queued callbacks for an in-flight determineSeasonAndBoundary() call.
+  // null when no call is in progress. Lets syncFullCFBD and syncLightCFBD
+  // both ask for the season/boundary at (near) the same time - as they
+  // now can, since a missing-team-data force-resync makes both fire
+  // together - without each kicking off its own redundant calendar +
+  // next-season-boundary fetch. See determineSeasonAndBoundary() below.
+  var seasonDeterminationCallbacks = null;
+
   /**
    * Persistent (localStorage-backed) tracking of API calls made this
    * calendar month. Incremented once per real HTTP request (see
@@ -338,7 +346,34 @@ var cfbd = (function() {
    *      - If in last year's window: use last year (postseason), fetch next year's first game
    *      - If not: this is offseason between seasons, fetch next year's first game as boundary
    */
+  // Public entry point: shares one in-flight determineSeasonAndBoundaryImpl()
+  // call across concurrent callers instead of letting each start its own.
+  // syncFullCFBD and syncLightCFBD can both land here within the same
+  // tick (a missing-team-data force-resync makes that the normal case
+  // now, not a rare race), and without this, each would independently
+  // pay for a calendar fetch + a next-season first-game fetch - exactly
+  // the duplicate "Grabbing full regular season for <next year>" calls
+  // you'd otherwise see twice in the logs for one sync cycle.
   function determineSeasonAndBoundary(apiKey, callback) {
+    if (seasonDeterminationCallbacks) {
+      // Already in progress - piggyback on it instead of starting a
+      // second, redundant round trip.
+      console.log('Season/boundary determination already in progress - reusing it');
+      seasonDeterminationCallbacks.push(callback);
+      return;
+    }
+
+    seasonDeterminationCallbacks = [callback];
+    determineSeasonAndBoundaryImpl(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
+      var callbacks = seasonDeterminationCallbacks;
+      seasonDeterminationCallbacks = null;
+      for (var i = 0; i < callbacks.length; i++) {
+        callbacks[i](year, nextSeasonTs, seasonDates, weekDates);
+      }
+    });
+  }
+
+  function determineSeasonAndBoundaryImpl(apiKey, callback) {
     var now = new Date();
     var currentYear = now.getFullYear();
 
