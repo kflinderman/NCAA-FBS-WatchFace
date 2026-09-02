@@ -318,21 +318,9 @@ void globals_prv_update_display() {
   s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
   #ifndef PBL_PLATFORM_APLITE
   s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
-  #endif
 
   // Setup Accent / Icon Colors
-  #ifndef PBL_PLATFORM_APLITE
-  GColor primary_icon_color;
-  #if defined(PBL_COLOR)
-  primary_icon_color = (GColor){.argb = TEAMS[primary_idx].icon_color};
-  #else
-  if(gcolor_equal((GColor){.argb = TEAMS[primary_idx].color}, GColorWhite)){
-    primary_icon_color = GColorBlack;
-  }
-  else{
-    primary_icon_color = GColorWhite;
-  }
-  #endif
+  GColor primary_icon_color = teams_get_icon_color(primary_idx);
   #endif
   
   // Update beat team layer position

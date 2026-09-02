@@ -64,3 +64,5 @@ typedef struct {
 extern Team TEAMS[];
 extern const size_t TEAMS_COUNT;
 extern CFBDState cfbd_state;
+
+GColor teams_get_icon_color(uint8_t team_idx);

@@ -46,7 +46,6 @@ void update_time() {
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  time_t now = time(NULL);
   //Determine if we should update anything based on setting
   if(tick_time->tm_min % settings.watchUpdate == 0){
     //Update time
@@ -87,6 +86,7 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     // I might need to look into if both countdown and scores are chosen + they're on different screens
     // Currently it just displays one or the other which is fine. 
     if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+      time_t now = time(NULL);
       time_t target_time = (time_t)TEAMS[settings.FavoriteTeam].gametime;
       int32_t seconds_diff = (int32_t)(target_time - now);
       int32_t minutes_diff = seconds_diff / 60;

@@ -493,3 +493,20 @@ Team TEAMS[] = {
 
 // Define the count based on the array
 const size_t TEAMS_COUNT = sizeof(TEAMS) / sizeof(TEAMS[0]);
+
+// Helper to determine icon coloring
+GColor teams_get_icon_color(uint8_t team_idx){
+  GColor icon_color;
+  #if defined(PBL_COLOR)
+  icon_color = (GColor){.argb = TEAMS[team_idx].icon_color};
+  #else
+  if(gcolor_equal((GColor){.argb = TEAMS[team_idx].color}, GColorWhite)){
+    icon_color = GColorBlack;
+  }
+  else{
+    icon_color = GColorWhite;
+  }
+  #endif
+  
+  return icon_color;
+}

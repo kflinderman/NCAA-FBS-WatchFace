@@ -88,9 +88,6 @@ void display_beatteam(Layer *window_layer, GRect bounds){
   layer_set_update_proc(s_layers[LAYER_BEAT_TEAM], drawing_round_rect_update_proc);
   layer_add_child(window_layer, s_layers[LAYER_BEAT_TEAM]);
   s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM] = drawing_bitmap_set((bounds.size.w - BITMAP_SIZE) / 2, bounds.size.h * 0.025, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM], s_layers[LAYER_BEAT_TEAM]);
-  
-  #ifndef PBL_PLATFORM_APLITE
   s_bitmap_layers[BITMAP_LAYER_BAGB] = drawing_bitmap_set(0, 0, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]));
-  #endif
 }
 #endif

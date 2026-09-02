@@ -5,18 +5,22 @@
 #include "api.h"
 #include "outbox_queue.h"
 
+// Defines how an incoming message key maps to a specific field in the settings struct.
 typedef struct {
   const uint32_t *message_key;
   size_t offset;
   uint8_t size; // bytes: 1 (uint8_t/bool), 2 (uint16_t), or 4 (uint32_t)
 } ClaySettingField;
 
+// Helper macro for when the AppMessage key and the struct field share the exact same name.
 #define SF(field) \
   { &MESSAGE_KEY_##field, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
+
+// Helper macro for when the AppMessage key differs from the struct field name.
 #define SF2(msg_key, field) \
   { &MESSAGE_KEY_##msg_key, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
 
-// Stored in Flash/ROM — 0 bytes of RAM usage
+// Master lookup table for all configuration settings.
 static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(DisconnectVibration),
   SF(ReconnectVibration),
@@ -68,11 +72,13 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(watchUpdate),
 };
 
+// Clean up macros so they don't pollute the rest of the namespace
 #undef SF
 #undef SF2
 
 #define CLAY_SETTINGS_FIELDS_COUNT (sizeof(CLAY_SETTINGS_FIELDS) / sizeof(CLAY_SETTINGS_FIELDS[0]))
 
+// Helper function to find a setting's mapping definition based on an incoming AppMessage key.
 static const ClaySettingField *prv_find_field(uint32_t key) {
   for (uint32_t i = 0; i < CLAY_SETTINGS_FIELDS_COUNT; i++) {
     if (key == *CLAY_SETTINGS_FIELDS[i].message_key) return &CLAY_SETTINGS_FIELDS[i];
@@ -80,26 +86,27 @@ static const ClaySettingField *prv_find_field(uint32_t key) {
   return NULL;
 }
 
+// Iterates through incoming dictionary elements and updates the global settings
 void configuration_callback(DictionaryIterator *iterator, void *context) {
   bool settings_changed = false;
   uint8_t previous_favorite_team = settings.FavoriteTeam;
 
   for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
-    // 1. API key string assignment
+    // API key string assignment
     if (t->key == MESSAGE_KEY_api_key) {
       snprintf(settings.api_key, sizeof(settings.api_key), "%s", t->value->cstring);
       settings_changed = true;
       continue;
     }
 
-    // 2. Look up which settings field this key maps to
+    // Look up which settings field this key maps to
     const ClaySettingField *field = prv_find_field(t->key);
     if (!field) continue;
 
     int32_t value = (t->type == TUPLE_CSTRING) ? atoi(t->value->cstring) : t->value->int32;
     settings_changed = true;
 
-    // 3. Write directly into the settings struct at the field's offset
+    // Write directly into the settings struct at the field's offset
     uint8_t *field_ptr = (uint8_t *)&settings + field->offset;
     switch (field->size) {
       case 1: *(uint8_t *)field_ptr = (uint8_t)value; break;
@@ -136,12 +143,14 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   #endif
 }
 
+// Triggered if the phone tries to send data to the watch, but the watch fails to receive it.
 void inbox_dropped_callback(AppMessageResult reason, void *context) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_ERROR, "Message dropped!");
   #endif
 }
 
+// Triggered if the watch attempts to send a message to the phone, but fails.
 void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reason, void *context) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_ERROR, "Outbox send failed! Reason: %d", reason);
@@ -149,6 +158,7 @@ void outbox_failed_callback(DictionaryIterator *iterator, AppMessageResult reaso
   outbox_queue_on_result();
 }
 
+// Triggered when a message is successfully delivered from the watch to the phone.
 void outbox_sent_callback(DictionaryIterator *iterator, void *context) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Outbox send success!");

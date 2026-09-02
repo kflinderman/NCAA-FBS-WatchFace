@@ -134,26 +134,33 @@ static void build_request_full_sync(DictionaryIterator *iter) {
 }
 
 uint8_t api_update_status_indicator() {
-  if (api_calls_percent_used() >= 99) {
-    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
-      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
-    }
-    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
-    return 0;
-  } else if (api_calls_nearing_limit()) {
-    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
-      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
-    }
-    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
-    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
-    return 1;
-  } else {
-    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
-    return 2;
+  uint8_t status;
+
+  if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
   }
+
+  if (api_calls_percent_used() >= 99) {
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+    //bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
+    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
+    status = 0;
+  }
+  else if (api_calls_nearing_limit()) {
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
+    //bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
+    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
+    status = 1;
+  }
+  else {
+    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+    status = 2;
+  }
+
+  if (status < 2) bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), status == 2);
+
+  return status;
 }
 
 void api_request_cfbd_full_sync(void) {
@@ -275,8 +282,6 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD calendar received: year %d, next season ts %lu",
             settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
     #endif
-
-    apply_api_usage_from_message(iterator);
 
     apply_api_usage_from_message(iterator);
 

@@ -3,18 +3,24 @@
 #include "teams.h"
 
 
+/*********************/
+/* DEBUG Variables   */
+/*********************/
+
 //#define TESTING
 
 #ifndef PBL_PLATFORM_APLITE
 //#define DEBUG
 #endif
 
+
+
+
+/*******************************************/
+/* ClaySettings — persisted user settings  */
+/*******************************************/
 #define SETTINGS_KEY 1
 #define NUM_TEAMS 154
-
-/*******************************************
- * ClaySettings — persisted user settings
- *******************************************/
 typedef struct ClaySettings {
   uint8_t DisconnectVibration;
   uint8_t ReconnectVibration;
@@ -71,12 +77,12 @@ typedef struct ClaySettings {
 
 extern ClaySettings settings;
 
-/*******************************************
- * UI element pointers (owned/created in main.c,
- * used by other modules)
- *******************************************/
 extern Window *s_main_window;
 
+
+/*********************/
+/* Layer Arrays      */
+/*********************/
 typedef enum {
   LAYER_KIND_TEXT,
   LAYER_KIND_BITMAP,
@@ -103,11 +109,6 @@ typedef enum {
   NUM_TEXT_LAYERS
 } TextLayerID;
 extern TextLayer* s_text_layers[NUM_TEXT_LAYERS];
-
-#if defined(PBL_HEALTH)
-extern Layer *hr_icon, *step_ladder;
-extern bool noHR;
-#endif
 
 typedef enum {
   GBITMAP_LAYER_LOGO,
@@ -162,29 +163,27 @@ typedef enum {
 } LayerID;
 extern Layer* s_layers[NUM_GENERIC_LAYERS];
 
+
+/***************************************/
+/* Sensor / state variables            */
+/***************************************/
+
+#if defined(PBL_HEALTH)
+extern Layer *hr_icon, *step_ladder;
+extern bool noHR;
+#endif
 extern GFont s_font, s_wIcon;
-
 extern char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_away_text[5], s_day_text[5], s_hour_text[5];
-
-/*******************************************
- * Sensor / state variables
- *******************************************/
 extern int16_t s_prev_y;
-extern bool s_bt_connected;
-extern bool s_animation;
-extern bool s_favorite_team_data_missing;
-extern bool after_time;
-extern bool gametime;
+extern bool s_bt_connected, s_animation, s_favorite_team_data_missing, after_time, gametime, s_bt_history;
 extern BatteryChargeState s_battery_state;
-extern bool s_bt_history;
+extern uint8_t beat_spot, beat_primary;
 extern int16_t s_batt_history;
 extern int32_t current_time_integer;
 #ifndef PBL_PLATFORM_APLITE
 extern int16_t temperatureValue;
 extern int16_t conditionValue;
 #endif
-
-extern uint8_t beat_spot, beat_primary;
 
 /*******************************************
  * Layout constants — values differ by shape/size,
@@ -272,26 +271,9 @@ extern uint8_t beat_spot, beat_primary;
 #define BITMAP_SIZE 115
 #endif
 
-void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow);
-
-/*******************************************
- * Settings persistence + display application
- * (settings.c)
- *******************************************/
-void globals_prv_default_settings(void);
-void globals_prv_save_settings(void);
-void globals_prv_load_settings(void);
-void globals_prv_update_display(void);
-
-/*******************************************
- * FavoriteTeam data persistence (globals.c)
- * — see PersistedTeamCache in teams.h for the
- * recently-used-teams cache this reads/writes.
- *******************************************/
-void globals_prv_save_team_data(void);
-void globals_prv_load_team_data(void);
-
-// Structural items
+/************************/
+/* Structural items     */
+/************************/
 typedef struct {
   uint16_t x1, y1, x2, y2, width;
   GColor color;
@@ -300,3 +282,15 @@ typedef struct {
 typedef struct {
   GColor fill_color;
 } RoundRectData;
+
+
+/*****************/
+/* Functions     */
+/*****************/
+void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow);
+void globals_prv_default_settings(void);
+void globals_prv_save_settings(void);
+void globals_prv_load_settings(void);
+void globals_prv_update_display(void);
+void globals_prv_save_team_data(void);
+void globals_prv_load_team_data(void);

@@ -31,7 +31,7 @@ void weather_temp_update(){
   }
 
   uint8_t tempTemperature = temperatureValue;
-  char unit = 'F';
+  char unit;
 
   //Determine temperature units
   if (settings.weatherUnits){
@@ -102,18 +102,9 @@ void weather_callback(DictionaryIterator *iterator, void *context){
 //First function to draw all necessary items.
 void weather_draw(Layer *window_layer, GRect bounds){
   
-  //Determine text/icon color based on Favorite team
-  GColor icon_color;
-  #if defined(PBL_COLOR)
-  icon_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color};
-  #else
-  if(gcolor_equal((GColor){.argb = TEAMS[settings.FavoriteTeam].color}, GColorWhite)){
-    icon_color = GColorBlack;
-  }
-  else{
-    icon_color = GColorWhite;
-  }
-  #endif
+  //Determine text/icon color based on display team
+  uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  GColor icon_color = teams_get_icon_color(primary_idx);
   
   //Draw layers based on large or small screen
   #if PBL_DISPLAY_HEIGHT > 180

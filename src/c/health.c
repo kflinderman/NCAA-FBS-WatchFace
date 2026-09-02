@@ -119,17 +119,9 @@ void health_handler() {
 
 //Draw everything needed
 void health_draw(Layer *window_layer, GRect bounds){
-  GColor icon_color;
-  #if defined(PBL_COLOR)
-  icon_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color};
-  #else
-  if(gcolor_equal((GColor){.argb = TEAMS[settings.FavoriteTeam].color}, GColorWhite)){
-    icon_color = GColorBlack;
-  }
-  else{
-    icon_color = GColorWhite;
-  }
-  #endif
+  //Determine text/icon color based on display team
+  uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  GColor icon_color = teams_get_icon_color(primary_idx);
   
   //HR Value
   #if PBL_DISPLAY_HEIGHT > 180
