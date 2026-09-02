@@ -3,7 +3,12 @@
 #include "timekeeping.h"
 
 
+/****************/
+/* Animation    */
+/****************/
+
 #ifndef PBL_PLATFORM_APLITE
+//Function to transition the animation so it goes back once done
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
   Layer *layer = (Layer *)context;
@@ -22,6 +27,7 @@ void animation_beat_team_layer(void) {
   static bool returning = false;
 
   #ifndef PBL_PLATFORM_APLITE
+  //Figure out movement of the beat team and its layer
   GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
 
   GRect beat_on_screen  = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
@@ -39,6 +45,7 @@ void animation_beat_team_layer(void) {
 
   uint8_t target_mode = returning ? 1 : 2;
 
+  //Determine if we need to show a score or countdown (or bring back time)
   bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
   bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
 
@@ -61,6 +68,7 @@ void animation_beat_team_layer(void) {
   }
 
   #ifndef PBL_PLATFORM_APLITE
+  //Call layer movement and set flag for returning
   PropertyAnimation *anim_beat = property_animation_create_layer_frame(s_layers[LAYER_BEAT_TEAM], &beat_from, &beat_to);
   animation_set_duration((Animation*)anim_beat, 1000);
   animation_set_handlers((Animation*)anim_beat, (AnimationHandlers){
@@ -72,6 +80,7 @@ void animation_beat_team_layer(void) {
   animation_set_duration((Animation*)anim_rect, 1000);
   animation_schedule((Animation*)anim_rect);
   #else
+  //OTherwise we're just changing the text in the time area, but we need to setup a register to return to main view
   if (!returning) {
     app_timer_register(3000, (AppTimerCallback)animation_beat_team_layer, NULL);
   } else {
@@ -82,12 +91,19 @@ void animation_beat_team_layer(void) {
   returning = !returning;
 }
 
+/****************/
+/* Quick View   */
+/****************/
+
+#ifndef PBL_PLATFORM_APLITE
+//Move layers more easily
 static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, int bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
   move_frame.origin.y = (((tmp_bounds.size.h * origin_permil) / 1000) + bump) - (diff * bmp_ratio_permil) / 1000;
   layer_set_frame(tmp_layer, move_frame);
 }
 
+//Move lines more easily
 static void animation_linemove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t Y1RATIO, uint16_t Y2RATIO) {
   LinePoints *pointsMove = (LinePoints *)layer_get_data(tmp_layer);
   pointsMove->y1 = (tmp_bounds.size.h * Y1RATIO) / 1000 - diff;
@@ -95,6 +111,7 @@ static void animation_linemove(GRect tmp_bounds, int diff, Layer *tmp_layer, uin
   layer_mark_dirty(tmp_layer);
 }
 
+//Change certain layers based on quick view
 void animation_prv_unobstructed_change(AnimationProgress progress, void *context) {
   Layer *root = window_get_root_layer(s_main_window);
   GRect obsBounds = layer_get_unobstructed_bounds(root);
@@ -128,10 +145,7 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   #endif
   #endif
   
-  #ifndef PBL_PLATFORM_APLITE
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
-  #endif
-  
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
   animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
@@ -141,8 +155,7 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   animation_linemove(unBounds, bound_diff, s_layers[LAYER_SCORE_I], VERT_3, VERT_4);
 }
 
-  
-
+//Setup call for quick view
 void animation_subscribe_unobstructed_area(void) {
   UnobstructedAreaHandlers handlers = {
     .will_change = NULL,
@@ -151,3 +164,4 @@ void animation_subscribe_unobstructed_area(void) {
   };
   unobstructed_area_service_subscribe(handlers, NULL);
 }
+#endif

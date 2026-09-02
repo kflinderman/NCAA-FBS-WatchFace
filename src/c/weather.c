@@ -130,4 +130,9 @@ void weather_draw(Layer *window_layer, GRect bounds){
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_WEATHER]), true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_CONDITIONS]), true);
 }
+
+
+void weather_build_request(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
+}
 #endif

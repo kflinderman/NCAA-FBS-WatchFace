@@ -176,6 +176,7 @@ Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_WYOMING, .color = GColorWindsorTanARGB8, .icon_color = GColorWhiteARGB8, .rival = 29, .vs_id = -1, .name="Wyoming", .shortname="WYO ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true },
 };
 #elif defined(PBL_PLATFORM_APLITE)
+//Required for Aplite to slim down on memory for items that aren't included anyway
 Team TEAMS[] = {
   {},
   { .logo_res_id = RESOURCE_ID_AIRFORCE, .color = GColorWhiteARGB8, .rival = 10, .name="Air Force", .shortname="AFA ", .score = 0, .vs_score = 0, .vs_id = 10, .gametime = 0, .completed = true }, // Army

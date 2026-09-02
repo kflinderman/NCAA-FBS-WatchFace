@@ -29,6 +29,7 @@ typedef struct {
 #define MAX_CACHED_FAVORITE_TEAMS 5
 #define TEAM_CACHE_EMPTY_SLOT 0xFF
 
+//Array to keep a couple teams in memory so the API doesn't have to trigger so often.
 typedef struct {
   uint8_t team_index; // TEAM_CACHE_EMPTY_SLOT if this slot is unused
   int16_t vs_id;
@@ -49,6 +50,7 @@ typedef struct {
   PersistedTeamData slots[MAX_CACHED_FAVORITE_TEAMS];
 } PersistedTeamCache;
 	
+//API information
 typedef struct {
   uint32_t next_season_first_game_ts;
   uint16_t current_season_year;
@@ -59,7 +61,6 @@ typedef struct {
   bool api_data_valid;
 } CFBDState;
 
-// DECLARE the variables here
 extern Team TEAMS[];
 extern const size_t TEAMS_COUNT;
 extern CFBDState cfbd_state;

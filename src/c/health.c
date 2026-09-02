@@ -3,8 +3,13 @@
 #include "drawing.h"
 #include "timekeeping.h"
 
-
 #if defined(PBL_HEALTH)
+
+
+/****************/
+/* Heartrate    */
+/****************/
+
 void health_heartRateHandler(void) {
   // Early Return: If HR is disabled in settings, hide elements and exit immediately
   if (!settings.hrBool) {
@@ -18,10 +23,15 @@ void health_heartRateHandler(void) {
   if (!settings.healthQuiet || !timekeeping_is_quiet_time()) {
     hrvalue = health_service_peek_current_value(HealthMetricHeartRateBPM);
   }
+  // If we're not checking during quite time, just give it a 70bpm as a placeholder
   else{
     hrvalue = 70;
   }
+  #ifdef TESTING
+  hrvalue = 70;
+  #endif
 
+  //This is really the only way to check if a platform has health but no heart rate. Because hrvalue will fill, but it won't be something living
   if (hrvalue > 0) {
     static char s_hr_buffer[4];
     snprintf(s_hr_buffer, sizeof(s_hr_buffer), "%d", (int)hrvalue);
@@ -35,6 +45,11 @@ void health_heartRateHandler(void) {
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HR]), noHR);
   layer_set_hidden(hr_icon, noHR);
 }
+
+
+/****************/
+/* Steps        */
+/****************/
 
 void health_stepHandler(){
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_STEP]), !settings.stepsBool);
@@ -52,7 +67,10 @@ void health_stepHandler(){
 
   // Fetch Step Metrics
   HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
-  //HealthValue stepvalue = 4000;
+  
+  #ifdef TESTING
+  HealthValue stepvalue = 4000;
+  #endif
 
   // Update Step Text
   if (settings.stepsBool) {
@@ -89,11 +107,17 @@ void health_stepHandler(){
   }
 }
 
+
+/****************/
+/* Health       */
+/****************/
+
 void health_handler() {
   health_heartRateHandler();
   health_stepHandler();
 }
 
+//Draw everything needed
 void health_draw(Layer *window_layer, GRect bounds){
   GColor icon_color;
   #if defined(PBL_COLOR)
@@ -107,12 +131,14 @@ void health_draw(Layer *window_layer, GRect bounds){
   }
   #endif
   
+  //HR Value
   #if PBL_DISPLAY_HEIGHT > 180
     s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, icon_color, "100", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
   #else
     s_text_layers[TEXT_LAYER_HR] = drawing_text_set(bounds.size.w - 30, 0, 25, 20, icon_color, "100", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
   #endif
   
+  //HR pulse lines
   hr_icon = drawing_multiline_layer_create(bounds, window_layer);
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 23 + (6*HR_W), 30), GPoint(bounds.size.w - 20 + (5*HR_W), 30), HR_THICK, icon_color);
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 20 + (5*HR_W), 30), GPoint(bounds.size.w - 17 + (4*HR_W), 35), HR_THICK, icon_color);
@@ -120,11 +146,14 @@ void health_draw(Layer *window_layer, GRect bounds){
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 11 + (2*HR_W), 25), GPoint(bounds.size.w - 8 + (HR_W),    30), HR_THICK, icon_color);
   drawing_multiline_add_segment(hr_icon, GPoint(bounds.size.w - 8 + (HR_W), 30),    GPoint(bounds.size.w - 5,             30), HR_THICK, icon_color);
 
+  //Steps value
   #if PBL_DISPLAY_HEIGHT > 180
   s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - STEPX2, ((bounds.size.h * TIME_H) / 1000) - 20, 50, 20, icon_color, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentLeft, window_layer);
   #else
   s_text_layers[TEXT_LAYER_STEP] = drawing_text_set(bounds.size.w / 2 - STEPX2, ((bounds.size.h * TIME_H) / 1000) - 20, 50, 16, icon_color, "00000", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
   #endif
+  
+  //Ladder draw
   uint16_t gaps = (((bounds.size.h * TIME_H) / 1000) - STEPY - 25) / 3;
   uint16_t gaps2 = gaps / 5;
   step_ladder = drawing_multiline_layer_create(bounds, window_layer);
@@ -139,6 +168,7 @@ void health_draw(Layer *window_layer, GRect bounds){
     }
   }
 
+  //Football and where to put TD when goal met
   s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL] = gbitmap_create_with_resource(RESOURCE_ID_football);
   #if PBL_DISPLAY_HEIGHT > 180
     s_bitmap_layers[BITMAP_LAYER_FOOTBALL] = drawing_bitmap_set((bounds.size.w / 2 - STEPX2) + (STEPX1 / 2) - 4, STEPY + gaps * 4 - 6, 12, 12, s_gbitmap_layers[GBITMAP_LAYER_FOOTBALL], window_layer);

@@ -123,7 +123,9 @@ static void main_window_load(Window *window) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Apply Correct Layout w/ Quick View");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   animation_prv_unobstructed_change(0, NULL);
+  #endif
 }
 
 // Unloads the main window's UI elements
@@ -141,7 +143,9 @@ static void main_window_unload(Window *window) {
   #if PBL_DISPLAY_HEIGHT > 180
   fonts_unload_custom_font(s_font);
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   fonts_unload_custom_font(s_wIcon);
+  #endif
 
   // Destroy BitmapLayer
   destroy_layers_by_kind((void**)s_bitmap_layers, LAYER_KIND_BITMAP, NUM_BITMAP_LAYERS);
@@ -181,7 +185,9 @@ static void init() {
   // Subscribe to unobstructed area events
   APP_LOG(APP_LOG_LEVEL_INFO, "Quick View");
   #endif
+  #ifndef PBL_PLATFORM_APLITE
   animation_subscribe_unobstructed_area();
+  #endif
 
   // Register with TickTimerService
   #if defined(DEBUG)

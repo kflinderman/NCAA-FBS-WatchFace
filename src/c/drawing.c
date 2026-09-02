@@ -1,6 +1,11 @@
 #include "drawing.h"
 #include "globals.h"
 
+/****************/
+/* Lines        */
+/****************/
+
+//Function to update line locations
 static void drawing_line_update_proc(Layer *layer, GContext *ctx) {
   LinePoints *points = (LinePoints *)layer_get_data(layer);
   graphics_context_set_stroke_width(ctx, points->width);
@@ -8,6 +13,7 @@ static void drawing_line_update_proc(Layer *layer, GContext *ctx) {
   graphics_draw_line(ctx, GPoint(points->x1, points->y1), GPoint(points->x2, points->y2));
 }
 
+//function to draw lines
 Layer* drawing_line_draw(GRect bounds, uint16_t x1, uint16_t y1, uint16_t x2, uint16_t y2,
                   uint16_t width, GColor color, Layer *window_layer) {
   Layer *line_layer = layer_create_with_data(bounds, sizeof(LinePoints));
@@ -30,12 +36,17 @@ typedef struct {
   GColor color;
 } LineSegment;
 
+
+/****************/
+/* Multiline    */
+/****************/
 typedef struct {
   LineSegment *segments; // heap-allocated, grown with realloc()
   uint16_t count;
   uint16_t capacity;
 } MultiLineData;
 
+//Update multiline location
 static void drawing_multiline_update_proc(Layer *layer, GContext *ctx) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   for (uint16_t i = 0; i < data->count; i++) {
@@ -46,6 +57,7 @@ static void drawing_multiline_update_proc(Layer *layer, GContext *ctx) {
   }
 }
 
+//create a multiline layer
 Layer* drawing_multiline_layer_create(GRect bounds, Layer *parent) {
   Layer *layer = layer_create_with_data(bounds, sizeof(MultiLineData));
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
@@ -57,6 +69,7 @@ Layer* drawing_multiline_layer_create(GRect bounds, Layer *parent) {
   return layer;
 }
 
+//Draw the lines of the multiline
 void drawing_multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t width, GColor color) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
 
@@ -80,12 +93,14 @@ void drawing_multiline_add_segment(Layer *layer, GPoint p1, GPoint p2, uint16_t 
   layer_mark_dirty(layer);
 }
 
+//Clear out lines
 void drawing_multiline_clear(Layer *layer) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   data->count = 0;
   layer_mark_dirty(layer);
 }
 
+//Destroy Layer
 void drawing_multiline_layer_destroy(Layer *layer) {
   if (!layer) return;
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
@@ -93,6 +108,7 @@ void drawing_multiline_layer_destroy(Layer *layer) {
   layer_destroy(layer);
 }
 
+//Change color of all lines in the layer
 void drawing_multiline_set_all_colors(Layer *layer, GColor color) {
   MultiLineData *data = (MultiLineData *)layer_get_data(layer);
   for (uint16_t i = 0; i < data->count; i++) {
@@ -100,6 +116,10 @@ void drawing_multiline_set_all_colors(Layer *layer, GColor color) {
   }
   layer_mark_dirty(layer);
 }
+
+/****************/
+/* Bitmap       */
+/****************/
 
 BitmapLayer* drawing_bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GBitmap *bitmap, Layer *window) {
   BitmapLayer *s_bitmap_layer = bitmap_layer_create(GRect(x, y, w, h));
@@ -109,6 +129,10 @@ BitmapLayer* drawing_bitmap_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, 
 
   return s_bitmap_layer;
 }
+
+/****************/
+/* Text         */
+/****************/
 
 TextLayer* drawing_text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GColor text_color,
                      const char *initial_text, GFont font_handle,
@@ -124,6 +148,10 @@ TextLayer* drawing_text_set(uint16_t x, uint16_t y, uint16_t w, uint16_t h, GCol
 
   return text_layer;
 }
+
+/****************/
+/* Round Layer  */
+/****************/
 
 void drawing_round_rect_update_proc(Layer *layer, GContext *ctx) {
   GRect bounds = layer_get_bounds(layer);
