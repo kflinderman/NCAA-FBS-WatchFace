@@ -1,10 +1,14 @@
 var cfbd = (function() {
-  // In-memory cache for this session (survives across multiple calls)
+  /**********************/
+  /* Cache & Storage    */
+  /**********************/
+
+  // In-memory session cache surviving across sync calls
   var cache = {
     currentYear: null,
     nextSeasonFirstGameTs: null,
     seasonDates: [],  // [ startDate, endDate ]
-    weekDates: [], // [[ week, startDate, endDate], [week...]]
+    weekDates: [],    // [[ week, startDate, endDate], ...]
     games: null,
     records: null,
     rankings: null
@@ -12,13 +16,17 @@ var cfbd = (function() {
 
   var constants = {
     API_BASE: 'https://api.collegefootballdata.com',
-    BATCH_DELAY: 100  // ms between requests to avoid hammering API
+    BATCH_DELAY: 100  // ms delay between batched requests
   };
 
   var seasonDeterminationCallbacks = null;
-
   var USAGE_STORAGE_KEY = 'cfbd_api_usage';
 
+  /**********************/
+  /* Usage Tracking     */
+  /**********************/
+
+  // Load API usage history from localStorage
   function loadUsage() {
     try {
       var raw = localStorage.getItem(USAGE_STORAGE_KEY);
@@ -29,6 +37,7 @@ var cfbd = (function() {
     return null;
   }
 
+  // Persist current API usage stats
   function saveUsage() {
     try {
       localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(usage));
@@ -39,6 +48,7 @@ var cfbd = (function() {
 
   var usage = loadUsage() || { year: null, month: null, used: 0, limit: 1000 };
 
+  // Track API call counts and auto-reset on new calendar month
   function trackApiCall() {
     var now = new Date();
     var year = now.getFullYear();
@@ -54,6 +64,11 @@ var cfbd = (function() {
     saveUsage();
   }
 
+  /**********************/
+  /* HTTP Request Core  */
+  /**********************/
+
+  // Authenticated HTTP GET request handler with bearer auth and usage tracking
   function xhrAuth(url, apiKey, callback, errorCallback) {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -80,6 +95,11 @@ var cfbd = (function() {
     xhr.send();
   }
 
+  /**********************/
+  /* Endpoint Fetchers  */
+  /**********************/
+
+  // Sync remaining user API quota from CFBD account endpoint
   function fetchUserInfo(apiKey, callback) {
     var url = constants.API_BASE + '/info';
     xhrAuth(url, apiKey, function(data) {
@@ -90,9 +110,10 @@ var cfbd = (function() {
     });
   }
 
+  // Fetch season schedule boundaries and week date ranges
   function fetchCalendar(year, apiKey, callback) {
     var url = constants.API_BASE + '/calendar?year=' + year;
-    
+
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data) || data.length === 0) {
         console.log('No calendar data for year ' + year);
@@ -105,20 +126,20 @@ var cfbd = (function() {
       var endEntry = data[data.length - 1];
       var startStr = startEntry.startDate;
       var endStr = endEntry.endDate;
-      
+
       var startDate = new Date(startStr);
       var endDate = new Date(endStr);
-      
+
       if (data.length > 0) {
         cache.seasonDates = [
           data[0].startDate,               // First day of Week 1
-          data[data.length - 1].endDate    // Last day of the Postseason/Bowl week
+          data[data.length - 1].endDate    // Last day of Postseason/Bowl week
         ];
       }
-      
+
       var inSeason = now >= startDate && now <= endDate;
       var postSeason = now > endDate;
-      
+
       var weeks = data.map(function(item) {
         return [
           item.week,
@@ -126,9 +147,8 @@ var cfbd = (function() {
           item.endDate
         ];
       });
-      
 
-      console.log('Calendar ' + year + ': ' + startStr + ' - ' + endStr + 
+      console.log('Calendar ' + year + ': ' + startStr + ' - ' + endStr +
                   ', in season: ' + inSeason + ', post season: ' + postSeason);
 
       callback({
@@ -144,6 +164,7 @@ var cfbd = (function() {
     });
   }
 
+  // Strip unneeded fields and filter placeholder games
   function trimGames(data) {
     return data
       .filter(function(game) {
@@ -165,6 +186,7 @@ var cfbd = (function() {
       });
   }
 
+  // Fetch FBS game schedule for specified year and season type
   function fetchSeasonGames(year, seasonType, apiKey, callback) {
     var url = constants.API_BASE + '/games?year=' + year +
         '&seasonType=' + seasonType + '&classification=fbs';
@@ -184,6 +206,7 @@ var cfbd = (function() {
     });
   }
 
+  // Fetch team records filtered down to FBS teams
   function fetchRecords(year, apiKey, callback) {
     var url = constants.API_BASE + '/records?year=' + year;
 
@@ -222,13 +245,10 @@ var cfbd = (function() {
     });
   }
 
+  // Fetch team rankings (prefers Playoff Committee Rankings, falls back to AP Top 25)
   function fetchRankings(year, week, postseason, apiKey, callback) {
-    if (postseason){
-      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=postseason&week=' + week;
-    }
-    else{
-      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=regular&week=' + week;
-    }
+    var seasonTypeStr = postseason ? 'postseason' : 'regular';
+    var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=' + seasonTypeStr + '&week=' + week;
 
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
@@ -277,6 +297,11 @@ var cfbd = (function() {
     });
   }
 
+  /**********************/
+  /* Boundary Logic     */
+  /**********************/
+
+  // Queue simultaneous season resolution calls to avoid redundant requests
   function determineSeasonAndBoundary(apiKey, callback) {
     if (seasonDeterminationCallbacks) {
       console.log('Season/boundary determination already in progress - reusing it');
@@ -294,16 +319,14 @@ var cfbd = (function() {
     });
   }
 
+  // Resolve active season year and calculate upcoming season timestamp boundary
   function determineSeasonAndBoundaryImpl(apiKey, callback) {
     var now = new Date();
     var currentYear = now.getFullYear();
 
     console.log('Phase 1: Determine season (current year: ' + currentYear + ')');
 
-    // Try current year first
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
-
-      // 1. Define the next step as a helper function
       var fetchNextSeasonBoundary = function() {
         fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
           if (firstGame && firstGame.startDate) {
@@ -320,11 +343,9 @@ var cfbd = (function() {
         cache.seasonDates[1] = calendarResult.endDate;
         cache.weekDates = calendarResult.weekDates;
 
-        // 2. Execute here if current year is valid
         fetchNextSeasonBoundary();
-      }
-      else {
-        // Try last year
+      } else {
+        // Fallback check on prior year for postseason or off-season transition
         fetchCalendar(currentYear - 1, apiKey, function(lastYearResult) {
           if (lastYearResult.isInSeason || lastYearResult.postSeason) {
             console.log('In postseason: using year ' + (currentYear - 1));
@@ -333,19 +354,17 @@ var cfbd = (function() {
             cache.seasonDates[1] = lastYearResult.endDate;
             cache.weekDates = lastYearResult.weekDates;
 
-            // 3. Execute here if last year is valid
             fetchNextSeasonBoundary();
           } else {
-            // Offseason: use next year, fetch its first game
             console.error('No Schedules Found');
             callback(null, null, null, null);
-            return; // Stops execution, fetchNextSeasonBoundary is never called
           }
         });
       }
     });
   }
 
+  // Fetch kickoff game of target season year
   function fetchFirstGameOfYear(year, apiKey, callback) {
     fetchSeasonGames(year, 'regular', apiKey, function(games) {
       if (games.length === 0) {
@@ -359,13 +378,14 @@ var cfbd = (function() {
     });
   }
 
+  // Determine current active season week or offseason status
   function determineCurrentWeek(cache) {
     var now = new Date();
     var nowTs = Math.floor(now.getTime() / 1000);
 
     var TWO_WEEKS_SECONDS = 14 * 24 * 60 * 60;
 
-    // Branch 1: within 2 weeks of next season's kickoff -> jump to new season, week 0
+    // Branch 1: Within 2 weeks of upcoming season -> advance to new season week 0
     if (cache.nextSeasonFirstGameTs && nowTs >= (cache.nextSeasonFirstGameTs - TWO_WEEKS_SECONDS)) {
       console.log('Within 2 weeks of next season kickoff - using year ' + (cache.currentYear + 1) + ', week 0');
       return {
@@ -375,7 +395,7 @@ var cfbd = (function() {
       };
     }
 
-    // Branch 2: currently inside the active season window
+    // Branch 2: Active in-season window
     var seasonStart = new Date(cache.seasonDates[0]);
     var seasonEnd = new Date(cache.seasonDates[1]);
 
@@ -404,7 +424,7 @@ var cfbd = (function() {
       };
     }
 
-    // Branch 3: not in season, not near next season -> offseason
+    // Branch 3: Offseason
     var lastEntry = cache.weekDates[cache.weekDates.length - 1];
     console.log('Offseason - using last week of ' + cache.currentYear + ': week ' + lastEntry[0] + " Post Season");
     return {
@@ -414,12 +434,14 @@ var cfbd = (function() {
     };
   }
 
-  /**
-   * Public API
-   */
+  /**********************/
+  /* Public Module API  */
+  /**********************/
+
   return {
     cache: cache,
 
+    // Perform complete sync: season calendar, usage quota, team records, and rankings
     syncFullCFBD: function(apiKey, callback) {
       console.log('=== CFBD Full Sync Start ===');
 
@@ -483,10 +505,11 @@ var cfbd = (function() {
           }, constants.BATCH_DELAY);
         });
       });
-      
+
       console.log('=== CFBD Full Sync End ===');
     },
 
+    // Lightweight sync: game schedules and live scores
     syncLightCFBD: function(apiKey, callback) {
       function fetchAndReturn() {
         var target = determineCurrentWeek(cache);

@@ -5,16 +5,28 @@
 #include "outbox_queue.h"
 #include "timekeeping.h"
 
+/**********************/
+/* Constants & State  */
+/**********************/
+
 #define MAX_DISPLAYABLE_SCORE 99
 #define CFBD_API_CALLS_WARNING_PERCENT 90
 
-static int cfbd_current_team_index = -1; // -1 = no team walk in progress
+// Sync state tracking variables
+static int cfbd_current_team_index = -1; // -1 = no team in progress
 static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
 static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
 static bool cfbd_light_sync_pending = false;
+
+// Forward declaration
 static void cfbd_team_walk_complete(CFBDTeamDataType type);
 
+/**********************/
+/* Private Helpers    */
+/**********************/
+
+// Helper function to look up a team pointer by string name matching
 static const Team *teams_find_by_name(const char *name) {
   if (!name || !name[0]) return NULL;
   if (strcmp(name, "NA") == 0) return NULL; // never resolve a placeholder opponent
@@ -27,6 +39,7 @@ static const Team *teams_find_by_name(const char *name) {
   return NULL;
 }
 
+// Extract API call quota and usage numbers from incoming message
 static void apply_api_usage_from_message(DictionaryIterator *iterator) {
   Tuple *used_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_USED);
   Tuple *limit_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_LIMIT);
@@ -46,6 +59,7 @@ static void apply_api_usage_from_message(DictionaryIterator *iterator) {
   }
 }
 
+// Calculate current monthly API usage percentage
 uint8_t api_calls_percent_used(void) {
   if (settings.cfbd.api_calls_monthly_limit == 0) return 0;
   uint32_t percent = ((uint32_t)settings.cfbd.api_calls_this_month * 100)
@@ -53,10 +67,12 @@ uint8_t api_calls_percent_used(void) {
   return (uint8_t)(percent > 100 ? 100 : percent);
 }
 
+// Check if monthly API usage has reached warning threshold
 bool api_calls_nearing_limit(void) {
   return api_calls_percent_used() >= CFBD_API_CALLS_WARNING_PERCENT;
 }
 
+// Construct dictionary request for team data
 static void build_request_team_data(DictionaryIterator *iter) {
   uint16_t team_index = (uint16_t)cfbd_current_team_index;
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
@@ -65,6 +81,7 @@ static void build_request_team_data(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_CFBD_TEAM_DATA_TYPE, (uint8_t)cfbd_current_sync_type);
 }
 
+// Queue request to fetch data for current active team
 static void request_team_data(void) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
@@ -75,7 +92,9 @@ static void request_team_data(void) {
   outbox_queue_send(build_request_team_data);
 }
 
+// Begin stepping through all teams to fetch data sequentially
 static void start_team_walk(CFBDTeamDataType type) {
+  // If a walk is already active, defer this request
   if (cfbd_current_team_index >= 0) {
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk (type %d) deferred - type %d walk in progress",
@@ -99,6 +118,7 @@ static void start_team_walk(CFBDTeamDataType type) {
   request_team_data();
 }
 
+// Complete active team walk sequence, persist updated data, and check pending walks
 static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
@@ -119,6 +139,7 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   s_favorite_team_data_missing = false;
   globals_prv_update_display();
 
+  // Trigger any deferred team walks queued during sync
   if (cfbd_pending_games_walk) {
     cfbd_pending_games_walk = false;
     start_team_walk(CFBD_TEAM_DATA_GAMES);
@@ -128,11 +149,23 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   }
 }
 
+// Construct dictionary request for full sync
 static void build_request_full_sync(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
 }
 
+// Construct dictionary request for light sync
+static void build_request_light_sync(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
+  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
+}
+
+/**********************/
+/* Global Functions   */
+/**********************/
+
+// Update and render status icon layer based on API quota remaining
 uint8_t api_update_status_indicator() {
   uint8_t status;
 
@@ -140,20 +173,19 @@ uint8_t api_update_status_indicator() {
     gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
   }
 
+  // Check quota levels (0 = depleted, 1 = warning, 2 = normal)
   if (api_calls_percent_used() >= 99) {
     s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
-    //bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
-    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     status = 0;
   }
   else if (api_calls_nearing_limit()) {
     s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
-    //bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
-    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), false);
     status = 1;
   }
   else {
-    //layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+      s_gbitmap_layers[GBITMAP_LAYER_API] = NULL;
+    }
     status = 2;
   }
 
@@ -163,6 +195,7 @@ uint8_t api_update_status_indicator() {
   return status;
 }
 
+// Request full API calendar/season sync if prerequisites pass
 void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     #if defined(DEBUG)
@@ -182,15 +215,9 @@ void api_request_cfbd_full_sync(void) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
   #endif
   outbox_queue_send(build_request_full_sync);
-
-
 }
 
-static void build_request_light_sync(DictionaryIterator *iter) {
-  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
-  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-}
-
+// Request light API score sync if prerequisites pass
 void api_request_cfbd_light_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
     #if defined(DEBUG)
@@ -219,6 +246,7 @@ void api_request_cfbd_light_sync(void) {
   outbox_queue_send(build_request_light_sync);
 }
 
+// Evaluate conditions to check if full sync is required
 bool api_should_full_sync(void) {
   time_t now = time(NULL);
 
@@ -236,7 +264,7 @@ bool api_should_full_sync(void) {
     return true;
   }
 
-  // Also check: if we've crossed into next season, force a sync
+  // Check if we've crossed into next season to force sync
   time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
   if (next_game_ts > 0 && now >= next_game_ts && !settings.cfbd.api_data_valid) {
     return true;
@@ -245,8 +273,8 @@ bool api_should_full_sync(void) {
   return false;
 }
 
+// Evaluate conditions to check if light sync is required
 bool api_should_light_sync(void) {
-  
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
     return false;
   }
@@ -267,8 +295,9 @@ bool api_should_light_sync(void) {
   return false;
 }
 
+// Main incoming AppMessage dictionary parser for API data
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Full sync response: calendar data (year, next season kickoff).
+  // Full sync response: calendar data (year, next season kickoff)
   Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
   if (year_tuple) {
     settings.cfbd.current_season_year = year_tuple->value->uint16;
@@ -284,11 +313,11 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     #endif
 
     apply_api_usage_from_message(iterator);
-
     globals_prv_save_settings();
     return;
   }
 
+  // Games dataset ready, start going through team data
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
     #if defined(DEBUG)
@@ -302,6 +331,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
+  // Records dataset ready, start going through team standings/rankings
   Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
   if (records_ready_tuple) {
     #if defined(DEBUG)
@@ -315,6 +345,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
+  // Incoming data payload for a specific team index
   Tuple *team_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_INDEX);
   if (team_index_tuple) {
     uint16_t team_index = team_index_tuple->value->uint16;
@@ -338,15 +369,15 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     Team *info = &TEAMS[team_index];
 
     Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
-    Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
-    Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
-    Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
-    Tuple *completed_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_COMPLETED);
+    Tuple *score_tuple         = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
+    Tuple *vs_score_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
+    Tuple *gametime_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
+    Tuple *completed_tuple     = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_COMPLETED);
     #ifndef PBL_PLATFORM_APLITE
-    Tuple *rank_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
-    Tuple *wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
-    Tuple *ps_games_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
-    Tuple *ps_wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
+    Tuple *rank_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
+    Tuple *wins_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
+    Tuple *ps_games_tuple  = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
+    Tuple *ps_wins_tuple   = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
     Tuple *ps_losses_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_LOSSES);
     #endif
 
@@ -356,20 +387,20 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
         const Team *opp = teams_find_by_name(opponent_name);
         info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
       } else {
-        // Bye week - no game this week, so no opponent to show.
+        // Bye week - no opponent active
         info->vs_id = -1;
       }
     }
 
-    if (score_tuple) info->score = (uint16_t)score_tuple->value->int32;
-    if (vs_score_tuple) info->vs_score = (uint16_t)vs_score_tuple->value->int32;
-    if (gametime_tuple) info->gametime = (uint32_t)gametime_tuple->value->int32;
+    if (score_tuple)     info->score     = (uint16_t)score_tuple->value->int32;
+    if (vs_score_tuple)  info->vs_score  = (uint16_t)vs_score_tuple->value->int32;
+    if (gametime_tuple)  info->gametime  = (uint32_t)gametime_tuple->value->int32;
     if (completed_tuple) info->completed = (completed_tuple->value->int32 != 0);
     #ifndef PBL_PLATFORM_APLITE
-    if (rank_tuple) info->ranking = (uint16_t)rank_tuple->value->int32;
-    if (wins_tuple) info->wins = (uint16_t)wins_tuple->value->int32;
-    if (ps_games_tuple) info->postseasonGames = (uint16_t)ps_games_tuple->value->int32;
-    if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
+    if (rank_tuple)      info->ranking          = (uint16_t)rank_tuple->value->int32;
+    if (wins_tuple)      info->wins             = (uint16_t)wins_tuple->value->int32;
+    if (ps_games_tuple)  info->postseasonGames  = (uint16_t)ps_games_tuple->value->int32;
+    if (ps_wins_tuple)   info->postseasonWins   = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
     #endif
 
@@ -379,6 +410,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
             info->ranking, info->wins);
     #endif
 
+    // Advance to next team or finish walk sequence
     uint16_t next_index = team_index + 1;
     if (next_index < TEAMS_COUNT) {
       cfbd_current_team_index = next_index;
@@ -389,29 +421,29 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   }
 }
 
+// Fast formatting helper to format integers < 100 as 2-character ASCII strings
 void api_format_2digits(char *buf, int val) {
   buf[0] = '0' + ((val / 10) % 10);
   buf[1] = '0' + (val % 10);
 }
 
+// Format team shortnames and score strings for UI text buffers
 void api_score_display() {
   if (TEAMS[settings.FavoriteTeam].vs_id == -1) {
     snprintf(s_day_text, sizeof(s_home_text), "BYE");
     snprintf(s_hour_text, sizeof(s_away_text), "WEEK");
-    // Copy constant string directly instead of snprintf
     memcpy(s_score_text, "00|00", 6);
   } else {
-    // Zero-copy! Point directly to existing string constants
     strncpy(s_home_text, TEAMS[settings.FavoriteTeam].shortname, sizeof(s_home_text) - 1);
     strncpy(s_away_text, TEAMS[TEAMS[settings.FavoriteTeam].vs_id].shortname, sizeof(s_away_text) - 1);
 
-    // Clamp scores cleanly
+    // Clamp score display values to 2 digits max
     int score1 = TEAMS[settings.FavoriteTeam].score;
     int score2 = TEAMS[settings.FavoriteTeam].vs_score;
     if (score1 > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
     if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
 
-    // Manual string building for "XX|YY" without snprintf
+    // Fast string construction for "XX|YY"
     api_format_2digits(&s_score_text[0], score1);
     s_score_text[2] = ' ';
     api_format_2digits(&s_score_text[3], score2);
@@ -419,20 +451,19 @@ void api_score_display() {
   }
 }
 
+// Initialize and setup UI resources for status icons, rankings, and trophies
 void api_icon_draw(Layer *window_layer, GRect bounds){
   s_gbitmap_layers[GBITMAP_LAYER_API] = NULL;
 
   #if PBL_DISPLAY_HEIGHT > 180
-  //168
   s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 19), (bounds.size.h * VERT_2) / 1000 + 3, 8, 14, NULL, window_layer);
   #else
   s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 10), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
-  //+ 14
   #endif
 
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
 
-  //Create Ranking resources
+  // Create ranking display layers for non-Aplite targets
   #ifndef PBL_PLATFORM_APLITE
   GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
   
@@ -446,12 +477,11 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
   layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
   s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 40, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
-  
 
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
 
-  //Create supurlitive resources
+  // Setup win and postseason trophy graphics
   s_gbitmap_layers[GBITMAP_LAYER_WIN] = gbitmap_create_with_resource(RESOURCE_ID_WIN);
   s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = NULL;
 

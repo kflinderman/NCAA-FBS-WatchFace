@@ -122,6 +122,7 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
 
   #if PBL_DISPLAY_HEIGHT > 180
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -2, 1000);
+  //animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), TIME_H, -2, 1000);
   
   #ifdef PBL_ROUND
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, 8, 1000);
@@ -134,6 +135,7 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   
   #else
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -5, 1000);
+  //animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), TIME_H, -5, 1000);
   
   #ifdef PBL_ROUND
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, TIME_Y - 20, 1000);

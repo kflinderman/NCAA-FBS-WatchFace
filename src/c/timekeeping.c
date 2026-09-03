@@ -258,12 +258,12 @@ bool timekeeping_countdown() {
 
 // Prepare Time layers
 void timeDate_draw(Layer *window_layer, GRect bounds){
-  
   //Load up tertiary items
   #if PBL_DISPLAY_HEIGHT > 180
   //Pull in custom fonts for the bigger screens
   s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
-  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * TIME_H) / 1000 - 2, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  //s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * TIME_H) / 1000 - 2, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * RECT_H) / 1000 - 2, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   
   #ifdef PBL_ROUND
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 + 2, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 + 2, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
@@ -278,7 +278,8 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   
   #else
   s_font = fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS);
-  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, ((bounds.size.h * TIME_H) / 1000) - 5, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  //s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * TIME_H) / 1000 - 5, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * RECT_H) / 1000 - 5, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
   
   #ifdef PBL_ROUND
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 1, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 1, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);

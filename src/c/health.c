@@ -69,7 +69,7 @@ void health_stepHandler(){
   HealthValue stepvalue = health_service_sum_today(HealthMetricStepCount);
   
   #ifdef TESTING
-  HealthValue stepvalue = 4000;
+  stepvalue = 4000;
   #endif
 
   // Update Step Text

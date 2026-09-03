@@ -9,6 +9,7 @@
 #include "weather.h"
 #include "display.h"
 #include "api.h"
+#include "outbox_queue.h"
 
 /***********************************/
 /* NCAA FBS Watchface              */
@@ -41,6 +42,7 @@ void destroy_layers_by_kind(void **layers, LayerKind kind, size_t count) {
 
 // Loads the main window's UI elements
 static void main_window_load(Window *window) {
+  
   // Get window information
   Layer *window_layer = window_get_root_layer(window);
   GRect bounds = layer_get_bounds(window_layer);
@@ -50,7 +52,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Main Logo");
   #endif
   s_bitmap_layers[BITMAP_LAYER_LOGO] = drawing_bitmap_set((bounds.size.w - BITMAP_SIZE) / 2, (bounds.size.h * 25) / 1000, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_LOGO], window_layer);
-  
+
   #ifndef PBL_PLATFORM_APLITE
   s_bitmap_layers[BITMAP_LAYER_BAG] = drawing_bitmap_set(0, 0, BITMAP_SIZE, BITMAP_SIZE, s_gbitmap_layers[GBITMAP_LAYER_BAG], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
   #endif
@@ -85,12 +87,12 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Bottom Box");
   #endif
   display_main_time_layer(window_layer, bounds);
-
+  
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Date and Time");
   #endif
   timeDate_draw(window_layer, bounds);
-  
+
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Drawing Bluetooth");
   #endif
@@ -112,7 +114,7 @@ static void main_window_load(Window *window) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Applying Saved Settings");
   #endif
   globals_prv_update_display();
-
+  
   // Make sure the time and date are displayed from the start
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Update Time");

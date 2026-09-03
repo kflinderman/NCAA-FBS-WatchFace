@@ -1,8 +1,14 @@
+/**********************/
+/* AppMessage Queue   */
+/**********************/
+
+// Overrides default Pebble.sendAppMessage to process outgoing messages sequentially
 (function() {
   var originalSendAppMessage = Pebble.sendAppMessage.bind(Pebble);
   var sendQueue = [];
   var sending = false;
 
+  // Step through queue sequentially upon previous transmission completion
   function processQueue() {
     if (sending || sendQueue.length === 0) return;
     sending = true;
@@ -21,23 +27,33 @@
     );
   }
 
+  // Intercept sendAppMessage calls and push to queue
   Pebble.sendAppMessage = function(dict, onSuccess, onError) {
     sendQueue.push({ dict: dict, onSuccess: onSuccess, onError: onError });
     processQueue();
   };
 })();
 
-// Import the Clay package
+/**********************/
+/* Imports & Setup    */
+/**********************/
+
+// Import Clay configuration framework
 var Clay = require('@rebble/clay');
-// Load our Clay configuration file
 var clayConfig = require('./config');
 var customClay = require('./customClay');
-// Load CFBD module
+
+// Import College Football Data API sync module
 var cfbdModule = require('./cfbd');
 
-// Initialize Clay
+// Initialize Clay configuration instance
 var clay = new Clay(clayConfig, customClay);
 
+/**********************/
+/* Weather Services   */
+/**********************/
+
+// Basic asynchronous HTTP GET request helper
 var xhrRequest = function (url, type, callback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
@@ -47,23 +63,25 @@ var xhrRequest = function (url, type, callback) {
   xhr.send();
 };
 
+// Map WMO weather code integers from Open-Meteo to app condition enum values
 function weatherCodeToCondition(code) {
-  if (code === 0) return 0; //'Clear';
-  if (code <= 3) return 1; //'Cloudy';
-  if (code <= 48) return 2; //'Fog';
-  if (code <= 55) return 3; //'Drizzle';
-  if (code <= 57) return 4; //'Fz. Drizzle';
-  if (code <= 65) return 5; //'Rain';
-  if (code <= 67) return 6; //'Fz. Rain';
-  if (code <= 75) return 7; //'Snow';
-  if (code <= 77) return 8; //'Snow Grains';
-  if (code <= 82) return 9; //'Showers';
-  if (code <= 86) return 10; //'Snow Shwrs';
-  if (code === 95) return 11; //'T-Storm';
-  if (code <= 99) return 12; //'T-Storm';
-  return 13; //'Unknown';
+  if (code === 0) return 0;  // Clear
+  if (code <= 3) return 1;  // Cloudy
+  if (code <= 48) return 2; // Fog
+  if (code <= 55) return 3; // Drizzle
+  if (code <= 57) return 4; // Freezing Drizzle
+  if (code <= 65) return 5; // Rain
+  if (code <= 67) return 6; // Freezing Rain
+  if (code <= 75) return 7; // Snow
+  if (code <= 77) return 8; // Snow Grains
+  if (code <= 82) return 9; // Showers
+  if (code <= 86) return 10;// Snow Showers
+  if (code === 95) return 11;// Thunderstorm
+  if (code <= 99) return 12;// Thunderstorm
+  return 13;                // Unknown
 }
 
+// Success callback for GPS positioning; fetches current Open-Meteo forecast
 function locationSuccess(pos) {
   var url = 'https://api.open-meteo.com/v1/forecast?' +
       'latitude=' + pos.coords.latitude +
@@ -90,10 +108,12 @@ function locationSuccess(pos) {
   );
 }
 
+// Failure callback for GPS positioning
 function locationError(err) {
   console.log('Error requesting location!');
 }
 
+// Trigger GPS location lookup to update weather
 function getWeather() {
   navigator.geolocation.getCurrentPosition(
     locationSuccess,
@@ -102,6 +122,11 @@ function getWeather() {
   );
 }
 
+/**********************/
+/* CFBD Data Services */
+/**********************/
+
+// Authenticated HTTP GET request helper for CFBD API
 var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
@@ -122,6 +147,7 @@ var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   xhr.send();
 };
 
+// Fetch latest game score for single team (legacy lookup)
 function getScore(apiKey, teamIndex) {
   var teamName = CFBD_TEAM_NAMES[teamIndex];
   if (!teamName) {
@@ -152,6 +178,7 @@ function getScore(apiKey, teamIndex) {
   );
 }
 
+// Send score details of a single game object to watch app
 function sendScoreToWatch(game) {
   var dictionary = {
     'ScoreHomeTeam': (game.homeTeam || '').substring(0, 31),
@@ -167,6 +194,7 @@ function sendScoreToWatch(game) {
   );
 }
 
+// In-memory caching variables for sync operations
 var gamesData = null;
 var recordsRankingsData = null;
 
@@ -174,6 +202,7 @@ var recordsRankingsData = null;
 var CFBD_TEAM_DATA_TYPE_GAMES = 0;
 var CFBD_TEAM_DATA_TYPE_RECORDS = 1;
 
+// Send calendar and API quota info payload to watch
 function sendCalendarToWatch(calendarData) {
   var dictionary = {
     'CFBD_YEAR': calendarData.year,
@@ -188,6 +217,7 @@ function sendCalendarToWatch(calendarData) {
   );
 }
 
+// Pick active or upcoming game for a specific team from a pool of games
 function pickTeamGameFromPool(teamName, pool) {
   var matches = pool.filter(function(g) {
     return g.homeTeam === teamName || g.awayTeam === teamName;
@@ -207,6 +237,7 @@ function pickTeamGameFromPool(teamName, pool) {
   return upcoming[0];
 }
 
+// Find target team's latest relevant game from regular or postseason datasets
 function findLatestTeamGame(teamName, games) {
   if (games.inPostseason) {
     var postGame = pickTeamGameFromPool(teamName, games.postGames);
@@ -216,6 +247,7 @@ function findLatestTeamGame(teamName, games) {
   return pickTeamGameFromPool(teamName, games.regularGames);
 }
 
+// Reorient game object data into target team's relative perspective
 function gameToTeamPerspective(teamName, game) {
   if (!game) {
     return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
@@ -238,6 +270,7 @@ function gameToTeamPerspective(teamName, game) {
   };
 }
 
+// Look up overall and postseason wins/losses for a team in cached records
 function findTeamRecord(teamName, records) {
   for (var i = 0; i < records.length; i++) {
     if (records[i].team === teamName) {
@@ -252,6 +285,7 @@ function findTeamRecord(teamName, records) {
   return { wins: 0, postseasonGames: 0, postseasonWins: 0, postseasonLosses: 0 };
 }
 
+// Look up national rank for a team in cached rankings
 function findTeamRank(teamName, rankings) {
   for (var i = 0; i < rankings.length; i++) {
     if (rankings[i].school === teamName) {
@@ -261,6 +295,7 @@ function findTeamRank(teamName, rankings) {
   return 0;
 }
 
+// Send team-specific data payload back to watch during sequential team walk
 function sendTeamData(teamIndex, teamName, dataType) {
   if (dataType === CFBD_TEAM_DATA_TYPE_GAMES) {
     if (!gamesData) {
@@ -306,6 +341,11 @@ function sendTeamData(teamIndex, teamName, dataType) {
   );
 }
 
+/**********************/
+/* Event Listeners    */
+/**********************/
+
+// Trigger initial startup tasks when PebbleKit JS is ready
 Pebble.addEventListener('ready',
   function(e) {
     console.log('PebbleKit JS ready!');
@@ -313,13 +353,15 @@ Pebble.addEventListener('ready',
   }
 );
 
+// Route incoming messages from C watchapp to appropriate handlers
 Pebble.addEventListener('appmessage',
   function(e) {
     console.log('AppMessage received!');
     if (e.payload['REQUEST_WEATHER']) {
       getWeather();
     }
-    // ===== CFBD Full Sync: calendar + records + rankings =====
+
+    // Full CFBD sync request (calendar, records, rankings)
     if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
       var apiKey = e.payload['api_key'];
       if (!apiKey) {
@@ -345,6 +387,7 @@ Pebble.addEventListener('appmessage',
       });
     }
 
+    // Light CFBD sync request (scores/games)
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
 
@@ -369,6 +412,7 @@ Pebble.addEventListener('appmessage',
       });
     }
 
+    // Single team data request during sequential team walk
     if (e.payload['REQUEST_CFBD_TEAM_DATA']) {
       var teamIndex = e.payload['CFBD_TEAM_INDEX'];
       var teamName = e.payload['CFBD_TEAM_NAME'];

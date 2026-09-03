@@ -1,6 +1,10 @@
 module.exports = function (minified) {
   var clayConfig = this;
 
+  /**********************/
+  /* Condition Helpers  */
+  /**********************/
+
   var isTrue = function (v) { return v === true; };
   var isFalse = function (v) { return v === false; };
   var eq = function (target) {
@@ -10,6 +14,11 @@ module.exports = function (minified) {
     return function (v) { return parseInt(v, 10) !== target; };
   };
 
+  /**********************/
+  /* Dependency Tree   */
+  /**********************/
+
+  // Configuration tree defining conditional visibility and parent-child field hierarchies
   var tree = [
     { key: 'DisplayTeam' },
     { key: 'bagBool' },
@@ -128,16 +137,21 @@ module.exports = function (minified) {
         { key: 'weatherQuiet', externalKey: 'quietTimeBool' }, // only when quietTimeBool is also true
         { key: 'weatherUnits' },
       ]
-        },
-        {
-        key: 'donate',
-        condition: isTrue, // display below on true
-        children: [
+    },
+    {
+      key: 'donate',
+      condition: isTrue, // display below on true
+      children: [
         { key: 'donation_block' }
       ]
     }
   ];
 
+  /**********************/
+  /* Visibility Logic   */
+  /**********************/
+
+  // Helper function to resolve a Clay configuration item by message key or element ID
   function getItem(key) {
     var item = clayConfig.getItemByMessageKey(key);
     if (!item) {
@@ -146,10 +160,12 @@ module.exports = function (minified) {
     return item;
   }
 
+  // Recursively apply visibility rules to a node and all of its nested children
   function applyNode(node, parentVisible) {
     var item = getItem(node.key);
     var ownVisible = parentVisible;
 
+    // Check external dependency rule if specified
     if (ownVisible && node.externalKey) {
       var extItem = getItem(node.externalKey);
       if (extItem) {
@@ -159,12 +175,14 @@ module.exports = function (minified) {
       }
     }
 
+    // Toggle field visibility in the DOM
     if (item) {
       ownVisible ? item.show() : item.hide();
     } else {
       console.log("Error: Could not find item '" + node.key + "' by Key or ID!");
     }
 
+    // Process dependent child nodes
     if (node.children && node.children.length) {
       var childrenVisible = ownVisible;
       if (ownVisible && node.condition) {
@@ -176,12 +194,14 @@ module.exports = function (minified) {
     }
   }
 
+  // Re-evaluate visibility states across the entire dependency tree
   function recomputeAll() {
     tree.forEach(function (node) {
       applyNode(node, true);
     });
   }
 
+  // Recursively register change listeners on configurable items to trigger UI updates
   function attachListeners(nodes) {
     nodes.forEach(function (node) {
       var item = getItem(node.key);
@@ -194,6 +214,11 @@ module.exports = function (minified) {
     });
   }
 
+  /**********************/
+  /* Event Handlers     */
+  /**********************/
+
+  // Hook into Clay build lifecycle after DOM elements are fully initialized
   clayConfig.on(clayConfig.EVENTS.AFTER_BUILD, function () {
     attachListeners(tree);
     recomputeAll();
@@ -201,6 +226,7 @@ module.exports = function (minified) {
     var watchUpdateItem = getItem('watchUpdate');
     var scoreUpdateItem = getItem('scoreUpdate');
 
+    // Dynamic constraint sync between watch update rate and score update rate
     if (watchUpdateItem && scoreUpdateItem) {
       function syncScoreMin() {
         // Get the current integer value of watchUpdate

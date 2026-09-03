@@ -1398,7 +1398,7 @@ module.exports = [
         "messageKey": "api",
         "label": "Auto Fetch Information",
         "defaultValue": false,
-        "description": "This will make a call once per day"
+        "description": "This will make API calls, TBD on frequency and amount"
       },
       {
         "type": "input",
@@ -1407,6 +1407,7 @@ module.exports = [
         "defaultValue": "",
   	    "description": "Get a free API key from <a href='https://collegefootballdata.com/key?source=homepage&placement=hero_supporting'>CFBD API</a>"
       },
+      /*
       {
         "type": "toggle",
         "messageKey": "api_quiet",
@@ -1414,6 +1415,7 @@ module.exports = [
         "defaultValue": false,
         "description": "This means score updates will not occur during your quiet time"
       }
+      */
     ]
   },
   {
