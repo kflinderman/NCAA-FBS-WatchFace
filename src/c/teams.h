@@ -59,6 +59,7 @@ typedef struct {
   uint16_t api_calls_this_month;
   uint16_t api_calls_monthly_limit;
   bool api_data_valid;
+  bool pull_next_season; // true once within 2 weeks of next_season_first_game_ts
 } CFBDState;
 
 extern Team TEAMS[];

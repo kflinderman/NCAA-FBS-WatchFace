@@ -302,7 +302,7 @@ var cfbd = (function() {
   /**********************/
 
   // Queue simultaneous season resolution calls to avoid redundant requests
-  function determineSeasonAndBoundary(apiKey, callback) {
+  function determineSeasonAndBoundary(apiKey, knownNextSeasonTs, callback) {
     if (seasonDeterminationCallbacks) {
       console.log('Season/boundary determination already in progress - reusing it');
       seasonDeterminationCallbacks.push(callback);
@@ -310,7 +310,7 @@ var cfbd = (function() {
     }
 
     seasonDeterminationCallbacks = [callback];
-    determineSeasonAndBoundaryImpl(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
+    determineSeasonAndBoundaryImpl(apiKey, knownNextSeasonTs, function(year, nextSeasonTs, seasonDates, weekDates) {
       var callbacks = seasonDeterminationCallbacks;
       seasonDeterminationCallbacks = null;
       for (var i = 0; i < callbacks.length; i++) {
@@ -320,14 +320,23 @@ var cfbd = (function() {
   }
 
   // Resolve active season year and calculate upcoming season timestamp boundary
-  function determineSeasonAndBoundaryImpl(apiKey, callback) {
+  function determineSeasonAndBoundaryImpl(apiKey, knownNextSeasonTs, callback) {
     var now = new Date();
     var currentYear = now.getFullYear();
+    var nowTs = Math.floor(now.getTime() / 1000);
 
     console.log('Phase 1: Determine season (current year: ' + currentYear + ')');
 
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
       var fetchNextSeasonBoundary = function() {
+        //knownNextSeasonTs is whatever the watch already has persisted (0 if unknown)
+        if (knownNextSeasonTs && knownNextSeasonTs > nowTs) {
+          console.log('Next season boundary already known (' + knownNextSeasonTs + ') - skipping /games lookup');
+          cache.nextSeasonFirstGameTs = knownNextSeasonTs;
+          callback(cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates);
+          return;
+        }
+
         fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
           if (firstGame && firstGame.startDate) {
             cache.nextSeasonFirstGameTs = Math.floor(new Date(firstGame.startDate).getTime() / 1000);
@@ -442,10 +451,10 @@ var cfbd = (function() {
     cache: cache,
 
     // Perform complete sync: season calendar, usage quota, team records, and rankings
-    syncFullCFBD: function(apiKey, callback) {
+    syncFullCFBD: function(apiKey, knownNextSeasonTs, callback) {
       console.log('=== CFBD Full Sync Start ===');
 
-      determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
+      determineSeasonAndBoundary(apiKey, knownNextSeasonTs, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
 
         if (year === null) {
@@ -510,11 +519,12 @@ var cfbd = (function() {
     },
 
     // Lightweight sync: game schedules and live scores
-    syncLightCFBD: function(apiKey, callback) {
+    syncLightCFBD: function(apiKey, targetYear, knownNextSeasonTs, callback) {
       function fetchAndReturn() {
         var target = determineCurrentWeek(cache);
+        var year = targetYear || cache.currentYear;
 
-        fetchSeasonGames(cache.currentYear, 'regular', apiKey, function(regularGames) {
+        fetchSeasonGames(year, 'regular', apiKey, function(regularGames) {
           if (!target.offseason) {
             callback({
               regularGames: regularGames,
@@ -526,7 +536,7 @@ var cfbd = (function() {
             return;
           }
 
-          fetchSeasonGames(cache.currentYear, 'postseason', apiKey, function(postGames) {
+          fetchSeasonGames(year, 'postseason', apiKey, function(postGames) {
             callback({
               regularGames: regularGames,
               postGames: postGames,
@@ -540,7 +550,7 @@ var cfbd = (function() {
 
       if (cache.currentYear === null) {
         console.log('Light sync: cache empty (no full sync this session yet) - determining season first');
-        determineSeasonAndBoundary(apiKey, function() {
+        determineSeasonAndBoundary(apiKey, knownNextSeasonTs, function() {
           fetchAndReturn();
         });
         return;

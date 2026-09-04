@@ -164,10 +164,29 @@ static void globals_prv_team_cache_touch(PersistedTeamCache *cache, PersistedTea
   cache->slots[0] = entry;
 }
 
-//Save persisted cached teams and their API info
-void globals_prv_save_team_data(void) {
-  if (settings.FavoriteTeam >= TEAMS_COUNT) return;
+//Build a PersistedTeamData snapshot from a team's current live data
+static PersistedTeamData globals_prv_team_cache_entry_from(uint8_t team_index) {
+  Team *team = &TEAMS[team_index];
+  PersistedTeamData entry = {
+    .team_index = team_index,
+    .vs_id = team->vs_id,
+    .score = team->score,
+    .vs_score = team->vs_score,
+    #ifndef PBL_PLATFORM_APLITE
+    .ranking = team->ranking,
+    .wins = team->wins,
+    .postseasonGames = team->postseasonGames,
+    .postseasonWins = team->postseasonWins,
+    .postseasonLosses = team->postseasonLosses,
+    #endif
+    .completed = team->completed,
+    .gametime = team->gametime,
+  };
+  return entry;
+}
 
+//Save persisted cached teams and their API info for every team in a cache-scoped sync walk
+void globals_prv_save_team_data(const uint8_t *team_indices, uint8_t count) {
   PersistedTeamCache cache;
   if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
     persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
@@ -177,24 +196,26 @@ void globals_prv_save_team_data(void) {
     }
   }
 
-  Team *fav = &TEAMS[settings.FavoriteTeam];
-  PersistedTeamData entry = {
-    .team_index = settings.FavoriteTeam,
-    .vs_id = fav->vs_id,
-    .score = fav->score,
-    .vs_score = fav->vs_score,
-    #ifndef PBL_PLATFORM_APLITE
-    .ranking = fav->ranking,
-    .wins = fav->wins,
-    .postseasonGames = fav->postseasonGames,
-    .postseasonWins = fav->postseasonWins,
-    .postseasonLosses = fav->postseasonLosses,
-    #endif
-    .completed = fav->completed,
-    .gametime = fav->gametime,
-  };
+  for (uint8_t n = 0; n < count; n++) {
+    uint8_t team_index = team_indices[n];
+    if (team_index >= TEAMS_COUNT) continue;
 
-  globals_prv_team_cache_touch(&cache, entry);
+    PersistedTeamData entry = globals_prv_team_cache_entry_from(team_index);
+
+    if (team_index == settings.FavoriteTeam) {
+      // Active favorite always gets promoted to slot 0.
+      globals_prv_team_cache_touch(&cache, entry);
+    } else {
+      // Refresh in place if it's already a cache slot; only the favorite creates brand-new slots, so skip it if not found.
+      for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+        if (cache.slots[i].team_index == team_index) {
+          cache.slots[i] = entry;
+          break;
+        }
+      }
+    }
+  }
+
   persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
 }
 

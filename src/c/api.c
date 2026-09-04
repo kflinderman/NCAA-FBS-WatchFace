@@ -19,6 +19,11 @@ static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
 static bool cfbd_light_sync_pending = false;
 
+// Walk list: the specific TEAMS[] being synced this walk
+static uint8_t cfbd_walk_indices[MAX_CACHED_FAVORITE_TEAMS + 1];
+static uint8_t cfbd_walk_count = 0;
+static uint8_t cfbd_walk_pos = 0;
+
 // Forward declaration
 static void cfbd_team_walk_complete(CFBDTeamDataType type);
 
@@ -85,14 +90,41 @@ static void build_request_team_data(DictionaryIterator *iter) {
 static void request_team_data(void) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
-          cfbd_current_team_index + 1, (int)TEAMS_COUNT, TEAMS[cfbd_current_team_index].name,
+          cfbd_walk_pos + 1, cfbd_walk_count, TEAMS[cfbd_current_team_index].name,
           cfbd_current_sync_type);
   #endif
 
   outbox_queue_send(build_request_team_data);
 }
 
-// Begin stepping through all teams to fetch data sequentially
+// Build the list of teams to sync this, scoped to the persisted favorite-team cache
+static uint8_t build_cache_walk_list(uint8_t *out) {
+  uint8_t count = 0;
+
+  if (settings.FavoriteTeam < TEAMS_COUNT) {
+    out[count++] = settings.FavoriteTeam;
+  }
+
+  if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
+    PersistedTeamCache cache;
+    persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+
+    for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS && count < (MAX_CACHED_FAVORITE_TEAMS + 1); i++) {
+      uint8_t idx = cache.slots[i].team_index;
+      if (idx == TEAM_CACHE_EMPTY_SLOT || idx >= TEAMS_COUNT) continue;
+
+      bool dup = false;
+      for (uint8_t j = 0; j < count; j++) {
+        if (out[j] == idx) { dup = true; break; }
+      }
+      if (!dup) out[count++] = idx;
+    }
+  }
+
+  return count;
+}
+
+// Begin stepping through cached teams to fetch data sequentially
 static void start_team_walk(CFBDTeamDataType type) {
   // If a walk is already active, defer this request
   if (cfbd_current_team_index >= 0) {
@@ -108,21 +140,24 @@ static void start_team_walk(CFBDTeamDataType type) {
     return;
   }
 
-  if (TEAMS_COUNT == 0) {
+  cfbd_walk_count = build_cache_walk_list(cfbd_walk_indices);
+  cfbd_walk_pos = 0;
+
+  if (cfbd_walk_count == 0) {
     cfbd_team_walk_complete(type);
     return;
   }
 
   cfbd_current_sync_type = type;
-  cfbd_current_team_index = 0;
+  cfbd_current_team_index = cfbd_walk_indices[0];
   request_team_data();
 }
 
 // Complete active team walk sequence, persist updated data, and check pending walks
 static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - all %d teams updated",
-          type, (int)TEAMS_COUNT);
+  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - %d cached teams updated",
+          type, cfbd_walk_count);
   #endif
 
   cfbd_current_team_index = -1;
@@ -135,7 +170,7 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   }
   settings.cfbd.api_data_valid = true;
   globals_prv_save_settings();
-  globals_prv_save_team_data();
+  globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
   s_favorite_team_data_missing = false;
   globals_prv_update_display();
 
@@ -153,12 +188,19 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
 static void build_request_full_sync(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
+  // Tell JS what we already know about next season's kickoff (0 = unknown)
+  dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
 }
 
 // Construct dictionary request for light sync
 static void build_request_light_sync(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
+  dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
+
+  // Tell JS exactly which season year to pull games from
+  uint16_t sync_year = settings.cfbd.current_season_year + (settings.cfbd.pull_next_season ? 1 : 0);
+  dict_write_uint16(iter, MESSAGE_KEY_CFBD_SYNC_YEAR, sync_year);
 }
 
 /**********************/
@@ -246,27 +288,46 @@ void api_request_cfbd_light_sync(void) {
   outbox_queue_send(build_request_light_sync);
 }
 
-// Evaluate conditions to check if full sync is required
-bool api_should_full_sync(void) {
+#define CFBD_TWO_WEEKS_SECONDS (14 * 24 * 60 * 60)
+
+// Handles two distinct events, two weeks out from next season's kickoff or actual rollover 
+static void api_check_season_rollover(void) {
+  time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
+  if (next_game_ts == 0) {
+    return;
+  }
+
   time_t now = time(NULL);
 
+  if (now >= next_game_ts) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD season rollover reached - invalidating data for new season");
+    #endif
+    settings.cfbd.api_data_valid = false;
+    settings.cfbd.current_season_year++;
+    settings.cfbd.next_season_first_game_ts = 0;
+    settings.cfbd.pull_next_season = false;
+    return;
+  }
+
+  if (!settings.cfbd.pull_next_season && now >= (next_game_ts - CFBD_TWO_WEEKS_SECONDS)) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD within 2 weeks of next season - light sync will pull next year's games");
+    #endif
+    settings.cfbd.pull_next_season = true;
+  }
+}
+
+// Evaluate conditions to check if full sync is required
+bool api_should_full_sync(void) {
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
     return false;
   }
 
-  if (settings.api && s_favorite_team_data_missing) {
-    return true;
-  }
+  api_check_season_rollover();
 
-  // Never synced, or more than 24 hours since last full sync
-  if (settings.api && (!settings.cfbd.api_data_valid ||
-                       (now - settings.cfbd.last_full_sync_ts >= 86400))) {
-    return true;
-  }
-
-  // Check if we've crossed into next season to force sync
-  time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
-  if (next_game_ts > 0 && now >= next_game_ts && !settings.cfbd.api_data_valid) {
+  // Full sync only needs to run when its own data is actually missing
+  if (settings.api && !settings.cfbd.api_data_valid) {
     return true;
   }
 
@@ -282,6 +343,8 @@ bool api_should_light_sync(void) {
   if (cfbd_light_sync_pending) {
     return false;
   }
+
+  api_check_season_rollover();
 
   if (settings.api && s_favorite_team_data_missing) {
     return true;
@@ -321,7 +384,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
   if (games_ready_tuple) {
     #if defined(DEBUG)
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - requesting %d teams", (int)TEAMS_COUNT);
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - starting cache-scoped team walk");
     #endif
 
     apply_api_usage_from_message(iterator);
@@ -335,7 +398,7 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
   Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
   if (records_ready_tuple) {
     #if defined(DEBUG)
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - requesting %d teams", (int)TEAMS_COUNT);
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - starting cache-scoped team walk");
     #endif
 
     apply_api_usage_from_message(iterator);
@@ -410,10 +473,10 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
             info->ranking, info->wins);
     #endif
 
-    // Advance to next team or finish walk sequence
-    uint16_t next_index = team_index + 1;
-    if (next_index < TEAMS_COUNT) {
-      cfbd_current_team_index = next_index;
+    // Advance to next team in the walk list, or finish walk sequence
+    cfbd_walk_pos++;
+    if (cfbd_walk_pos < cfbd_walk_count) {
+      cfbd_current_team_index = cfbd_walk_indices[cfbd_walk_pos];
       request_team_data();
     } else {
       cfbd_team_walk_complete(cfbd_current_sync_type);

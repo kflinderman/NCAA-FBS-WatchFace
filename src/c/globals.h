@@ -10,7 +10,7 @@
 //#define TESTING
 
 #ifndef PBL_PLATFORM_APLITE
-//#define DEBUG
+#define DEBUG
 #endif
 
 
@@ -292,5 +292,5 @@ void globals_prv_default_settings(void);
 void globals_prv_save_settings(void);
 void globals_prv_load_settings(void);
 void globals_prv_update_display(void);
-void globals_prv_save_team_data(void);
+void globals_prv_save_team_data(const uint8_t *team_indices, uint8_t count);
 void globals_prv_load_team_data(void);

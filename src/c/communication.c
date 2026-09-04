@@ -132,7 +132,6 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
 
 // AppMessage received handler
 void inbox_received_callback(DictionaryIterator *iterator, void *context) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP: inbox start = %lu", (unsigned long)heap_bytes_free());
 
   
   #if defined(DEBUG)
@@ -140,9 +139,7 @@ void inbox_received_callback(DictionaryIterator *iterator, void *context) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Configuration - Dict size: %d", dict_size(iterator));
   #endif
   configuration_callback(iterator, context);
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP: after configuration_callback = %lu", (unsigned long)heap_bytes_free());
   api_cfbd_callback(iterator, context);  
-  APP_LOG(APP_LOG_LEVEL_INFO, "HEAP: after api_cfbd_callback = %lu", (unsigned long)heap_bytes_free());
   #ifndef PBL_PLATFORM_APLITE
   weather_callback(iterator, context);
   #endif

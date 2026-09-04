@@ -368,8 +368,9 @@ Pebble.addEventListener('appmessage',
         console.log('REQUEST_CFBD_FULL_SYNC with no api_key - skipping');
         return;
       }
+      var knownNextSeasonTs = e.payload['CFBD_NEXT_SEASON_TS'] || 0;
 
-      cfbdModule.syncFullCFBD(apiKey, function(fullData) {
+      cfbdModule.syncFullCFBD(apiKey, knownNextSeasonTs, function(fullData) {
         sendCalendarToWatch(fullData);
 
         recordsRankingsData = fullData;
@@ -395,8 +396,10 @@ Pebble.addEventListener('appmessage',
         console.log('REQUEST_CFBD_LIGHT_SYNC missing api_key');
         return;
       }
+      var syncYear = e.payload['CFBD_SYNC_YEAR'] || 0;
+      var knownNextSeasonTsLight = e.payload['CFBD_NEXT_SEASON_TS'] || 0;
 
-      cfbdModule.syncLightCFBD(apiKey, function(result) {
+      cfbdModule.syncLightCFBD(apiKey, syncYear, knownNextSeasonTsLight, function(result) {
         gamesData = result;
         console.log('Games cached: ' + result.regularGames.length + ' regular' +
           (result.inPostseason ? ', ' + result.postGames.length + ' postseason' : ''));
