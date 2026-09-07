@@ -185,7 +185,10 @@ static PersistedTeamData globals_prv_team_cache_entry_from(uint8_t team_index) {
   return entry;
 }
 
-//Save persisted cached teams and their API info for every team in a cache-scoped sync walk
+//Save persisted cached teams and their API info for every team in a
+//cache-scoped sync walk. FavoriteTeam is promoted to most-recently-used;
+//any other cached teams just get their data refreshed in place so a sync
+//doesn't reshuffle the LRU order out from under the active favorite.
 void globals_prv_save_team_data(const uint8_t *team_indices, uint8_t count) {
   PersistedTeamCache cache;
   if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
@@ -206,7 +209,8 @@ void globals_prv_save_team_data(const uint8_t *team_indices, uint8_t count) {
       // Active favorite always gets promoted to slot 0.
       globals_prv_team_cache_touch(&cache, entry);
     } else {
-      // Refresh in place if it's already a cache slot; only the favorite creates brand-new slots, so skip it if not found.
+      // Refresh in place if it's already a cache slot; only the
+      // favorite creates brand-new slots, so skip it if not found.
       for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
         if (cache.slots[i].team_index == team_index) {
           cache.slots[i] = entry;

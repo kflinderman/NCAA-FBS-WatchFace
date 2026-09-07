@@ -13,13 +13,14 @@
 #define CFBD_API_CALLS_WARNING_PERCENT 90
 
 // Sync state tracking variables
-static int cfbd_current_team_index = -1; // -1 = no team in progress
+static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
 static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
 static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
 static bool cfbd_light_sync_pending = false;
 
-// Walk list: the specific TEAMS[] being synced this walk
+// Walk list: the specific TEAMS[] indices being synced this walk (cache-scoped, not the full roster).
+// Sized for the worst case: current FavoriteTeam (if not yet cached) plus every cached slot.
 static uint8_t cfbd_walk_indices[MAX_CACHED_FAVORITE_TEAMS + 1];
 static uint8_t cfbd_walk_count = 0;
 static uint8_t cfbd_walk_pos = 0;
@@ -97,7 +98,12 @@ static void request_team_data(void) {
   outbox_queue_send(build_request_team_data);
 }
 
-// Build the list of teams to sync this, scoped to the persisted favorite-team cache
+// Build the list of team indices to sync this walk, scoped to the persisted
+// favorite-team cache. Always includes the current FavoriteTeam even if it
+// hasn't been cached yet - that covers the "just switched to a new team"
+// case, and it'll get cached once this walk completes via
+// globals_prv_save_team_data(). Duplicates (FavoriteTeam already present in
+// the cache) are collapsed.
 static uint8_t build_cache_walk_list(uint8_t *out) {
   uint8_t count = 0;
 
@@ -165,10 +171,10 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   if (type == CFBD_TEAM_DATA_GAMES) {
     settings.cfbd.last_light_sync_ts = time(NULL);
     cfbd_light_sync_pending = false;
-  } else {
-    settings.cfbd.last_full_sync_ts = time(NULL);
   }
-  settings.cfbd.api_data_valid = true;
+  // api_data_valid is set once, by the calendar response handler - it no
+  // longer reflects "did a team walk finish" since records/rankings moved
+  // here from full sync.
   globals_prv_save_settings();
   globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
   s_favorite_team_data_missing = false;
@@ -188,7 +194,9 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
 static void build_request_full_sync(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  // Tell JS what we already know about next season's kickoff (0 = unknown)
+  // Tell JS what we already know about next season's kickoff (0 = unknown).
+  // If this is non-zero and still in the future, JS skips its /games
+  // lookup entirely and just reuses this value.
   dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
 }
 
@@ -198,7 +206,8 @@ static void build_request_light_sync(DictionaryIterator *iter) {
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
   dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
 
-  // Tell JS exactly which season year to pull games from
+  // Tell JS exactly which season year to pull games from - no need for it
+  // to re-derive this itself.
   uint16_t sync_year = settings.cfbd.current_season_year + (settings.cfbd.pull_next_season ? 1 : 0);
   dict_write_uint16(iter, MESSAGE_KEY_CFBD_SYNC_YEAR, sync_year);
 }
@@ -290,7 +299,13 @@ void api_request_cfbd_light_sync(void) {
 
 #define CFBD_TWO_WEEKS_SECONDS (14 * 24 * 60 * 60)
 
-// Handles two distinct events, two weeks out from next season's kickoff or actual rollover 
+// Pure date-math check against the persisted season boundary - no network
+// involved. Handles two distinct events:
+//  1. Two weeks out from next season's kickoff: flip pull_next_season so
+//     light sync starts asking for next year's games instead of this year's.
+//  2. Actual rollover (kickoff has passed): invalidate api_data_valid so a
+//     genuine full sync runs to learn the new season's calendar, and reset
+//     the boundary fields so it gets re-learned fresh.
 static void api_check_season_rollover(void) {
   time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
   if (next_game_ts == 0) {
@@ -326,7 +341,9 @@ bool api_should_full_sync(void) {
 
   api_check_season_rollover();
 
-  // Full sync only needs to run when its own data is actually missing
+  // Full sync only needs to run when its own data (calendar/season boundary)
+  // is actually missing - never on a rolling timer, and never just because
+  // the favorite team changed (that's light sync's job).
   if (settings.api && !settings.cfbd.api_data_valid) {
     return true;
   }
@@ -360,7 +377,9 @@ bool api_should_light_sync(void) {
 
 // Main incoming AppMessage dictionary parser for API data
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Full sync response: calendar data (year, next season kickoff)
+  // Full sync response: calendar data (year, next season kickoff). This is
+  // now the actual completion point of "full sync" - it no longer chains
+  // into a team walk, since records/rankings moved to light sync.
   Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
   if (year_tuple) {
     settings.cfbd.current_season_year = year_tuple->value->uint16;
@@ -375,6 +394,8 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
             settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
     #endif
 
+    settings.cfbd.api_data_valid = true;
+    settings.cfbd.last_full_sync_ts = time(NULL);
     apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
     return;

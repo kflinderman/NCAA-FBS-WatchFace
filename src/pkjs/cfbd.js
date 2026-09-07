@@ -319,7 +319,10 @@ var cfbd = (function() {
     });
   }
 
-  // Resolve active season year and calculate upcoming season timestamp boundary
+  // Resolve active season year and calculate upcoming season timestamp boundary.
+  // knownNextSeasonTs is whatever the watch already has persisted (0 if
+  // unknown) - when it's still in the future we skip the /games lookup
+  // entirely and just reuse it.
   function determineSeasonAndBoundaryImpl(apiKey, knownNextSeasonTs, callback) {
     var now = new Date();
     var currentYear = now.getFullYear();
@@ -329,7 +332,6 @@ var cfbd = (function() {
 
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
       var fetchNextSeasonBoundary = function() {
-        //knownNextSeasonTs is whatever the watch already has persisted (0 if unknown)
         if (knownNextSeasonTs && knownNextSeasonTs > nowTs) {
           console.log('Next season boundary already known (' + knownNextSeasonTs + ') - skipping /games lookup');
           cache.nextSeasonFirstGameTs = knownNextSeasonTs;
@@ -450,7 +452,12 @@ var cfbd = (function() {
   return {
     cache: cache,
 
-    // Perform complete sync: season calendar, usage quota, team records, and rankings
+    // Resolve season calendar boundary and correct usage quota only.
+    // Records/rankings now ride along with light sync instead (see below) -
+    // full sync just tracks the season boundary, so it stays rare.
+    // knownNextSeasonTs is whatever the watch already has persisted for next
+    // season's kickoff (0 if unknown) - lets us skip the /games boundary
+    // lookup entirely once it's been learned.
     syncFullCFBD: function(apiKey, knownNextSeasonTs, callback) {
       console.log('=== CFBD Full Sync Start ===');
 
@@ -478,74 +485,80 @@ var cfbd = (function() {
             console.log('CFBD usage correction skipped - GET /info unavailable or unlimited plan');
           }
 
-          var target = determineCurrentWeek(cache);
-
-          var expected = 2;
-          var completed = 0;
-          var records = [];
-          var rankings = [];
-
-          function onFetchComplete() {
-            completed++;
-            if (completed !== expected) return;
-
-            callback({
-              year: year,
-              nextSeasonFirstGameTs: nextSeasonTs,
-              seasonDates: seasonDates,
-              weekDates: weekDates,
-              records: records,
-              rankings: rankings,
-              apiCallsUsed: usage.used,
-              apiCallsLimit: usage.limit
-            });
-          }
-
-          fetchRecords(target.year, apiKey, function(data) {
-            records = data;
-            onFetchComplete();
+          callback({
+            year: year,
+            nextSeasonFirstGameTs: nextSeasonTs,
+            seasonDates: seasonDates,
+            weekDates: weekDates,
+            apiCallsUsed: usage.used,
+            apiCallsLimit: usage.limit
           });
-
-          setTimeout(function() {
-            fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-              rankings = data;
-              onFetchComplete();
-            });
-          }, constants.BATCH_DELAY);
         });
       });
 
       console.log('=== CFBD Full Sync End ===');
     },
 
-    // Lightweight sync: game schedules and live scores
+    // Lightweight sync: game schedules, live scores, and records/rankings.
+    // targetYear is the exact season year the watch wants games for (its own
+    // math, based on the persisted season boundary) - used directly instead
+    // of re-deriving it here. knownNextSeasonTs is passed through to the
+    // cache-empty fallback below so it can also skip its /games lookup.
     syncLightCFBD: function(apiKey, targetYear, knownNextSeasonTs, callback) {
       function fetchAndReturn() {
         var target = determineCurrentWeek(cache);
         var year = targetYear || cache.currentYear;
 
-        fetchSeasonGames(year, 'regular', apiKey, function(regularGames) {
-          if (!target.offseason) {
-            callback({
-              regularGames: regularGames,
-              postGames: [],
-              inPostseason: false,
-              apiCallsUsed: usage.used,
-              apiCallsLimit: usage.limit
-            });
-            return;
-          }
+        // regular games, [postseason games], records, rankings
+        var expected = target.offseason ? 4 : 3;
+        var completed = 0;
+        var regularGames = [];
+        var postGames = [];
+        var records = [];
+        var rankings = [];
 
-          fetchSeasonGames(year, 'postseason', apiKey, function(postGames) {
-            callback({
-              regularGames: regularGames,
-              postGames: postGames,
-              inPostseason: true,
-              apiCallsUsed: usage.used,
-              apiCallsLimit: usage.limit
-            });
+        function onFetchComplete() {
+          completed++;
+          if (completed !== expected) return;
+
+          callback({
+            regularGames: regularGames,
+            postGames: postGames,
+            inPostseason: target.offseason,
+            records: records,
+            rankings: rankings,
+            apiCallsUsed: usage.used,
+            apiCallsLimit: usage.limit
           });
+        }
+
+        fetchSeasonGames(year, 'regular', apiKey, function(games) {
+          regularGames = games;
+          onFetchComplete();
         });
+
+        if (target.offseason) {
+          setTimeout(function() {
+            fetchSeasonGames(year, 'postseason', apiKey, function(games) {
+              postGames = games;
+              onFetchComplete();
+            });
+          }, constants.BATCH_DELAY);
+        }
+
+        setTimeout(function() {
+          fetchRecords(year, apiKey, function(data) {
+            records = data;
+            onFetchComplete();
+          });
+        }, constants.BATCH_DELAY);
+
+        setTimeout(function() {
+          fetchRankings(year, target.week, target.offseason, apiKey, function(data) {
+            rankings = data;
+            onFetchComplete();
+          });
+        }, constants.BATCH_DELAY * 2);
       }
 
       if (cache.currentYear === null) {

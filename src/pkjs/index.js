@@ -361,7 +361,7 @@ Pebble.addEventListener('appmessage',
       getWeather();
     }
 
-    // Full CFBD sync request (calendar, records, rankings)
+    // Full CFBD sync request (calendar boundary + usage quota only)
     if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
       var apiKey = e.payload['api_key'];
       if (!apiKey) {
@@ -372,23 +372,10 @@ Pebble.addEventListener('appmessage',
 
       cfbdModule.syncFullCFBD(apiKey, knownNextSeasonTs, function(fullData) {
         sendCalendarToWatch(fullData);
-
-        recordsRankingsData = fullData;
-        console.log('Records/rankings cached: ' + fullData.records.length + ' records, '
-          + fullData.rankings.length + ' rankings');
-
-        Pebble.sendAppMessage({
-            'CFBD_RECORDS_SYNC_READY': 1,
-            'CFBD_API_CALLS_USED': fullData.apiCallsUsed || 0,
-            'CFBD_API_CALLS_LIMIT': fullData.apiCallsLimit || 0
-          },
-          function(e) { console.log('Records/rankings ready signal sent'); },
-          function(e) { console.log('Error sending records/rankings ready signal!'); }
-        );
       });
     }
 
-    // Light CFBD sync request (scores/games)
+    // Light CFBD sync request (scores/games, records/rankings)
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
 
@@ -401,8 +388,11 @@ Pebble.addEventListener('appmessage',
 
       cfbdModule.syncLightCFBD(apiKey, syncYear, knownNextSeasonTsLight, function(result) {
         gamesData = result;
+        recordsRankingsData = result;
         console.log('Games cached: ' + result.regularGames.length + ' regular' +
           (result.inPostseason ? ', ' + result.postGames.length + ' postseason' : ''));
+        console.log('Records/rankings cached: ' + result.records.length + ' records, '
+          + result.rankings.length + ' rankings');
 
         Pebble.sendAppMessage({
             'CFBD_LIGHT_SYNC_READY': 1,
@@ -411,6 +401,15 @@ Pebble.addEventListener('appmessage',
           },
           function(e) { console.log('Light sync ready signal sent'); },
           function(e) { console.log('Error sending light sync ready signal!'); }
+        );
+
+        Pebble.sendAppMessage({
+            'CFBD_RECORDS_SYNC_READY': 1,
+            'CFBD_API_CALLS_USED': result.apiCallsUsed || 0,
+            'CFBD_API_CALLS_LIMIT': result.apiCallsLimit || 0
+          },
+          function(e) { console.log('Records/rankings ready signal sent'); },
+          function(e) { console.log('Error sending records/rankings ready signal!'); }
         );
       });
     }
