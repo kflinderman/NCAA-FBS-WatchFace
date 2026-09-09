@@ -16,6 +16,7 @@ var cfbd = (function() {
 
   var constants = {
     API_BASE: 'https://api.collegefootballdata.com',
+    ESPN_SCOREBOARD_URL: 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?limit=400',
     BATCH_DELAY: 100  // ms delay between batched requests
   };
 
@@ -92,6 +93,38 @@ var cfbd = (function() {
     xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
     xhr.setRequestHeader('Accept', 'application/json');
     trackApiCall();
+    xhr.send();
+  }
+
+  // Unauthenticated HTTP GET - for public, no-key endpoints (ESPN's public
+  // scoreboard). Deliberately separate from xhrAuth: no bearer token, and
+  // does NOT count against CFBD's monthly usage quota.
+  function xhrPublic(url, callback, errorCallback) {
+    var xhr = new XMLHttpRequest();
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
+          callback(JSON.parse(xhr.responseText));
+        } catch (e) {
+          console.log('Public request JSON parse error: ' + e);
+          if (errorCallback) errorCallback(-1);
+        }
+      } else {
+        console.log('Public request failed: ' + xhr.status + ' ' + url);
+        if (errorCallback) errorCallback(xhr.status);
+      }
+    };
+    xhr.onerror = function() {
+      console.log('Public request network error: ' + url);
+      if (errorCallback) errorCallback(0);
+    };
+    xhr.ontimeout = function() {
+      console.log('Public request timed out: ' + url);
+      if (errorCallback) errorCallback(-2);
+    };
+    xhr.open('GET', url);
+    xhr.setRequestHeader('Accept', 'application/json');
     xhr.send();
   }
 
@@ -184,6 +217,70 @@ var cfbd = (function() {
           completed: game.completed
         };
       });
+  }
+
+  // Fetch today's live/final scores from ESPN's public scoreboard. This is
+  // an unofficial, undocumented endpoint (no auth, no key, doesn't touch
+  // CFBD's quota) - used only for the dedicated live-score poll, since
+  // CFBD's free tier only has live scores behind a Patreon-gated
+  // /scoreboard endpoint. If this fails or ESPN's shape ever changes, we
+  // just return no live data - the watch keeps whatever CFBD last had.
+  function fetchEspnLiveScores(callback) {
+    xhrPublic(constants.ESPN_SCOREBOARD_URL, function(data) {
+      var events = (data && Array.isArray(data.events)) ? data.events : [];
+      console.log('ESPN scoreboard: ' + events.length + ' games today');
+      callback(events);
+    }, function() {
+      callback([]);
+    });
+  }
+
+  // Loose-match team names between CFBD and ESPN's differing conventions
+  function normalizeTeamName(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  // Build a per-team lookup (normalized team name -> live game info) from
+  // ESPN's raw events, keeping only games that are actually live or final -
+  // nothing to report for games that haven't started yet. Indexed by single
+  // team name (not a matchup pair) so a per-team live-score request can
+  // find a team's own game without already knowing its opponent.
+  function buildEspnLiveByTeam(events) {
+    var byTeam = {};
+
+    events.forEach(function(event) {
+      var comp = event.competitions && event.competitions[0];
+      if (!comp || !Array.isArray(comp.competitors)) return;
+
+      var home = comp.competitors.filter(function(c) { return c.homeAway === 'home'; })[0];
+      var away = comp.competitors.filter(function(c) { return c.homeAway === 'away'; })[0];
+      if (!home || !away) return;
+
+      var status = comp.status || event.status;
+      var state = status && status.type && status.type.state; // 'pre' | 'in' | 'post'
+      if (state !== 'in' && state !== 'post') return;
+
+      var homeName = (home.team && (home.team.location || home.team.displayName)) || '';
+      var awayName = (away.team && (away.team.location || away.team.displayName)) || '';
+      if (!homeName || !awayName) return;
+
+      var homePoints = parseInt(home.score, 10) || 0;
+      var awayPoints = parseInt(away.score, 10) || 0;
+      var completed = !!(status && status.type && status.type.completed);
+
+      byTeam[normalizeTeamName(homeName)] = {
+        teamScore: homePoints,
+        oppScore: awayPoints,
+        completed: completed
+      };
+      byTeam[normalizeTeamName(awayName)] = {
+        teamScore: awayPoints,
+        oppScore: homePoints,
+        completed: completed
+      };
+    });
+
+    return byTeam;
   }
 
   // Fetch FBS game schedule for specified year and season type
@@ -569,7 +666,19 @@ var cfbd = (function() {
         return;
       }
       fetchAndReturn();
-    }
+    },
+
+    // Dedicated live-score poll: ESPN's public scoreboard only, completely
+    // independent of CFBD (no key, no quota impact). Used only while a
+    // cached team's game is known to be underway - see the watch-side
+    // gating in api.c for when this actually gets called.
+    fetchLiveScores: function(callback) {
+      fetchEspnLiveScores(function(events) {
+        callback(buildEspnLiveByTeam(events));
+      });
+    },
+
+    normalizeTeamName: normalizeTeamName
   };
 })();
 

@@ -11,13 +11,17 @@
 
 #define MAX_DISPLAYABLE_SCORE 99
 #define CFBD_API_CALLS_WARNING_PERCENT 90
+#define CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS 60
 
 // Sync state tracking variables
 static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
 static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
 static bool cfbd_pending_games_walk = false;
 static bool cfbd_pending_records_walk = false;
+static bool cfbd_pending_live_walk = false;
 static bool cfbd_light_sync_pending = false;
+static bool cfbd_live_poll_pending = false;
+static bool cfbd_final_score_pending = false;
 
 // Walk list: the specific TEAMS[] indices being synced this walk (cache-scoped, not the full roster).
 // Sized for the worst case: current FavoriteTeam (if not yet cached) plus every cached slot.
@@ -140,8 +144,10 @@ static void start_team_walk(CFBDTeamDataType type) {
     #endif
     if (type == CFBD_TEAM_DATA_GAMES) {
       cfbd_pending_games_walk = true;
-    } else {
+    } else if (type == CFBD_TEAM_DATA_RECORDS) {
       cfbd_pending_records_walk = true;
+    } else {
+      cfbd_pending_live_walk = true;
     }
     return;
   }
@@ -171,13 +177,24 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   if (type == CFBD_TEAM_DATA_GAMES) {
     settings.cfbd.last_light_sync_ts = time(NULL);
     cfbd_light_sync_pending = false;
+  } else if (type == CFBD_TEAM_DATA_LIVE_SCORE) {
+    settings.cfbd.last_espn_poll_ts = time(NULL);
+    cfbd_live_poll_pending = false;
   }
   // api_data_valid is set once, by the calendar response handler - it no
   // longer reflects "did a team walk finish" since records/rankings moved
   // here from full sync.
   globals_prv_save_settings();
-  globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
-  s_favorite_team_data_missing = false;
+
+  if (type != CFBD_TEAM_DATA_LIVE_SCORE) {
+    // Live-score updates are ephemeral and refresh far more often than
+    // games/records (as often as every ~60s during a live game) - skip
+    // persisting them to flash every cycle to avoid excess wear. The real
+    // score gets written for good once CFBD itself reports it via GAMES.
+    globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
+    s_favorite_team_data_missing = false;
+  }
+
   globals_prv_update_display();
 
   // Trigger any deferred team walks queued during sync
@@ -187,6 +204,9 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   } else if (cfbd_pending_records_walk) {
     cfbd_pending_records_walk = false;
     start_team_walk(CFBD_TEAM_DATA_RECORDS);
+  } else if (cfbd_pending_live_walk) {
+    cfbd_pending_live_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_LIVE_SCORE);
   }
 }
 
@@ -210,6 +230,12 @@ static void build_request_light_sync(DictionaryIterator *iter) {
   // to re-derive this itself.
   uint16_t sync_year = settings.cfbd.current_season_year + (settings.cfbd.pull_next_season ? 1 : 0);
   dict_write_uint16(iter, MESSAGE_KEY_CFBD_SYNC_YEAR, sync_year);
+}
+
+// Construct dictionary request for the ESPN live-score poll - no api_key,
+// ESPN's public scoreboard needs none.
+static void build_request_espn_live_poll(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_ESPN_LIVE_POLL, 1);
 }
 
 /**********************/
@@ -297,6 +323,27 @@ void api_request_cfbd_light_sync(void) {
   outbox_queue_send(build_request_light_sync);
 }
 
+// Request a live-score poll from ESPN's public scoreboard. Entirely
+// independent of CFBD - no key needed, no quota impact - so this isn't
+// gated behind api_update_status_indicator() the way CFBD syncs are.
+void api_request_espn_live_poll(void) {
+  if (!settings.api) {
+    return;
+  }
+  if (cfbd_live_poll_pending) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "ESPN live poll skipped: already in flight");
+    #endif
+    return;
+  }
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting ESPN live score poll");
+  #endif
+  cfbd_live_poll_pending = true;
+  outbox_queue_send(build_request_espn_live_poll);
+}
+
 #define CFBD_TWO_WEEKS_SECONDS (14 * 24 * 60 * 60)
 
 // Pure date-math check against the persisted season boundary - no network
@@ -351,6 +398,23 @@ bool api_should_full_sync(void) {
   return false;
 }
 
+// Whether any cached team's game has started (per known gametime) but
+// isn't marked completed yet - true regardless of whether that game's data
+// came from CFBD or ESPN, since both write the same completed field.
+static bool any_cached_team_currently_live(void) {
+  time_t now = time(NULL);
+  uint8_t indices[MAX_CACHED_FAVORITE_TEAMS + 1];
+  uint8_t count = build_cache_walk_list(indices);
+
+  for (uint8_t i = 0; i < count; i++) {
+    Team *team = &TEAMS[indices[i]];
+    if (team->gametime > 0 && now >= (time_t)team->gametime && !team->completed) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // Evaluate conditions to check if light sync is required
 bool api_should_light_sync(void) {
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
@@ -367,12 +431,51 @@ bool api_should_light_sync(void) {
     return true;
   }
 
-  time_t now = time(NULL);
+  if (settings.api && cfbd_final_score_pending) {
+    // ESPN just told us a cached team's game finished - get CFBD's
+    // official numbers now rather than waiting out the normal timer.
+    cfbd_final_score_pending = false;
+    return true;
+  }
 
-  if (settings.api && (!settings.cfbd.api_data_valid || (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60)))) {
+  if (settings.api && !settings.cfbd.api_data_valid) {
+    return true;
+  }
+
+  // While ESPN's live poll is already covering a cached team's
+  // in-progress game, skip the scheduled CFBD refresh - CFBD's free tier
+  // won't have anything new until the game ends anyway, and ESPN is
+  // already keeping the score fresh for free. Normal cadence resumes once
+  // every cached team's game is either not started yet or complete.
+  //time_t now = time(NULL);
+  if (settings.api && !any_cached_team_currently_live()){
+      //&& (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60))) {
     return true;
   }
   return false;
+}
+
+// Evaluate whether to poll ESPN for a live score update. Only fires while
+// at least one cached team's game is known to have started (per CFBD's own
+// gametime) and isn't marked completed yet - so this never runs outside an
+// actual live game window, and stops the moment either CFBD or ESPN itself
+// reports the game as final. Entirely independent of CFBD's own sync
+// cadence/quota.
+bool api_should_poll_espn_live(void) {
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+
+  if (!settings.api || cfbd_live_poll_pending) {
+    return false;
+  }
+
+  time_t now = time(NULL);
+  if ((uint32_t)now - settings.cfbd.last_espn_poll_ts < CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS) {
+    return false;
+  }
+
+  return any_cached_team_currently_live();
 }
 
 // Main incoming AppMessage dictionary parser for API data
@@ -429,6 +532,17 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     return;
   }
 
+  // ESPN live-score data ready, walk cached teams for a score-only update
+  Tuple *espn_ready_tuple = dict_find(iterator, MESSAGE_KEY_ESPN_LIVE_READY);
+  if (espn_ready_tuple) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "ESPN live scores ready - starting cache-scoped team walk");
+    #endif
+
+    start_team_walk(CFBD_TEAM_DATA_LIVE_SCORE);
+    return;
+  }
+
   // Incoming data payload for a specific team index
   Tuple *team_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_INDEX);
   if (team_index_tuple) {
@@ -479,7 +593,31 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     if (score_tuple)     info->score     = (uint16_t)score_tuple->value->int32;
     if (vs_score_tuple)  info->vs_score  = (uint16_t)vs_score_tuple->value->int32;
     if (gametime_tuple)  info->gametime  = (uint32_t)gametime_tuple->value->int32;
-    if (completed_tuple) info->completed = (completed_tuple->value->int32 != 0);
+
+    if (cfbd_current_sync_type == CFBD_TEAM_DATA_LIVE_SCORE) {
+      // Require two consecutive ESPN "completed" reports before trusting
+      // it and bothering CFBD - guards against a brief/premature ESPN
+      // final-status blip triggering a CFBD call before it's actually
+      // ready. Doesn't need to persist across restarts; a fresh streak
+      // just costs one extra ~60s poll in the rare case of a restart
+      // mid-transition.
+      if (completed_tuple && completed_tuple->value->int32 != 0) {
+        if (info->espn_completed_streak < 255) info->espn_completed_streak++;
+        if (info->espn_completed_streak >= 2) {
+          info->completed = true;
+          info->espn_completed_streak = 0;
+          cfbd_final_score_pending = true;
+          #if defined(DEBUG)
+          APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team %d (%s) game confirmed complete by ESPN (2x) - requesting prompt light sync",
+                  team_index, info->name);
+          #endif
+        }
+      } else {
+        info->espn_completed_streak = 0;
+      }
+    } else if (completed_tuple) {
+      info->completed = (completed_tuple->value->int32 != 0);
+    }
     #ifndef PBL_PLATFORM_APLITE
     if (rank_tuple)      info->ranking          = (uint16_t)rank_tuple->value->int32;
     if (wins_tuple)      info->wins             = (uint16_t)wins_tuple->value->int32;
@@ -489,9 +627,16 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
     #endif
 
     #if defined(DEBUG)
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
-            team_index, info->name, cfbd_current_sync_type, info->vs_id, info->score, info->vs_score,
-            info->ranking, info->wins);
+    if (cfbd_current_sync_type == CFBD_TEAM_DATA_LIVE_SCORE) {
+      Tuple *has_live_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_HAS_LIVE_UPDATE);
+      bool has_live = has_live_tuple && has_live_tuple->value->int32 != 0;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) live poll: %s score=%d-%d",
+              team_index, info->name, has_live ? "updated" : "no live game", info->score, info->vs_score);
+    } else {
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
+              team_index, info->name, cfbd_current_sync_type, info->vs_id, info->score, info->vs_score,
+              info->ranking, info->wins);
+    }
     #endif
 
     // Advance to next team in the walk list, or finish walk sequence

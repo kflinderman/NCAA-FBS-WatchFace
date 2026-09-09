@@ -55,7 +55,7 @@ typedef struct ClaySettings {
   char api_key[65];
   bool api_quiet;
   bool scoreDisplayBool;
-  uint16_t scoreUpdate;
+  // uint16_t scoreUpdate; // no longer used - see CFBD_LIGHT_SYNC_INTERVAL_SECONDS in api.c
   uint8_t scoreLocation;
   bool opponentBool;
   uint8_t opponentSelect;

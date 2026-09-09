@@ -169,6 +169,19 @@ static void init() {
   #endif
   globals_prv_load_settings();
 
+  // Register AppMessage callbacks
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "-------- COMMUNICATION --------");
+  #endif
+  app_message_register_inbox_received(inbox_received_callback);
+  app_message_register_inbox_dropped(inbox_dropped_callback);
+  app_message_register_outbox_failed(outbox_failed_callback);
+  app_message_register_outbox_sent(outbox_sent_callback);
+
+  const int inbox_size = 560;
+  const int outbox_size = 128;
+  app_message_open(inbox_size, outbox_size);
+
   // Create main Window element
   s_main_window = window_create();
 
@@ -219,21 +232,6 @@ static void init() {
   #endif
   battery_state_service_subscribe(sensor_battery_handler);
   sensor_battery_handler(battery_state_service_peek());
-
-  // Register AppMessage callbacks
-  #if defined(DEBUG)
-  APP_LOG(APP_LOG_LEVEL_INFO, "Communication");
-  #endif
-  app_message_register_inbox_received(inbox_received_callback);
-  app_message_register_inbox_dropped(inbox_dropped_callback);
-  app_message_register_outbox_failed(outbox_failed_callback);
-  app_message_register_outbox_sent(outbox_sent_callback);
-
-  // Open AppMessage
-  const int inbox_size = 560;
-  const int outbox_size = 128;
-  app_message_open(inbox_size, outbox_size);
-
 }
 
 // Deinitializes the app

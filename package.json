@@ -46,7 +46,6 @@
             "api_key",
             "api_quiet",
             "scoreDisplayBool",
-            "scoreUpdate",
             "scoreLocation",
             "opponentSelect",
             "customOpponent",
@@ -87,7 +86,10 @@
             "healthQuiet",
             "opponentBool",
             "watchUpdate",
-            "CFBD_SYNC_YEAR"
+            "CFBD_SYNC_YEAR",
+            "REQUEST_ESPN_LIVE_POLL",
+            "ESPN_LIVE_READY",
+            "CFBD_HAS_LIVE_UPDATE"
         ],
         "projectType": "native",
         "resources": {

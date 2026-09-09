@@ -197,10 +197,12 @@ function sendScoreToWatch(game) {
 // In-memory caching variables for sync operations
 var gamesData = null;
 var recordsRankingsData = null;
+var espnLiveData = null;
 
 // Must match CFBDTeamDataType in api.c
 var CFBD_TEAM_DATA_TYPE_GAMES = 0;
 var CFBD_TEAM_DATA_TYPE_RECORDS = 1;
+var CFBD_TEAM_DATA_TYPE_LIVE_SCORE = 2;
 
 // Send calendar and API quota info payload to watch
 function sendCalendarToWatch(calendarData) {
@@ -320,6 +322,34 @@ function sendTeamData(teamIndex, teamName, dataType) {
     return;
   }
 
+  if (dataType === CFBD_TEAM_DATA_TYPE_LIVE_SCORE) {
+    // Always respond, even with no live update - the C-side walk is
+    // waiting on a response for this specific team index either way, and
+    // most cached teams won't have a game live at any given moment.
+    var normalizedName = cfbdModule.normalizeTeamName(teamName);
+    var live = espnLiveData ? espnLiveData[normalizedName] : null;
+
+    var liveDictionary = {
+      'CFBD_TEAM_INDEX': teamIndex,
+      'CFBD_TEAM_DATA_TYPE': dataType,
+      'CFBD_HAS_LIVE_UPDATE': live ? 1 : 0
+    };
+    if (live) {
+      liveDictionary['CFBD_TEAM_SCORE'] = live.teamScore;
+      liveDictionary['CFBD_TEAM_VS_SCORE'] = live.oppScore;
+      liveDictionary['CFBD_TEAM_COMPLETED'] = live.completed ? 1 : 0;
+    }
+
+    Pebble.sendAppMessage(liveDictionary,
+      function(e) {
+        console.log('Team data (live score) sent for index ' + teamIndex + ' (' + teamName + ')' +
+          (live ? '' : ' - no live game found'));
+      },
+      function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
+    );
+    return;
+  }
+
   if (!recordsRankingsData) {
     console.log('REQUEST_CFBD_TEAM_DATA (records) received with no records/rankings data cached - skipping');
     return;
@@ -410,6 +440,20 @@ Pebble.addEventListener('appmessage',
           },
           function(e) { console.log('Records/rankings ready signal sent'); },
           function(e) { console.log('Error sending records/rankings ready signal!'); }
+        );
+      });
+    }
+
+    // Dedicated live-score poll (ESPN only, no CFBD quota impact). The watch
+    // only sends this while a cached team's game is known to have started
+    // and CFBD hasn't marked it completed yet - see api.c.
+    if (e.payload['REQUEST_ESPN_LIVE_POLL']) {
+      cfbdModule.fetchLiveScores(function(byTeam) {
+        espnLiveData = byTeam;
+
+        Pebble.sendAppMessage({ 'ESPN_LIVE_READY': 1 },
+          function(e) { console.log('ESPN live-score ready signal sent'); },
+          function(e) { console.log('Error sending ESPN live-score ready signal!'); }
         );
       });
     }

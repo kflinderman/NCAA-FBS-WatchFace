@@ -54,7 +54,7 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(api),
   SF(api_quiet),
   SF(scoreDisplayBool),
-  SF(scoreUpdate),
+  // SF(scoreUpdate), // no longer used - see CFBD_LIGHT_SYNC_INTERVAL_SECONDS in api.c
   SF(scoreLocation),
   SF(opponentSelect),
   SF(customOpponent),

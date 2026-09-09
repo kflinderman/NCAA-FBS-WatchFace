@@ -117,7 +117,7 @@ module.exports = function (minified) {
           key: 'scoreDisplayBool',
           condition: isTrue, // display below on true
           children: [
-            { key: 'scoreUpdate' },
+            // { key: 'scoreUpdate' }, // no longer used - see cfbd.js / api.c for the fixed ESPN poll interval
             { key: 'scoreLocation' }
           ]
         },
@@ -224,6 +224,11 @@ module.exports = function (minified) {
     recomputeAll();
 
     var watchUpdateItem = getItem('watchUpdate');
+
+    // scoreUpdate is no longer used - the dynamic min-constraint sync
+    // against watchUpdate is commented out along with it. See cfbd.js /
+    // api.c for the fixed ESPN poll interval that replaced it.
+    /*
     var scoreUpdateItem = getItem('scoreUpdate');
 
     // Dynamic constraint sync between watch update rate and score update rate
@@ -252,5 +257,6 @@ module.exports = function (minified) {
       // Run once on load to ensure initial state is correct
       syncScoreMin();
     }
+    */
   });
 };

@@ -21,6 +21,7 @@ typedef struct {
   #endif
   bool completed;
   unsigned long gametime;
+  uint8_t espn_completed_streak; // in-memory only, never persisted - consecutive ESPN "completed" reports before trusting it
   const char *name;
   const char *shortname;
 } Team;
@@ -60,6 +61,7 @@ typedef struct {
   uint16_t api_calls_monthly_limit;
   bool api_data_valid;
   bool pull_next_season; // true once within 2 weeks of next_season_first_game_ts
+  uint32_t last_espn_poll_ts;
 } CFBDState;
 
 extern Team TEAMS[];

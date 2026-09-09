@@ -1433,6 +1433,10 @@ module.exports = [
         "defaultValue": false,
         "messageKey": "scoreDisplayBool"
       },
+      /* scoreUpdate is no longer used - CFBD's own light sync cadence is
+         now decoupled from this, and live updates come from a fixed-
+         interval ESPN poll instead. Commented out (not removed) in case
+         we want to bring back a user-configurable interval later.
       {
         "type": "slider",
         "label": "Score Updated Frequency (in minutes)",
@@ -1443,6 +1447,7 @@ module.exports = [
   	    "max": 60,
   	    "step": 1
       },
+      */
       {
         "type": "select",
         "defaultValue": 1,

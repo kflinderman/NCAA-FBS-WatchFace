@@ -83,7 +83,7 @@ void globals_prv_default_settings() {
   settings.api = false;
   settings.api_quiet = false;
   settings.scoreDisplayBool = false;
-  settings.scoreUpdate = 5;
+  // settings.scoreUpdate = 5; // no longer used - see CFBD_LIGHT_SYNC_INTERVAL_SECONDS in api.c
   settings.scoreLocation = 1;
   settings.opponentBool = false;
   settings.opponentSelect = 0;
@@ -285,6 +285,13 @@ void globals_prv_update_display() {
   #endif
   if (api_should_full_sync()) {
     api_request_cfbd_full_sync();
+  }
+
+  // Dedicated ESPN live-score poll - independent of full/light sync and
+  // CFBD's quota entirely. Only actually sends anything while a cached
+  // team's game is known to be underway (see api_should_poll_espn_live()).
+  if (api_should_poll_espn_live()) {
+    api_request_espn_live_poll();
   }
 
   // Update beat_primary if DisplayTeam changed
