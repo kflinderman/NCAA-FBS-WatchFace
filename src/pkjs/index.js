@@ -220,33 +220,39 @@ function sendCalendarToWatch(calendarData) {
 }
 
 // Pick active or upcoming game for a specific team from a pool of games
-function pickTeamGameFromPool(teamName, pool) {
+// Pick a team's game for the current calendar week from a pool of games.
+// weekStart/weekEnd scope this to "this week's guidelines" rather than
+// whatever the team's most recent game happened to be - if nothing falls
+// in that window, there's no game this week (a bye), not a stale result.
+function pickTeamGameFromPool(teamName, pool, weekStart, weekEnd) {
   var matches = pool.filter(function(g) {
     return g.homeTeam === teamName || g.awayTeam === teamName;
   });
   if (matches.length === 0) return null;
 
-  var now = new Date();
-  var started = matches.filter(function(g) { return new Date(g.startDate) <= now; });
-  if (started.length > 0) {
-    started.sort(function(a, b) { return new Date(b.startDate) - new Date(a.startDate); });
-    return started[0];
+  if (weekStart && weekEnd) {
+    var start = new Date(weekStart);
+    var end = new Date(weekEnd);
+    matches = matches.filter(function(g) {
+      var gameDate = new Date(g.startDate);
+      return gameDate >= start && gameDate <= end;
+    });
+    if (matches.length === 0) return null;
   }
 
-  var upcoming = matches.slice().sort(function(a, b) {
-    return new Date(a.startDate) - new Date(b.startDate);
-  });
-  return upcoming[0];
+  matches.sort(function(a, b) { return new Date(a.startDate) - new Date(b.startDate); });
+  return matches[0];
 }
 
-// Find target team's latest relevant game from regular or postseason datasets
+// Find target team's game within the current week from regular or
+// postseason datasets
 function findLatestTeamGame(teamName, games) {
   if (games.inPostseason) {
-    var postGame = pickTeamGameFromPool(teamName, games.postGames);
+    var postGame = pickTeamGameFromPool(teamName, games.postGames, games.weekStart, games.weekEnd);
     if (postGame) return postGame;
-    console.log(teamName + ' has no postseason games - falling back to last regular season game');
+    console.log(teamName + ' has no postseason game this week - checking regular season pool');
   }
-  return pickTeamGameFromPool(teamName, games.regularGames);
+  return pickTeamGameFromPool(teamName, games.regularGames, games.weekStart, games.weekEnd);
 }
 
 // Reorient game object data into target team's relative perspective

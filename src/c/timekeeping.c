@@ -178,18 +178,52 @@ bool timekeeping_countdown() {
 
   // Custom Time
   if (settings.countdownTime == 1) {
+    APP_LOG(APP_LOG_LEVEL_INFO, "CustomDate Before: %c", settings.countdownCustomDate);
+    //if (!settings.countdownCustomDate || strlen(settings.countdownCustomDate) < 8) return 0;
+
+    int year = atoi(settings.countdownCustomDate);
+
     //if there's no custom date despite choosing the option, use Sat Noon EST
-    if (settings.countdownCustomDate < 10000000) { 
+    //if (settings.countdownCustomDate < 10000000) { 
+    if (year < 2020) { 
       target_time = get_saturday_noon_eastern_utc(now_tm);
     }
     //Otherwise create a tm from that setting
     else {
+      int month = 0;
+      const char *dash1 = strchr(settings.countdownCustomDate, '-');
+      if (dash1) {
+        month = atoi(dash1 + 1);
+      }
+
+      int day = 0;
+      if (dash1) {
+        const char *dash2 = strchr(dash1 + 1, '-');
+        if (dash2) {
+          day = atoi(dash2 + 1);
+        }
+      }
+
       struct tm target = {0};
-      target.tm_year = (settings.countdownCustomDate / 10000) - 1900;
-      target.tm_mon  = ((settings.countdownCustomDate / 100) % 100) - 1;
-      target.tm_mday = settings.countdownCustomDate % 100;
-      target.tm_hour = (settings.countdownCustomTime < 10) ? 12 : settings.countdownCustomTime / 100;
-      target.tm_min  = (settings.countdownCustomTime < 10) ? 0  : settings.countdownCustomTime % 100;
+      //target.tm_year = (settings.countdownCustomDate / 10000) - 1900;
+      //target.tm_mon  = ((settings.countdownCustomDate / 100) % 100) - 1;
+      //target.tm_mday = settings.countdownCustomDate % 100;
+      target.tm_year = year;
+      target.tm_mon  = month;
+      target.tm_mday = day;
+
+      APP_LOG(APP_LOG_LEVEL_INFO, "CustomDate After: %d / %d / %d", year, month, day);
+
+      //target.tm_hour = (settings.countdownCustomTime < 10) ? 12 : settings.countdownCustomTime / 100;
+      //target.tm_min  = (settings.countdownCustomTime < 10) ? 0  : settings.countdownCustomTime % 100;
+      target.tm_hour = atoi(settings.countdownCustomTime);
+      const char *colon = strchr(settings.countdownCustomTime, ':');
+      if (colon) {
+        target.tm_min = atoi(colon + 1);
+      }
+
+      APP_LOG(APP_LOG_LEVEL_INFO, "CustomTime After: %d : %d", target.tm_hour, target.tm_min);
+      
       target.tm_sec  = 0;
       target.tm_isdst = -1;
       target_time = mktime(&target);
@@ -267,7 +301,7 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   
   #ifdef PBL_ROUND
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 + 2, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 + 2, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
-  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - bounds.size.w / 2 - (TIME_W - 15), ((bounds.size.h * TIME_H) / 1000) + 8, 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W - 17), ((bounds.size.h * TIME_H) / 1000) + 8, 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 25, ((bounds.size.h * TIME_H) / 1000) + 8, 40, 18, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
   #else
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 13, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 13, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
@@ -283,8 +317,9 @@ void timeDate_draw(Layer *window_layer, GRect bounds){
   
   #ifdef PBL_ROUND
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 1, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 1, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
-  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W), ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 20), 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 20, ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 20), 40, 18, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  //it was time_y - 20 trying to move it down
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W-1), ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 10), 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 20, ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 10), 40, 18, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
   #else
   s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 13, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 13, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
   s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W - 10), bounds.size.h - 14, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);

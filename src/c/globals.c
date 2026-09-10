@@ -77,8 +77,8 @@ void globals_prv_default_settings() {
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
-  settings.countdownCustomDate = 0;
-  settings.countdownCustomTime = 0;
+  settings.countdownCustomDate;// = "0000-00-00";
+  settings.countdownCustomTime;// = "00:00";
   settings.countdownDisplay = 1;
   settings.api = false;
   settings.api_quiet = false;
@@ -485,7 +485,7 @@ void globals_prv_update_display() {
     //Grab rankings and put them in their appropriate layers
     if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
 
-      static char s_rank_buffer[3];
+      static char s_rank_buffer[4];
       snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", TEAMS[settings.FavoriteTeam].ranking);
       text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
 

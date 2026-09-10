@@ -138,8 +138,8 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   //animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), TIME_H, -5, 1000);
   
   #ifdef PBL_ROUND
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, TIME_Y - 20, 1000);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, TIME_Y - 20, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, TIME_Y - 10, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, TIME_Y - 10, 1000);
   #else
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), 1000, -14, 1000);
   animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), 1000, -14, 1000);

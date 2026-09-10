@@ -12,6 +12,13 @@
 #define MAX_DISPLAYABLE_SCORE 99
 #define CFBD_API_CALLS_WARNING_PERCENT 90
 #define CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS 60
+// Fallback-only cadence for light sync's schedule/game data. This is NOT
+// about live-score freshness anymore - ESPN's poll handles that entirely,
+// and cfbd_final_score_pending handles getting CFBD's official final
+// score/stats the moment ESPN confirms a game's done. This just catches
+// day-to-day schedule changes (a new day's game appearing, a postponement,
+// etc.) that nothing else would otherwise notice, so once a day is plenty.
+#define CFBD_LIGHT_SYNC_INTERVAL_SECONDS (24 * 60 * 60)
 
 // Sync state tracking variables
 static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
@@ -447,9 +454,9 @@ bool api_should_light_sync(void) {
   // won't have anything new until the game ends anyway, and ESPN is
   // already keeping the score fresh for free. Normal cadence resumes once
   // every cached team's game is either not started yet or complete.
-  //time_t now = time(NULL);
-  if (settings.api && !any_cached_team_currently_live()){
-      //&& (now - settings.cfbd.last_light_sync_ts >= (settings.scoreUpdate * 60))) {
+  time_t now = time(NULL);
+  if (settings.api && !any_cached_team_currently_live() &&
+      (now - settings.cfbd.last_light_sync_ts >= CFBD_LIGHT_SYNC_INTERVAL_SECONDS)) {
     return true;
   }
   return false;
@@ -697,15 +704,15 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
   
   #ifdef PBL_ROUND
-  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 40, 25), sizeof(RoundRectData));
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 45, 25), sizeof(RoundRectData));
   #else
-  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 40, 25), sizeof(RoundRectData));
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 45, 25), sizeof(RoundRectData));
   #endif
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
   rect_beat_data->fill_color = GColorWhite;
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
   layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
-  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 40, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 45, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
 
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);

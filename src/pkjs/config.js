@@ -674,7 +674,7 @@ module.exports = [
         "defaultValue": 0,
         "label": "Bye Opponent",
         "messageKey": "opponentSelect",
-        "description": "What to display on a bye week, this team will also be used when API data is unavialable",
+        "description": "What to display on a bye week or FCS opponent, this team will also be used when API data is unavialable",
       		"options": [
       		  {
       		    "label": "NCAA",

@@ -493,13 +493,18 @@ var cfbd = (function() {
 
     var TWO_WEEKS_SECONDS = 14 * 24 * 60 * 60;
 
-    // Branch 1: Within 2 weeks of upcoming season -> advance to new season week 0
+    // Branch 1: Within 2 weeks of upcoming season -> advance to new season week 0.
+    // No real week window exists yet (next season's calendar hasn't been
+    // fetched) - weekStart/weekEnd are null, game-picking should treat that
+    // as "no window to filter against" upstream.
     if (cache.nextSeasonFirstGameTs && nowTs >= (cache.nextSeasonFirstGameTs - TWO_WEEKS_SECONDS)) {
       console.log('Within 2 weeks of next season kickoff - using year ' + (cache.currentYear + 1) + ', week 0');
       return {
         year: cache.currentYear + 1,
         week: 0,
-        offseason: false
+        offseason: false,
+        weekStart: null,
+        weekEnd: null
       };
     }
 
@@ -519,7 +524,9 @@ var cfbd = (function() {
           return {
             year: cache.currentYear,
             week: weekNum,
-            offseason: false
+            offseason: false,
+            weekStart: weekEntry[1],
+            weekEnd: weekEntry[2]
           };
         }
       }
@@ -528,7 +535,9 @@ var cfbd = (function() {
       return {
         year: cache.currentYear,
         week: fallbackEntry[0],
-        offseason: false
+        offseason: false,
+        weekStart: fallbackEntry[1],
+        weekEnd: fallbackEntry[2]
       };
     }
 
@@ -538,7 +547,9 @@ var cfbd = (function() {
     return {
       year: cache.currentYear,
       week: lastEntry[0],
-      offseason: true
+      offseason: true,
+      weekStart: lastEntry[1],
+      weekEnd: lastEntry[2]
     };
   }
 
@@ -622,6 +633,8 @@ var cfbd = (function() {
             regularGames: regularGames,
             postGames: postGames,
             inPostseason: target.offseason,
+            weekStart: target.weekStart,
+            weekEnd: target.weekEnd,
             records: records,
             rankings: rankings,
             apiCallsUsed: usage.used,
