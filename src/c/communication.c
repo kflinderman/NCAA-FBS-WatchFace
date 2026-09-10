@@ -9,19 +9,25 @@
 typedef struct {
   const uint32_t *message_key;
   size_t offset;
-  uint8_t size; // bytes: 1 (uint8_t/bool), 2 (uint16_t), or 4 (uint32_t)
+  uint8_t size; // numeric fields: 1/2/4 bytes; string fields: buffer capacity
+  bool is_string;
 } ClaySettingField;
 
 // Helper macro for when the AppMessage key and the struct field share the exact same name.
 #define SF(field) \
-  { &MESSAGE_KEY_##field, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
+  { &MESSAGE_KEY_##field, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field), false }
 
 // Helper macro for when the AppMessage key differs from the struct field name.
 #define SF2(msg_key, field) \
-  { &MESSAGE_KEY_##msg_key, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field) }
+  { &MESSAGE_KEY_##msg_key, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field), false }
+
+// Helper macro for char[] settings fields (copied via snprintf, not a fixed-width numeric write).
+#define SF_STR(field) \
+  { &MESSAGE_KEY_##field, offsetof(ClaySettings, field), sizeof(((ClaySettings *)0)->field), true }
 
 // Master lookup table for all configuration settings.
 static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
+  SF_STR(api_key),
   SF(DisconnectVibration),
   SF(ReconnectVibration),
   SF(LowBatteryPercent),
@@ -48,8 +54,8 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
   SF(animationDelay),
   SF(countdownBool),
   SF(countdownTime),
-  SF(countdownCustomDate),
-  SF(countdownCustomTime),
+  SF_STR(countdownCustomDate),
+  SF_STR(countdownCustomTime),
   SF(countdownDisplay),
   SF(api),
   SF(api_quiet),
@@ -75,6 +81,7 @@ static const ClaySettingField CLAY_SETTINGS_FIELDS[] = {
 // Clean up macros so they don't pollute the rest of the namespace
 #undef SF
 #undef SF2
+#undef SF_STR
 
 #define CLAY_SETTINGS_FIELDS_COUNT (sizeof(CLAY_SETTINGS_FIELDS) / sizeof(CLAY_SETTINGS_FIELDS[0]))
 
@@ -92,22 +99,21 @@ void configuration_callback(DictionaryIterator *iterator, void *context) {
   uint8_t previous_favorite_team = settings.FavoriteTeam;
 
   for (Tuple *t = dict_read_first(iterator); t != NULL; t = dict_read_next(iterator)) {
-    // API key string assignment
-    if (t->key == MESSAGE_KEY_api_key) {
-      snprintf(settings.api_key, sizeof(settings.api_key), "%s", t->value->cstring);
-      settings_changed = true;
-      continue;
-    }
-
     // Look up which settings field this key maps to
     const ClaySettingField *field = prv_find_field(t->key);
     if (!field) continue;
 
-    int32_t value = (t->type == TUPLE_CSTRING) ? atoi(t->value->cstring) : t->value->int32;
     settings_changed = true;
+    uint8_t *field_ptr = (uint8_t *)&settings + field->offset;
+
+    if (field->is_string) {
+      snprintf((char *)field_ptr, field->size, "%s", t->value->cstring);
+      continue;
+    }
+
+    int32_t value = (t->type == TUPLE_CSTRING) ? atoi(t->value->cstring) : t->value->int32;
 
     // Write directly into the settings struct at the field's offset
-    uint8_t *field_ptr = (uint8_t *)&settings + field->offset;
     switch (field->size) {
       case 1: *(uint8_t *)field_ptr = (uint8_t)value; break;
       case 2: *(uint16_t *)field_ptr = (uint16_t)value; break;

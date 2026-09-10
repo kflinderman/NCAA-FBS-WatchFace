@@ -7,7 +7,7 @@
 /* DEBUG Variables   */
 /*********************/
 
-//#define TESTING
+#define TESTING
 
 #ifndef PBL_PLATFORM_APLITE
 #define DEBUG

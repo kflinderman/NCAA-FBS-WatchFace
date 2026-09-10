@@ -701,7 +701,16 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
 
   // Create ranking display layers for non-Aplite targets
   #ifndef PBL_PLATFORM_APLITE
-  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  BitmapLayer* super_location; 
+  
+  if(settings.DisplayTeam > 1){
+    super_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+  }
+  else{
+    super_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
+  }
+  
+  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(super_location));
   
   #ifdef PBL_ROUND
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 45, 25), sizeof(RoundRectData));
@@ -711,7 +720,7 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
   rect_beat_data->fill_color = GColorWhite;
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
-  layer_add_child(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), s_layers[LAYER_RANK_RECT]);
+  layer_add_child(bitmap_layer_get_layer(super_location), s_layers[LAYER_RANK_RECT]);
   s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 45, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
 
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
@@ -728,11 +737,11 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   #endif
   
   #ifdef PBL_ROUND
-  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2) - (winW + 5), logo_bounds.size.h - (trophWH + 5), winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5) + (winH - trophWH), trophWH, trophWH, NULL, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2) - (winW + 5), logo_bounds.size.h - (trophWH + 5), winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(super_location));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5) + (winH - trophWH), trophWH, trophWH, NULL, bitmap_layer_get_layer(super_location));
   #else
-  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (winW * 2), 0, winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
-  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5), trophWH, trophWH, NULL, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]));
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (winW * 2), 0, winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(super_location));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5), trophWH, trophWH, NULL, bitmap_layer_get_layer(super_location));
   #endif
   
   layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);

@@ -178,51 +178,34 @@ bool timekeeping_countdown() {
 
   // Custom Time
   if (settings.countdownTime == 1) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "CustomDate Before: %c", settings.countdownCustomDate);
     //if (!settings.countdownCustomDate || strlen(settings.countdownCustomDate) < 8) return 0;
 
     int year = atoi(settings.countdownCustomDate);
 
     //if there's no custom date despite choosing the option, use Sat Noon EST
-    //if (settings.countdownCustomDate < 10000000) { 
     if (year < 2020) { 
       target_time = get_saturday_noon_eastern_utc(now_tm);
     }
     //Otherwise create a tm from that setting
     else {
-      int month = 0;
+      struct tm target = {0};
+      target.tm_year = year - 1900;
+      
       const char *dash1 = strchr(settings.countdownCustomDate, '-');
       if (dash1) {
-        month = atoi(dash1 + 1);
-      }
-
-      int day = 0;
-      if (dash1) {
+        target.tm_mon = atoi(dash1 + 1) - 1;
+        
         const char *dash2 = strchr(dash1 + 1, '-');
         if (dash2) {
-          day = atoi(dash2 + 1);
+          target.tm_mday = atoi(dash2 + 1);
         }
       }
-
-      struct tm target = {0};
-      //target.tm_year = (settings.countdownCustomDate / 10000) - 1900;
-      //target.tm_mon  = ((settings.countdownCustomDate / 100) % 100) - 1;
-      //target.tm_mday = settings.countdownCustomDate % 100;
-      target.tm_year = year;
-      target.tm_mon  = month;
-      target.tm_mday = day;
-
-      APP_LOG(APP_LOG_LEVEL_INFO, "CustomDate After: %d / %d / %d", year, month, day);
-
-      //target.tm_hour = (settings.countdownCustomTime < 10) ? 12 : settings.countdownCustomTime / 100;
-      //target.tm_min  = (settings.countdownCustomTime < 10) ? 0  : settings.countdownCustomTime % 100;
+      
       target.tm_hour = atoi(settings.countdownCustomTime);
       const char *colon = strchr(settings.countdownCustomTime, ':');
       if (colon) {
         target.tm_min = atoi(colon + 1);
       }
-
-      APP_LOG(APP_LOG_LEVEL_INFO, "CustomTime After: %d : %d", target.tm_hour, target.tm_min);
       
       target.tm_sec  = 0;
       target.tm_isdst = -1;
@@ -239,6 +222,19 @@ bool timekeeping_countdown() {
   }
 
   // Difference calculation in seconds
+  #ifdef DEBUG
+  char time_buf[32];
+  struct tm *t_info = localtime(&target_time);
+
+  if (t_info) {
+    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", t_info);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Target time: %s", time_buf);
+  }
+  else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid target_time: %ld", (long)target_time);
+  }
+  #endif
+
   int32_t seconds_diff = (int32_t)(target_time - now);
   int32_t minutes_diff = seconds_diff / 60;
 
