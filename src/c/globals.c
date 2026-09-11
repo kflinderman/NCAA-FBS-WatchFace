@@ -77,8 +77,6 @@ void globals_prv_default_settings() {
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
-  settings.countdownCustomDate;// = "0000-00-00";
-  settings.countdownCustomTime;// = "00:00";
   settings.countdownDisplay = 1;
   settings.api = false;
   settings.api_quiet = false;
@@ -485,6 +483,7 @@ void globals_prv_update_display() {
     //Grab rankings and put them in their appropriate layers
     if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
 
+      
       static char s_rank_buffer[4];
       snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", TEAMS[settings.FavoriteTeam].ranking);
       text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
@@ -496,6 +495,25 @@ void globals_prv_update_display() {
       layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
       layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
     }
+    
+    #ifdef TESTING
+    static char s_ranked_buffer[4];
+    snprintf(s_ranked_buffer, sizeof(s_ranked_buffer), "#%d", 25);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_ranked_buffer);
+
+    layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
+    #endif
+
+    BitmapLayer* rank_location;
+    if(settings.DisplayTeam > 1){
+      rank_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    }
+    else{
+      rank_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
+    }
+    layer_add_child(bitmap_layer_get_layer(rank_location), s_layers[LAYER_RANK_RECT]);
+    layer_add_child(bitmap_layer_get_layer(rank_location), text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]));
   }
 
   //Display a blue ribbon if it's a winning season
@@ -509,6 +527,15 @@ void globals_prv_update_display() {
     #ifdef TESTING
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
     #endif
+
+    BitmapLayer* win_location;
+    if(settings.DisplayTeam > 1){
+      win_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    }
+    else{
+      win_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
+    }
+    layer_add_child(bitmap_layer_get_layer(win_location), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]));
   }
 
 
@@ -539,6 +566,15 @@ void globals_prv_update_display() {
     } else {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
     }
+
+    BitmapLayer* trophy_location;
+    if(settings.DisplayTeam > 1){
+      trophy_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    }
+    else{
+      trophy_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
+    }
+    layer_add_child(bitmap_layer_get_layer(trophy_location), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]));
   }
   #endif
 

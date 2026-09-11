@@ -712,16 +712,28 @@ void api_icon_draw(Layer *window_layer, GRect bounds){
   
   GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(super_location));
   
+  #if PBL_DISPLAY_HEIGHT > 180
   #ifdef PBL_ROUND
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 45, 25), sizeof(RoundRectData));
   #else
   s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 45, 25), sizeof(RoundRectData));
   #endif
+  #else
+  #ifdef PBL_ROUND
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 35, 20), sizeof(RoundRectData));
+  #else
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(10, 0, 35, 20), sizeof(RoundRectData));
+  #endif
+  #endif
   RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
   rect_beat_data->fill_color = GColorWhite;
   layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
   layer_add_child(bitmap_layer_get_layer(super_location), s_layers[LAYER_RANK_RECT]);
+  #if PBL_DISPLAY_HEIGHT > 180
   s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 45, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  #else
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 35, 20, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  #endif
 
   layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
   layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
