@@ -10,7 +10,7 @@
 //#define TESTING
 
 #ifndef PBL_PLATFORM_APLITE
-#define DEBUG
+//#define DEBUG
 #endif
 
 

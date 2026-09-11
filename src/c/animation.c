@@ -46,18 +46,19 @@ void animation_beat_team_layer(void) {
   uint8_t target_mode = returning ? 1 : 2;
 
   //Determine if we need to show a score or countdown (or bring back time)
-  bool show_countdown = settings.countdownBool && (!settings.scoreDisplayBool || !after_time);
-  bool show_score     = settings.scoreDisplayBool && (!settings.countdownBool || after_time);
-
   bool timeTrue = true;
+  bool spaceTaken = false;
 
-  if (show_countdown) {
+  if (settings.countdownBool && (!settings.scoreDisplayBool || !after_time)) {
     bool sub_labels_hidden = (settings.countdownDisplay == target_mode);
     globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
-    if (!sub_labels_hidden) timeTrue = false;
+    if (!sub_labels_hidden){
+      spaceTaken = true;
+      timeTrue = false;
+    }
   }
 
-  if (show_score) {
+  if (settings.scoreDisplayBool && (!settings.countdownBool || after_time || !spaceTaken)) {
     bool sub_labels_hidden = (settings.scoreLocation == target_mode);
     globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
     if (!sub_labels_hidden) timeTrue = false;

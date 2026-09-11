@@ -852,7 +852,7 @@ module.exports = [
       {
         "type": "toggle",
         "label": "Display Score During Game",
-        "description": "Score will always be of Favorite Team",
+        "description": "Score will always be of Favorite Team, and it is pulling from ESPN so it will not impact API usage",
         "defaultValue": false,
         "messageKey": "scoreDisplayBool"
       },

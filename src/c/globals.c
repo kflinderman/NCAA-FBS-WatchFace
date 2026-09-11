@@ -439,7 +439,7 @@ void globals_prv_update_display() {
   weather_update();
   #endif
   
-  bool timeTrue = true;
+  bool timeTrue = true, mainTaken = false;
   if (settings.countdownBool){
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
@@ -451,13 +451,14 @@ void globals_prv_update_display() {
     if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
       globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
       timeTrue = false;
+      mainTaken = true;
     }
   }
 
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "After Time: %d", after_time);
   #endif
-  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time) || (!mainTaken && settings.scoreLocation != 1) )){
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
     #endif
