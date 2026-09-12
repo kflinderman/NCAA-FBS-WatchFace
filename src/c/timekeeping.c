@@ -21,8 +21,15 @@ void update_time() {
   //Determine where time will be
   bool countdown_active = settings.countdownBool &&
     (!settings.scoreDisplayBool || !after_time) && settings.countdownDisplay != 1;
+  // Matches the same "did countdown grab the main slot" fix applied in
+  // globals_prv_update_display()/animation.c - without the !countdown_active
+  // fallback here, this can disagree with those two about who owns the main
+  // slot (specifically: countdown using a non-main location, game not
+  // started yet, score wanting the main slot), and the disagreement shows
+  // up as the score getting silently reverted to the plain clock on the
+  // very next minute tick.
   bool score_active = settings.scoreDisplayBool &&
-    (!settings.countdownBool || after_time) && settings.scoreLocation != 1;
+    (!settings.countdownBool || after_time || !countdown_active) && settings.scoreLocation != 1;
 
   if (!countdown_active && !score_active) {
     //Update time to layer
