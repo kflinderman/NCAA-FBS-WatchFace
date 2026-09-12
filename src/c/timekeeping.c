@@ -186,30 +186,51 @@ bool timekeeping_countdown() {
     if (year < 2020) { 
       target_time = get_saturday_noon_eastern_utc(now_tm);
     }
-    //Otherwise create a tm from that setting
+    //Otherwise create a tm from that setting - cache the parsed result since
+    //these strings only change when the user updates Clay config, but this
+    //function can run many times a minute during an active sync cascade.
     else {
-      struct tm target = {0};
-      target.tm_year = year - 1900;
-      
-      const char *dash1 = strchr(settings.countdownCustomDate, '-');
-      if (dash1) {
-        target.tm_mon = atoi(dash1 + 1) - 1;
-        
-        const char *dash2 = strchr(dash1 + 1, '-');
-        if (dash2) {
-          target.tm_mday = atoi(dash2 + 1);
+      static char s_cached_date[sizeof(settings.countdownCustomDate)] = "";
+      static char s_cached_time[sizeof(settings.countdownCustomTime)] = "";
+      static time_t s_cached_target = 0;
+      static bool s_cache_valid = false;
+
+      if (!s_cache_valid ||
+          strcmp(s_cached_date, settings.countdownCustomDate) != 0 ||
+          strcmp(s_cached_time, settings.countdownCustomTime) != 0) {
+
+        struct tm target = {0};
+        target.tm_year = year - 1900;
+        target.tm_mday = 1; // sane default if the day component is missing/malformed
+
+        const char *dash1 = strchr(settings.countdownCustomDate, '-');
+        if (dash1) {
+          target.tm_mon = atoi(dash1 + 1) - 1;
+
+          const char *dash2 = strchr(dash1 + 1, '-');
+          if (dash2) {
+            target.tm_mday = atoi(dash2 + 1);
+          }
         }
+
+        target.tm_hour = atoi(settings.countdownCustomTime);
+        const char *colon = strchr(settings.countdownCustomTime, ':');
+        if (colon) {
+          target.tm_min = atoi(colon + 1);
+        }
+
+        target.tm_sec  = 0;
+        target.tm_isdst = -1;
+        s_cached_target = mktime(&target);
+
+        strncpy(s_cached_date, settings.countdownCustomDate, sizeof(s_cached_date) - 1);
+        s_cached_date[sizeof(s_cached_date) - 1] = '\0';
+        strncpy(s_cached_time, settings.countdownCustomTime, sizeof(s_cached_time) - 1);
+        s_cached_time[sizeof(s_cached_time) - 1] = '\0';
+        s_cache_valid = true;
       }
-      
-      target.tm_hour = atoi(settings.countdownCustomTime);
-      const char *colon = strchr(settings.countdownCustomTime, ':');
-      if (colon) {
-        target.tm_min = atoi(colon + 1);
-      }
-      
-      target.tm_sec  = 0;
-      target.tm_isdst = -1;
-      target_time = mktime(&target);
+
+      target_time = s_cached_target;
     }
   }
   // API Time

@@ -479,6 +479,19 @@ void globals_prv_update_display() {
   }
 
   #ifndef PBL_PLATFORM_APLITE
+  // Rank/win/trophy overlays all move together based on DisplayTeam. Only
+  // re-parent them when that target actually changes - layer_add_child()
+  // unconditionally unlinks+relinks the child (bumping it to the end of the
+  // new parent's paint order) even when the parent is already correct, and
+  // this function runs on every display update, not just when DisplayTeam
+  // changes.
+  static BitmapLayer *s_superlative_parent = NULL;
+  BitmapLayer *superlative_target = (settings.DisplayTeam > 1)
+      ? s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]
+      : s_bitmap_layers[BITMAP_LAYER_LOGO];
+  bool superlative_target_changed = (superlative_target != s_superlative_parent);
+  s_superlative_parent = superlative_target;
+
   //Here's where API superlatives go
   if (settings.rankingBool){
     //Grab rankings and put them in their appropriate layers
@@ -506,15 +519,10 @@ void globals_prv_update_display() {
     layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
     #endif
 
-    BitmapLayer* rank_location;
-    if(settings.DisplayTeam > 1){
-      rank_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), s_layers[LAYER_RANK_RECT]);
+      layer_add_child(bitmap_layer_get_layer(superlative_target), text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]));
     }
-    else{
-      rank_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
-    }
-    layer_add_child(bitmap_layer_get_layer(rank_location), s_layers[LAYER_RANK_RECT]);
-    layer_add_child(bitmap_layer_get_layer(rank_location), text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]));
   }
 
   //Display a blue ribbon if it's a winning season
@@ -529,14 +537,9 @@ void globals_prv_update_display() {
     layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
     #endif
 
-    BitmapLayer* win_location;
-    if(settings.DisplayTeam > 1){
-      win_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]));
     }
-    else{
-      win_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
-    }
-    layer_add_child(bitmap_layer_get_layer(win_location), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]));
   }
 
 
@@ -568,14 +571,9 @@ void globals_prv_update_display() {
       layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
     }
 
-    BitmapLayer* trophy_location;
-    if(settings.DisplayTeam > 1){
-      trophy_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]));
     }
-    else{
-      trophy_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
-    }
-    layer_add_child(bitmap_layer_get_layer(trophy_location), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]));
   }
   #endif
 
