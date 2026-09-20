@@ -19,6 +19,13 @@
 // day-to-day schedule changes (a new day's game appearing, a postponement,
 // etc.) that nothing else would otherwise notice, so once a day is plenty.
 #define CFBD_LIGHT_SYNC_INTERVAL_SECONDS (24 * 60 * 60)
+// A dropped AppMessage anywhere in a sync chain (confirmed happening in
+// testing - "Message dropped!") leaves the matching pending flag or
+// in-progress walk stuck forever with no other recovery path, silently
+// blocking every future sync attempt regardless of display settings. This
+// is generous enough for a normal round trip (even a slow one) but short
+// enough to self-heal quickly.
+#define CFBD_SYNC_STUCK_TIMEOUT_SECONDS (3 * 60)
 
 // Sync state tracking variables
 static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
@@ -29,6 +36,9 @@ static bool cfbd_pending_live_walk = false;
 static bool cfbd_light_sync_pending = false;
 static bool cfbd_live_poll_pending = false;
 static bool cfbd_final_score_pending = false;
+static time_t cfbd_walk_started_ts = 0;    // when cfbd_current_team_index last went from -1 to >= 0
+static time_t cfbd_light_sync_sent_ts = 0; // when cfbd_light_sync_pending was last set true
+static time_t cfbd_live_poll_sent_ts = 0;  // when cfbd_live_poll_pending was last set true
 
 // Walk list: the specific TEAMS[] indices being synced this walk (cache-scoped, not the full roster).
 // Sized for the worst case: current FavoriteTeam (if not yet cached) plus every cached slot.
@@ -169,6 +179,7 @@ static void start_team_walk(CFBDTeamDataType type) {
 
   cfbd_current_sync_type = type;
   cfbd_current_team_index = cfbd_walk_indices[0];
+  cfbd_walk_started_ts = time(NULL);
   request_team_data();
 }
 
@@ -327,6 +338,7 @@ void api_request_cfbd_light_sync(void) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
   #endif
   cfbd_light_sync_pending = true;
+  cfbd_light_sync_sent_ts = time(NULL);
   outbox_queue_send(build_request_light_sync);
 }
 
@@ -348,6 +360,7 @@ void api_request_espn_live_poll(void) {
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting ESPN live score poll");
   #endif
   cfbd_live_poll_pending = true;
+  cfbd_live_poll_sent_ts = time(NULL);
   outbox_queue_send(build_request_espn_live_poll);
 }
 
@@ -422,12 +435,58 @@ static bool any_cached_team_currently_live(void) {
   return false;
 }
 
+// Self-recovery for a dropped AppMessage anywhere in a sync chain. Every
+// pending flag and the shared walk-in-progress state normally only clear on
+// a successful completion - if any message along the way (the initial
+// ready-signal, or a per-team response mid-walk) gets dropped, nothing else
+// ever resets them, permanently blocking every future sync of every type
+// regardless of display settings. Called from any should_*() check that
+// depends on these flags, so a stuck state heals itself within one timeout
+// window instead of requiring an app restart.
+static void api_check_sync_watchdog(void) {
+  time_t now = time(NULL);
+
+  if (cfbd_current_team_index >= 0 &&
+      (now - cfbd_walk_started_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team walk (type %d) stuck for over %ds - abandoning it",
+            cfbd_current_sync_type, CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_current_team_index = -1;
+    cfbd_pending_games_walk = false;
+    cfbd_pending_records_walk = false;
+    cfbd_pending_live_walk = false;
+    cfbd_light_sync_pending = false;
+    cfbd_live_poll_pending = false;
+  }
+
+  if (cfbd_light_sync_pending && cfbd_current_team_index < 0 &&
+      (now - cfbd_light_sync_sent_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD light sync request stuck for over %ds - clearing it",
+            CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_light_sync_pending = false;
+  }
+
+  if (cfbd_live_poll_pending && cfbd_current_team_index < 0 &&
+      (now - cfbd_live_poll_sent_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "ESPN live poll request stuck for over %ds - clearing it",
+            CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_live_poll_pending = false;
+  }
+}
+
 // Evaluate conditions to check if light sync is required
 bool api_should_light_sync(void) {
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
     return false;
   }
   
+  api_check_sync_watchdog();
+
   if (cfbd_light_sync_pending) {
     return false;
   }
@@ -472,6 +531,8 @@ bool api_should_poll_espn_live(void) {
   if(settings.api_quiet && !timekeeping_is_quiet_time()){
     return false;
   }
+
+  api_check_sync_watchdog();
 
   if (!settings.api || cfbd_live_poll_pending) {
     return false;

@@ -157,22 +157,22 @@
                 {
                     "characterRegex": "[0-9:APM| ]",
                     "file": "fonts/LECO 1976 Regular.ttf",
-                    "name": "LECO_CUSTOM_54",
-                    "targetPlatforms": [
-                        "emery",
-                        "gabbro"
-                    ],
-                    "type": "font"
-                },
-                {
-                    "characterRegex": "[0-9:APM| ]",
-                    "file": "fonts/LECO 1976 Regular.ttf",
                     "name": "LECO_CUSTOM_42",
                     "targetPlatforms": [
                         "basalt",
                         "chalk",
                         "diorite",
                         "flint"
+                    ],
+                    "type": "font"
+                },
+                {
+                    "characterRegex": "[0-9:APM| ]",
+                    "file": "fonts/LECO 1976 Regular.ttf",
+                    "name": "LECO_CUSTOM_54",
+                    "targetPlatforms": [
+                        "emery",
+                        "gabbro"
                     ],
                     "type": "font"
                 },
@@ -1604,7 +1604,7 @@
             "gabbro",
             "flint"
         ],
-        "uuid": "0d8ecaa4-3bc4-440b-b5a0-b4a67363e2b3",
+        "uuid": "0290cf07-cc80-4d74-9467-1dde369f7350",
         "watchapp": {
             "watchface": true
         }

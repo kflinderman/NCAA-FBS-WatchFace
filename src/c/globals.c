@@ -292,6 +292,15 @@ void globals_prv_update_display() {
     api_request_espn_live_poll();
   }
 
+  // Light sync is a data concern, not a display concern - it must not be
+  // gated behind countdownBool/scoreDisplayBool/after_time, or it silently
+  // never fires for anyone with those display options off, and every team's
+  // gametime/completed (which the ESPN poll above depends on) never gets
+  // populated either.
+  if (api_should_light_sync()) {
+    api_request_cfbd_light_sync();
+  }
+
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
@@ -444,9 +453,6 @@ void globals_prv_update_display() {
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
     #endif
-    if (api_should_light_sync()) {
-      api_request_cfbd_light_sync();
-    }
     after_time = timekeeping_countdown();
     if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
       globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
@@ -462,10 +468,6 @@ void globals_prv_update_display() {
     #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
     #endif
-    //OK This is the only time I'm not confident in after_time.  I also need to make a new variable for when it's checked the gametime since I should have that information.
-    if (api_should_light_sync() && after_time) {
-      api_request_cfbd_light_sync();
-    }
     api_score_display();
     if (settings.scoreLocation != 1){
       globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
