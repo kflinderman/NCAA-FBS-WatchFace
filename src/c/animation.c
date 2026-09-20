@@ -1,65 +1,118 @@
 #include "animation.h"
 #include "globals.h"
-#include "structure.h"
+#include "timekeeping.h"
 
 
-// Animation complete handler
+/****************/
+/* Animation    */
+/****************/
+
+#ifndef PBL_PLATFORM_APLITE
+//Function to transition the animation so it goes back once done
 static void animation_beat_team_stopped(Animation *animation, bool finished, void *context) {
   static bool returning = false;
   Layer *layer = (Layer *)context;
 
   if (!returning) {
     returning = true;
-    // Wait 1 second, then animate back
     app_timer_register(1000, (AppTimerCallback)animation_beat_team_layer, layer);
   } else {
-    returning = false; // Reset for next cycle
+    returning = false;
     s_animation = false;
   }
 }
+#endif
 
-void animation_beat_team_layer() {
-  GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
-  GRect beat_from, beat_to;
-  GRect rect_from, rect_to;
+void animation_beat_team_layer(void) {
   static bool returning = false;
 
-  if (!returning) {
-    beat_from = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
-    beat_to   = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  #ifndef PBL_PLATFORM_APLITE
+  //Figure out movement of the beat team and its layer
+  GRect bounds = layer_get_bounds(window_get_root_layer(s_main_window));
 
-    rect_from = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    rect_to   = GRect(beat_spot, -10 - beat_primary, 44, 40);
-  } else {
-    beat_from = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
-    beat_to   = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  GRect beat_on_screen  = GRect(0, 0, bounds.size.w, bounds.size.h / 2 + 50);
+  GRect beat_off_screen = GRect(-bounds.size.w, 0, bounds.size.w, bounds.size.h / 2 + 50);
 
-    rect_from = GRect(beat_spot, -10 - beat_primary, 44, 40);
-    rect_to   = GRect(beat_spot, -40 + beat_primary, 44, 40);
+  GRect rect_pos_start = GRect(beat_spot, -40 + beat_primary, 44, 40);
+  GRect rect_pos_end   = GRect(beat_spot, -10 - beat_primary, 44, 40);
+
+  GRect beat_from = returning ? beat_on_screen  : beat_off_screen;
+  GRect beat_to   = returning ? beat_off_screen : beat_on_screen;
+
+  GRect rect_from = returning ? rect_pos_end   : rect_pos_start;
+  GRect rect_to   = returning ? rect_pos_start : rect_pos_end;
+  #endif
+
+  uint8_t target_mode = returning ? 1 : 2;
+
+  //Determine if we need to show a score or countdown (or bring back time)
+  bool timeTrue = true;
+  bool spaceTaken = false;
+
+  if (settings.countdownBool && (!settings.scoreDisplayBool || !after_time)) {
+    bool sub_labels_hidden = (settings.countdownDisplay == target_mode);
+    globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
+    if (!sub_labels_hidden){
+      spaceTaken = true;
+      timeTrue = false;
+    }
   }
 
-  // Animate beat_team_layer
-  PropertyAnimation *anim_beat = property_animation_create_layer_frame(beat_team_layer, &beat_from, &beat_to);
+  if (settings.scoreDisplayBool && (!settings.countdownBool || after_time || !spaceTaken)) {
+    bool sub_labels_hidden = (settings.scoreLocation == target_mode);
+    globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
+    if (!sub_labels_hidden) timeTrue = false;
+  }
+
+  if (timeTrue) {
+    globals_what2show("", "", s_time_text, true, true);
+  }
+
+  #ifndef PBL_PLATFORM_APLITE
+  //Call layer movement and set flag for returning
+  PropertyAnimation *anim_beat = property_animation_create_layer_frame(s_layers[LAYER_BEAT_TEAM], &beat_from, &beat_to);
   animation_set_duration((Animation*)anim_beat, 1000);
   animation_set_handlers((Animation*)anim_beat, (AnimationHandlers){
     .stopped = animation_beat_team_stopped
-  }, beat_team_layer);
+  }, s_layers[LAYER_BEAT_TEAM]);
   animation_schedule((Animation*)anim_beat);
 
-  // Animate rect_beat_layer
-  PropertyAnimation *anim_rect = property_animation_create_layer_frame(rect_beat_layer, &rect_from, &rect_to);
+  PropertyAnimation *anim_rect = property_animation_create_layer_frame(s_layers[LAYER_BEAT_RECT], &rect_from, &rect_to);
   animation_set_duration((Animation*)anim_rect, 1000);
   animation_schedule((Animation*)anim_rect);
+  #else
+  //OTherwise we're just changing the text in the time area, but we need to setup a register to return to main view
+  if (!returning) {
+    app_timer_register(3000, (AppTimerCallback)animation_beat_team_layer, NULL);
+  } else {
+    s_animation = false;
+  }
+  #endif
 
   returning = !returning;
 }
 
-static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, float origin, uint16_t bump, float bmp_ratio) {
+/****************/
+/* Quick View   */
+/****************/
+
+#ifndef PBL_PLATFORM_APLITE
+//Move layers more easily
+static void animation_layermove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t origin_permil, int bump, uint16_t bmp_ratio_permil) {
   GRect move_frame = layer_get_frame(tmp_layer);
-  move_frame.origin.y = ((tmp_bounds.size.h * origin) + bump) - diff * bmp_ratio;
+  move_frame.origin.y = (((tmp_bounds.size.h * origin_permil) / 1000) + bump) - (diff * bmp_ratio_permil) / 1000;
   layer_set_frame(tmp_layer, move_frame);
 }
 
+//Move lines more easily
+static void animation_linemove(GRect tmp_bounds, int diff, Layer *tmp_layer, uint16_t Y1RATIO, uint16_t Y2RATIO) {
+  LinePoints *pointsMove = (LinePoints *)layer_get_data(tmp_layer);
+  pointsMove->y1 = (tmp_bounds.size.h * Y1RATIO) / 1000 - diff;
+  pointsMove->y2 = (tmp_bounds.size.h * Y2RATIO) / 1000 - diff;
+  layer_mark_dirty(tmp_layer);
+}
+
+//Change certain layers based on quick view
 void animation_prv_unobstructed_change(AnimationProgress progress, void *context) {
   Layer *root = window_get_root_layer(s_main_window);
   GRect obsBounds = layer_get_unobstructed_bounds(root);
@@ -68,27 +121,44 @@ void animation_prv_unobstructed_change(AnimationProgress progress, void *context
   // Reposition to fit in the available space
   int bound_diff = unBounds.size.h - obsBounds.size.h;
 
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_time_layer), time_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_date_layer), date_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, rect_layer, rect_h, 0, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_logo_layer), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_beat_team_layer), 0.025, 0, 0.5);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bt_layer), vert_2, 3, 1);
-  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_batt_layer), vert_2, 3, 1);
-
-#ifdef PBL_RECT
-  LinePoints *points = (LinePoints *)layer_get_data(vertical_line);
-  points->y1 = unBounds.size.h * vert_1 - bound_diff;
-  points->y2 = unBounds.size.h * vert_2 - bound_diff;
-  layer_mark_dirty(vertical_line);
-#endif
-
-  LinePoints *points2 = (LinePoints *)layer_get_data(horizontal_line);
-  points2->y1 = unBounds.size.h * vert_2 - bound_diff;
-  points2->y2 = unBounds.size.h * vert_2 - bound_diff;
-  layer_mark_dirty(horizontal_line);
+  #if PBL_DISPLAY_HEIGHT > 180
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -2, 1000);
+  //animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), TIME_H, -2, 1000);
+  
+  #ifdef PBL_ROUND
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, 8, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, 8, 1000);
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), 1000, -16, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), 1000, -16, 1000);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_VERT], VERT_1, VERT_2);
+  #endif
+  
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), RECT_H, -5, 1000);
+  //animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_TIME]), TIME_H, -5, 1000);
+  
+  #ifdef PBL_ROUND
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), TIME_H, TIME_Y - 10, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), TIME_H, TIME_Y - 10, 1000);
+  #else
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), 1000, -14, 1000);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), 1000, -14, 1000);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_VERT], VERT_1, VERT_2);
+  #endif
+  #endif
+  
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]), 25, 0, 500);
+  animation_layermove(unBounds, bound_diff, text_layer_get_layer(s_text_layers[TEXT_LAYER_DATE]), DATE_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, s_layers[LAYER_RECT], RECT_H, 0, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_LOGO]), 25, 0, 500);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), VERT_2, 3, 1000);
+  animation_layermove(unBounds, bound_diff, bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), VERT_2, 3, 1000);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_HOR], VERT_2, VERT_2);
+  animation_linemove(unBounds, bound_diff, s_layers[LAYER_SCORE_I], VERT_3, VERT_4);
 }
 
+//Setup call for quick view
 void animation_subscribe_unobstructed_area(void) {
   UnobstructedAreaHandlers handlers = {
     .will_change = NULL,
@@ -97,3 +167,4 @@ void animation_subscribe_unobstructed_area(void) {
   };
   unobstructed_area_service_subscribe(handlers, NULL);
 }
+#endif

@@ -1,15 +1,14 @@
-/**
- * CFBD API module for batched data fetching
- * Handles season detection, data aggregation, and API call optimization
- */
-
 var cfbd = (function() {
-  // In-memory cache for this session (survives across multiple calls)
+  /**********************/
+  /* Cache & Storage    */
+  /**********************/
+
+  // In-memory session cache surviving across sync calls
   var cache = {
     currentYear: null,
     nextSeasonFirstGameTs: null,
     seasonDates: [],  // [ startDate, endDate ]
-    weekDates: [], // [[ week, startDate, endDate], [week...]]
+    weekDates: [],    // [[ week, startDate, endDate], ...]
     games: null,
     records: null,
     rankings: null
@@ -17,12 +16,60 @@ var cfbd = (function() {
 
   var constants = {
     API_BASE: 'https://api.collegefootballdata.com',
-    BATCH_DELAY: 100  // ms between requests to avoid hammering API
+    ESPN_SCOREBOARD_URL: 'https://site.api.espn.com/apis/site/v2/sports/football/college-football/scoreboard?limit=400',
+    BATCH_DELAY: 100  // ms delay between batched requests
   };
 
-  /**
-   * Helper: XHR with Bearer auth (from index.js, duplicated for isolation)
-   */
+  var seasonDeterminationCallbacks = null;
+  var USAGE_STORAGE_KEY = 'cfbd_api_usage';
+
+  /**********************/
+  /* Usage Tracking     */
+  /**********************/
+
+  // Load API usage history from localStorage
+  function loadUsage() {
+    try {
+      var raw = localStorage.getItem(USAGE_STORAGE_KEY);
+      if (raw) return JSON.parse(raw);
+    } catch (e) {
+      console.log('CFBD usage: failed to load persisted usage: ' + e);
+    }
+    return null;
+  }
+
+  // Persist current API usage stats
+  function saveUsage() {
+    try {
+      localStorage.setItem(USAGE_STORAGE_KEY, JSON.stringify(usage));
+    } catch (e) {
+      console.log('CFBD usage: failed to persist usage: ' + e);
+    }
+  }
+
+  var usage = loadUsage() || { year: null, month: null, used: 0, limit: 1000 };
+
+  // Track API call counts and auto-reset on new calendar month
+  function trackApiCall() {
+    var now = new Date();
+    var year = now.getFullYear();
+    var month = now.getMonth();
+
+    if (usage.year !== year || usage.month !== month) {
+      usage.year = year;
+      usage.month = month;
+      usage.used = 0;
+    }
+
+    usage.used++;
+    saveUsage();
+  }
+
+  /**********************/
+  /* HTTP Request Core  */
+  /**********************/
+
+  // Authenticated HTTP GET request handler with bearer auth and usage tracking
   function xhrAuth(url, apiKey, callback, errorCallback) {
     var xhr = new XMLHttpRequest();
     xhr.onload = function() {
@@ -45,16 +92,61 @@ var cfbd = (function() {
     xhr.open('GET', url);
     xhr.setRequestHeader('Authorization', 'Bearer ' + apiKey);
     xhr.setRequestHeader('Accept', 'application/json');
+    trackApiCall();
     xhr.send();
   }
 
-  /**
-   * GET /calendar for a year to determine if we're in season
-   * Returns: { isInSeason: bool, startDate: Date, endDate: Date, week: int }
-   */
+  // Unauthenticated HTTP GET - for public, no-key endpoints (ESPN's public
+  // scoreboard). Deliberately separate from xhrAuth: no bearer token, and
+  // does NOT count against CFBD's monthly usage quota.
+  function xhrPublic(url, callback, errorCallback) {
+    var xhr = new XMLHttpRequest();
+    xhr.timeout = 8000;
+    xhr.onload = function() {
+      if (xhr.status === 200) {
+        try {
+          callback(JSON.parse(xhr.responseText));
+        } catch (e) {
+          console.log('Public request JSON parse error: ' + e);
+          if (errorCallback) errorCallback(-1);
+        }
+      } else {
+        console.log('Public request failed: ' + xhr.status + ' ' + url);
+        if (errorCallback) errorCallback(xhr.status);
+      }
+    };
+    xhr.onerror = function() {
+      console.log('Public request network error: ' + url);
+      if (errorCallback) errorCallback(0);
+    };
+    xhr.ontimeout = function() {
+      console.log('Public request timed out: ' + url);
+      if (errorCallback) errorCallback(-2);
+    };
+    xhr.open('GET', url);
+    xhr.setRequestHeader('Accept', 'application/json');
+    xhr.send();
+  }
+
+  /**********************/
+  /* Endpoint Fetchers  */
+  /**********************/
+
+  // Sync remaining user API quota from CFBD account endpoint
+  function fetchUserInfo(apiKey, callback) {
+    var url = constants.API_BASE + '/info';
+    xhrAuth(url, apiKey, function(data) {
+      callback(data);
+    }, function(status) {
+      console.log('CFBD fetchUserInfo failed: ' + status);
+      callback(null);
+    });
+  }
+
+  // Fetch season schedule boundaries and week date ranges
   function fetchCalendar(year, apiKey, callback) {
     var url = constants.API_BASE + '/calendar?year=' + year;
-    
+
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data) || data.length === 0) {
         console.log('No calendar data for year ' + year);
@@ -62,45 +154,35 @@ var cfbd = (function() {
         return;
       }
 
-      //for (let i = 0; i < data.length; i++) {
-        //console.log("Calendar output: " + JSON.stringify(data[i], null, 2));
-      //}
       var now = new Date();
       var startEntry = data[0];
       var endEntry = data[data.length - 1];
       var startStr = startEntry.startDate;
       var endStr = endEntry.endDate;
-      
+
       var startDate = new Date(startStr);
       var endDate = new Date(endStr);
-      
+
       if (data.length > 0) {
         cache.seasonDates = [
           data[0].startDate,               // First day of Week 1
-          data[data.length - 1].endDate    // Last day of the Postseason/Bowl week
+          data[data.length - 1].endDate    // Last day of Postseason/Bowl week
         ];
       }
-      
+
       var inSeason = now >= startDate && now <= endDate;
       var postSeason = now > endDate;
-      //let  weeks = [];
-      //for (let i = 0; i < data.length; i++) {
-        //weeks.push([
-          //data[i].week,
-          //data[i].startDate,
-          //data[i].endDate
-        //]);
-      //}
-      
-      const weeks = data.map(item => [
-        item.week, 
-        item.startDate, 
-        item.endDate
-      ]);
-      
 
-      console.log('Calendar ' + year + ': ' + startStr + ' - ' + endStr + 
-                  ', in season: ' + inSeason + ', post season: ' + postSeason);// + ', week: ' + currentWeek);
+      var weeks = data.map(function(item) {
+        return [
+          item.week,
+          item.startDate,
+          item.endDate
+        ];
+      });
+
+      console.log('Calendar ' + year + ': ' + startStr + ' - ' + endStr +
+                  ', in season: ' + inSeason + ', post season: ' + postSeason);
 
       callback({
         isInSeason: inSeason,
@@ -115,70 +197,113 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /games for a specific year/week to find first game
-   * Returns: [ { id, startDate, homeTeam, awayTeam, ... }, ... ]
-   */
-  function fetchGames(year, week, postseason, apiKey, callback) {
-    if (postseason){
-      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=postseason&classification=fbs';
-    }
-    else{
-      var url = constants.API_BASE + '/games?year=' + year + '&week=' + week + '&seasonType=regular&classification=fbs';
-    }
-    console.log('Grabbing game data for: ' + year + ' week ' + week + (postseason ? ' (offseason)' : ''));
-    xhrAuth(url, apiKey, function(data) {
-      if (!data || !Array.isArray(data)) {
-        console.log('No games for ' + year + ' week ' + week);
-        callback([]);
-        return;
-      }
-
-      // Sort by startDate to find earliest game
-      data.sort(function(a, b) {
-        return new Date(a.startDate) - new Date(b.startDate);
-      });
-
-      var trimmedGames = data.map(function(game) {
+  // Strip unneeded fields and filter placeholder games
+  function trimGames(data) {
+    return data
+      .filter(function(game) {
+        if (game.homeTeam === 'NA' || game.awayTeam === 'NA') {
+          console.log('Skipping game with NA placeholder team');
+          return false;
+        }
+        return true;
+      })
+      .map(function(game) {
         return {
           startDate: game.startDate,
           homeTeam: game.homeTeam,
           homePoints: game.homePoints,
           awayTeam: game.awayTeam,
-          awayPoints: game.awayPoints
+          awayPoints: game.awayPoints,
+          completed: game.completed
         };
       });
+  }
 
-      console.log('Fetched ' + trimmedGames.length + ' games for week ' + week);
-      callback(trimmedGames);
-    }, function(status) {
-      console.log('fetchGames failed for week ' + week + ': ' + status);
+  // Fetch today's live/final scores from ESPN's public scoreboard. This is
+  // an unofficial, undocumented endpoint (no auth, no key, doesn't touch
+  // CFBD's quota) - used only for the dedicated live-score poll, since
+  // CFBD's free tier only has live scores behind a Patreon-gated
+  // /scoreboard endpoint. If this fails or ESPN's shape ever changes, we
+  // just return no live data - the watch keeps whatever CFBD last had.
+  function fetchEspnLiveScores(callback) {
+    xhrPublic(constants.ESPN_SCOREBOARD_URL, function(data) {
+      var events = (data && Array.isArray(data.events)) ? data.events : [];
+      console.log('ESPN scoreboard: ' + events.length + ' games today');
+      callback(events);
+    }, function() {
       callback([]);
     });
   }
 
-  /**
-   * GET /games for all weeks of a year (or filter by team)
-   * For batch processing; kept separate so it can be called independently
-   */
-  function fetchAllGamesForYear(year, apiKey, callback) {
-    var url = constants.API_BASE + '/games?year=' + year + '&classification=fbs';
-    
+  // Loose-match team names between CFBD and ESPN's differing conventions
+  function normalizeTeamName(name) {
+    return (name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  }
+
+  // Build a per-team lookup (normalized team name -> live game info) from
+  // ESPN's raw events, keeping only games that are actually live or final -
+  // nothing to report for games that haven't started yet. Indexed by single
+  // team name (not a matchup pair) so a per-team live-score request can
+  // find a team's own game without already knowing its opponent.
+  function buildEspnLiveByTeam(events) {
+    var byTeam = {};
+
+    events.forEach(function(event) {
+      var comp = event.competitions && event.competitions[0];
+      if (!comp || !Array.isArray(comp.competitors)) return;
+
+      var home = comp.competitors.filter(function(c) { return c.homeAway === 'home'; })[0];
+      var away = comp.competitors.filter(function(c) { return c.homeAway === 'away'; })[0];
+      if (!home || !away) return;
+
+      var status = comp.status || event.status;
+      var state = status && status.type && status.type.state; // 'pre' | 'in' | 'post'
+      if (state !== 'in' && state !== 'post') return;
+
+      var homeName = (home.team && (home.team.location || home.team.displayName)) || '';
+      var awayName = (away.team && (away.team.location || away.team.displayName)) || '';
+      if (!homeName || !awayName) return;
+
+      var homePoints = parseInt(home.score, 10) || 0;
+      var awayPoints = parseInt(away.score, 10) || 0;
+      var completed = !!(status && status.type && status.type.completed);
+
+      byTeam[normalizeTeamName(homeName)] = {
+        teamScore: homePoints,
+        oppScore: awayPoints,
+        completed: completed
+      };
+      byTeam[normalizeTeamName(awayName)] = {
+        teamScore: awayPoints,
+        oppScore: homePoints,
+        completed: completed
+      };
+    });
+
+    return byTeam;
+  }
+
+  // Fetch FBS game schedule for specified year and season type
+  function fetchSeasonGames(year, seasonType, apiKey, callback) {
+    var url = constants.API_BASE + '/games?year=' + year +
+        '&seasonType=' + seasonType + '&classification=fbs';
+    console.log('Grabbing full ' + seasonType + ' season for ' + year);
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
-        console.log('No games for year ' + year);
+        console.log('No ' + seasonType + ' games for ' + year);
         callback([]);
         return;
       }
-      console.log('Fetched ' + data.length + ' total games for ' + year);
-      cache.games = data;
-      callback(data);
+      var trimmed = trimGames(data);
+      console.log('Fetched ' + trimmed.length + ' ' + seasonType + ' games for ' + year);
+      callback(trimmed);
     }, function(status) {
-      console.log('fetchAllGamesForYear failed: ' + status);
+      console.log('fetchSeasonGames failed (' + seasonType + '): ' + status);
       callback([]);
     });
   }
 
+  // Fetch team records filtered down to FBS teams
   function fetchRecords(year, apiKey, callback) {
     var url = constants.API_BASE + '/records?year=' + year;
 
@@ -217,17 +342,10 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * GET /rankings for a year (current/latest poll)
-   * Returns: [ { year, week, poll, ranks: [ { rank, team, ... }, ... ] }, ... ]
-   */
+  // Fetch team rankings (prefers Playoff Committee Rankings, falls back to AP Top 25)
   function fetchRankings(year, week, postseason, apiKey, callback) {
-    if (postseason){
-      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=postseason&week=' + week;
-    }
-    else{
-      var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=regular&week=' + week;
-    }
+    var seasonTypeStr = postseason ? 'postseason' : 'regular';
+    var url = constants.API_BASE + '/rankings?year=' + year + '&seasonType=' + seasonTypeStr + '&week=' + week;
 
     xhrAuth(url, apiKey, function(data) {
       if (!data || !Array.isArray(data)) {
@@ -276,27 +394,48 @@ var cfbd = (function() {
     });
   }
 
-  /**
-   * Phase 1: Determine current season year + next season's first game timestamp
-   * 
-   * Logic:
-   *   1. Fetch calendar for current year
-   *   2. If in season: use this year, fetch first game of *next* year to store as boundary
-   *   3. If NOT in season: fetch calendar for last year, check if in that season window
-   *      - If in last year's window: use last year (postseason), fetch next year's first game
-   *      - If not: this is offseason between seasons, fetch next year's first game as boundary
-   */
-  function determineSeasonAndBoundary(apiKey, callback) {
+  /**********************/
+  /* Boundary Logic     */
+  /**********************/
+
+  // Queue simultaneous season resolution calls to avoid redundant requests
+  function determineSeasonAndBoundary(apiKey, knownNextSeasonTs, callback) {
+    if (seasonDeterminationCallbacks) {
+      console.log('Season/boundary determination already in progress - reusing it');
+      seasonDeterminationCallbacks.push(callback);
+      return;
+    }
+
+    seasonDeterminationCallbacks = [callback];
+    determineSeasonAndBoundaryImpl(apiKey, knownNextSeasonTs, function(year, nextSeasonTs, seasonDates, weekDates) {
+      var callbacks = seasonDeterminationCallbacks;
+      seasonDeterminationCallbacks = null;
+      for (var i = 0; i < callbacks.length; i++) {
+        callbacks[i](year, nextSeasonTs, seasonDates, weekDates);
+      }
+    });
+  }
+
+  // Resolve active season year and calculate upcoming season timestamp boundary.
+  // knownNextSeasonTs is whatever the watch already has persisted (0 if
+  // unknown) - when it's still in the future we skip the /games lookup
+  // entirely and just reuse it.
+  function determineSeasonAndBoundaryImpl(apiKey, knownNextSeasonTs, callback) {
     var now = new Date();
     var currentYear = now.getFullYear();
+    var nowTs = Math.floor(now.getTime() / 1000);
 
     console.log('Phase 1: Determine season (current year: ' + currentYear + ')');
 
-    // Try current year first
     fetchCalendar(currentYear, apiKey, function(calendarResult) {
+      var fetchNextSeasonBoundary = function() {
+        if (knownNextSeasonTs && knownNextSeasonTs > nowTs) {
+          console.log('Next season boundary already known (' + knownNextSeasonTs + ') - skipping /games lookup');
+          cache.nextSeasonFirstGameTs = knownNextSeasonTs;
+          callback(cache.currentYear, cache.nextSeasonFirstGameTs, cache.seasonDates, cache.weekDates);
+          return;
+        }
 
-      // 1. Define the next step as a helper function
-      const fetchNextSeasonBoundary = function() {
         fetchFirstGameOfYear(cache.currentYear + 1, apiKey, function(firstGame) {
           if (firstGame && firstGame.startDate) {
             cache.nextSeasonFirstGameTs = Math.floor(new Date(firstGame.startDate).getTime() / 1000);
@@ -312,11 +451,9 @@ var cfbd = (function() {
         cache.seasonDates[1] = calendarResult.endDate;
         cache.weekDates = calendarResult.weekDates;
 
-        // 2. Execute here if current year is valid
         fetchNextSeasonBoundary();
-      }
-      else {
-        // Try last year
+      } else {
+        // Fallback check on prior year for postseason or off-season transition
         fetchCalendar(currentYear - 1, apiKey, function(lastYearResult) {
           if (lastYearResult.isInSeason || lastYearResult.postSeason) {
             console.log('In postseason: using year ' + (currentYear - 1));
@@ -325,55 +462,53 @@ var cfbd = (function() {
             cache.seasonDates[1] = lastYearResult.endDate;
             cache.weekDates = lastYearResult.weekDates;
 
-            // 3. Execute here if last year is valid
             fetchNextSeasonBoundary();
           } else {
-            // Offseason: use next year, fetch its first game
             console.error('No Schedules Found');
-            callback([]);
-            return; // Stops execution, fetchNextSeasonBoundary is never called
+            callback(null, null, null, null);
           }
         });
       }
     });
   }
 
-  /**
-   * Helper: Fetch the first game (by date) of a given year's season
-   */
+  // Fetch kickoff game of target season year
   function fetchFirstGameOfYear(year, apiKey, callback) {
-    fetchGames(year, 1, false, apiKey, function(games) {
-      if (games.length > 0) {
-        // games are already sorted by startDate from fetchGames
-        callback(games[0]);
-      } else {
+    fetchSeasonGames(year, 'regular', apiKey, function(games) {
+      if (games.length === 0) {
         callback(null);
+        return;
       }
+      var sorted = games.slice().sort(function(a, b) {
+        return new Date(a.startDate) - new Date(b.startDate);
+      });
+      callback(sorted[0]);
     });
   }
 
-  /**
- * Helper: given the cached season info, figure out which (year, week)
- * we should be fetching, and whether we're in the offseason.
- * Returns: { year, week, offseason }
- */
+  // Determine current active season week or offseason status
   function determineCurrentWeek(cache) {
     var now = new Date();
     var nowTs = Math.floor(now.getTime() / 1000);
 
     var TWO_WEEKS_SECONDS = 14 * 24 * 60 * 60;
 
-    // Branch 1: within 2 weeks of next season's kickoff -> jump to new season, week 0
+    // Branch 1: Within 2 weeks of upcoming season -> advance to new season week 0.
+    // No real week window exists yet (next season's calendar hasn't been
+    // fetched) - weekStart/weekEnd are null, game-picking should treat that
+    // as "no window to filter against" upstream.
     if (cache.nextSeasonFirstGameTs && nowTs >= (cache.nextSeasonFirstGameTs - TWO_WEEKS_SECONDS)) {
       console.log('Within 2 weeks of next season kickoff - using year ' + (cache.currentYear + 1) + ', week 0');
       return {
         year: cache.currentYear + 1,
         week: 0,
-        offseason: false
+        offseason: false,
+        weekStart: null,
+        weekEnd: null
       };
     }
 
-    // Branch 2: currently inside the active season window
+    // Branch 2: Active in-season window
     var seasonStart = new Date(cache.seasonDates[0]);
     var seasonEnd = new Date(cache.seasonDates[1]);
 
@@ -389,136 +524,175 @@ var cfbd = (function() {
           return {
             year: cache.currentYear,
             week: weekNum,
-            offseason: false
+            offseason: false,
+            weekStart: weekEntry[1],
+            weekEnd: weekEntry[2]
           };
         }
       }
-      // Fallback: inside seasonDates but didn't land inside any single week's
-      // start/end (gaps between weeks happen) - use the last known week.
       var fallbackEntry = cache.weekDates[cache.weekDates.length - 1];
       console.log('In season but between week boundaries - using last known week ' + fallbackEntry[0]);
       return {
         year: cache.currentYear,
         week: fallbackEntry[0],
-        offseason: false
+        offseason: false,
+        weekStart: fallbackEntry[1],
+        weekEnd: fallbackEntry[2]
       };
     }
 
-    // Branch 3: not in season, not near next season -> offseason
+    // Branch 3: Offseason
     var lastEntry = cache.weekDates[cache.weekDates.length - 1];
-    console.log('Offseason - using last week of ' + cache.currentYear + ': week ' + lastEntry[0]);
+    console.log('Offseason - using last week of ' + cache.currentYear + ': week ' + lastEntry[0] + " Post Season");
     return {
       year: cache.currentYear,
       week: lastEntry[0],
-      offseason: true
+      offseason: true,
+      weekStart: lastEntry[1],
+      weekEnd: lastEntry[2]
     };
   }
 
-  /**
-   * Public API
-   */
+  /**********************/
+  /* Public Module API  */
+  /**********************/
+
   return {
     cache: cache,
 
-    /**
-     * Full workflow: determine season + boundary only. Calendar data
-     * (year, next season kickoff, season/week date ranges) is all the
-     * watch needs from a full sync - games/records/rankings are fetched
-     * separately by syncLightCFBD, on its own trigger, for whatever the
-     * current week turns out to be.
-     * Call on app launch and periodically (e.g., daily).
-     */
-    syncFullCFBD: function(apiKey, callback) {
-      console.log('=== CFBD Full Sync Start (calendar only) ===');
+    // Resolve season calendar boundary and correct usage quota only.
+    // Records/rankings now ride along with light sync instead (see below) -
+    // full sync just tracks the season boundary, so it stays rare.
+    // knownNextSeasonTs is whatever the watch already has persisted for next
+    // season's kickoff (0 if unknown) - lets us skip the /games boundary
+    // lookup entirely once it's been learned.
+    syncFullCFBD: function(apiKey, knownNextSeasonTs, callback) {
+      console.log('=== CFBD Full Sync Start ===');
 
-      determineSeasonAndBoundary(apiKey, function(year, nextSeasonTs, seasonDates, weekDates) {
+      determineSeasonAndBoundary(apiKey, knownNextSeasonTs, function(year, nextSeasonTs, seasonDates, weekDates) {
         console.log('=== CFBD Season Boundary Determined ===');
-        callback({
-          year: year,
-          nextSeasonFirstGameTs: nextSeasonTs,
-          seasonDates: seasonDates,
-          weekDates: weekDates
+
+        if (year === null) {
+          console.log('Full sync aborted - no season boundary available');
+          callback(null);
+          return;
+        }
+
+        fetchUserInfo(apiKey, function(info) {
+          if (info && typeof info.usedCalls === 'number') {
+            usage.used = info.usedCalls;
+            if (typeof info.monthlyLimit === 'number') {
+              usage.limit = info.monthlyLimit;
+            }
+            var now = new Date();
+            usage.year = now.getFullYear();
+            usage.month = now.getMonth();
+            saveUsage();
+            console.log('CFBD usage corrected: ' + usage.used + '/' + usage.limit);
+          } else {
+            console.log('CFBD usage correction skipped - GET /info unavailable or unlimited plan');
+          }
+
+          callback({
+            year: year,
+            nextSeasonFirstGameTs: nextSeasonTs,
+            seasonDates: seasonDates,
+            weekDates: weekDates,
+            apiCallsUsed: usage.used,
+            apiCallsLimit: usage.limit
+          });
         });
       });
+
+      console.log('=== CFBD Full Sync End ===');
     },
 
-    /**
-   * Lighter refresh: uses cached season info from syncFullCFBD to determine
-   * the correct year/week, then fetches games+records+rankings (or just
-   * records+rankings if we're in the offseason).
-   *
-   * determineCurrentWeek needs cache.currentYear/seasonDates/weekDates to
-   * already be populated (normally true after a prior syncFullCFBD call in
-   * this same JS session). If the JS worker restarted and light sync fires
-   * first - which can happen, since the watch decides to sync based on its
-   * own persisted timestamps, not on what this JS session has done - that
-   * cache would be empty and determineCurrentWeek would throw. So: if
-   * cache.currentYear is unset, run determineSeasonAndBoundary first to
-   * populate it, then proceed exactly as before.
-   */
-    syncLightCFBD: function(apiKey, callback) {
+    // Lightweight sync: game schedules, live scores, and records/rankings.
+    // targetYear is the exact season year the watch wants games for (its own
+    // math, based on the persisted season boundary) - used directly instead
+    // of re-deriving it here. knownNextSeasonTs is passed through to the
+    // cache-empty fallback below so it can also skip its /games lookup.
+    syncLightCFBD: function(apiKey, targetYear, knownNextSeasonTs, callback) {
+      function fetchAndReturn() {
+        var target = determineCurrentWeek(cache);
+        var year = targetYear || cache.currentYear;
+
+        // regular games, [postseason games], records, rankings
+        var expected = target.offseason ? 4 : 3;
+        var completed = 0;
+        var regularGames = [];
+        var postGames = [];
+        var records = [];
+        var rankings = [];
+
+        function onFetchComplete() {
+          completed++;
+          if (completed !== expected) return;
+
+          callback({
+            regularGames: regularGames,
+            postGames: postGames,
+            inPostseason: target.offseason,
+            weekStart: target.weekStart,
+            weekEnd: target.weekEnd,
+            records: records,
+            rankings: rankings,
+            apiCallsUsed: usage.used,
+            apiCallsLimit: usage.limit
+          });
+        }
+
+        fetchSeasonGames(year, 'regular', apiKey, function(games) {
+          regularGames = games;
+          onFetchComplete();
+        });
+
+        if (target.offseason) {
+          setTimeout(function() {
+            fetchSeasonGames(year, 'postseason', apiKey, function(games) {
+              postGames = games;
+              onFetchComplete();
+            });
+          }, constants.BATCH_DELAY);
+        }
+
+        setTimeout(function() {
+          fetchRecords(year, apiKey, function(data) {
+            records = data;
+            onFetchComplete();
+          });
+        }, constants.BATCH_DELAY);
+
+        setTimeout(function() {
+          fetchRankings(year, target.week, target.offseason, apiKey, function(data) {
+            rankings = data;
+            onFetchComplete();
+          });
+        }, constants.BATCH_DELAY * 2);
+      }
+
       if (cache.currentYear === null) {
         console.log('Light sync: cache empty (no full sync this session yet) - determining season first');
-        determineSeasonAndBoundary(apiKey, function() {
-          doLightSync(apiKey, callback);
+        determineSeasonAndBoundary(apiKey, knownNextSeasonTs, function() {
+          fetchAndReturn();
         });
         return;
       }
-      doLightSync(apiKey, callback);
-    }
-  };
+      fetchAndReturn();
+    },
 
-  function doLightSync(apiKey, callback) {
-    console.log('=== CFBD Light Sync Start ===');
-    var target = determineCurrentWeek(cache);
-    console.log('Light sync: year ' + target.year + ', week ' + target.week +
-                (target.offseason ? ' (offseason)' : ''));
-
-    var results = {
-      year: target.year,
-      week: target.week,
-      offseason: target.offseason,
-      games: [],
-      records: [],
-      rankings: []
-    };
-
-    //var expected = target.offseason ? 2 : 3; // records+rankings, or +games
-    var expected = 3;
-    var completed = 0;
-
-    function onComplete() {
-      completed++;
-      if (completed === expected) callback(results);
-    }
-
-    fetchRecords(target.year, apiKey, function(data) {
-      results.records = data;
-      onComplete();
-    });
-
-    setTimeout(function() {
-      //fetchRankings(target.year, target.week, target.offseason, apiKey, function(data) {
-      fetchRankings(target.year, 13, false, apiKey, function(data) {
-        results.rankings = data;
-        onComplete();
+    // Dedicated live-score poll: ESPN's public scoreboard only, completely
+    // independent of CFBD (no key, no quota impact). Used only while a
+    // cached team's game is known to be underway - see the watch-side
+    // gating in api.c for when this actually gets called.
+    fetchLiveScores: function(callback) {
+      fetchEspnLiveScores(function(events) {
+        callback(buildEspnLiveByTeam(events));
       });
-    }, constants.BATCH_DELAY);
+    },
 
-    // week 13 is hardcoded for now (offseason testing, so real "current
-    // week" games don't exist yet) - swap the two lines below (comment
-    // the 13 one, uncomment target.week one) once testing is done and the
-    // season's actual current week should be used instead.
-    //if (!target.offseason) {
-      setTimeout(function() {
-        //fetchGames(target.year, target.week, target.offseason, apiKey, function(data) {
-        fetchGames(target.year, 13, false, apiKey, function(data) {
-          results.games = data;
-          onComplete();
-        });
-      }, constants.BATCH_DELAY * 2);
-    //}
-  }
+    normalizeTeamName: normalizeTeamName
+  };
 })();
 
 module.exports = cfbd;

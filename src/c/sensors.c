@@ -4,6 +4,15 @@
 #include "drawing.h"
 #include "timekeeping.h"
 
+//Function to easy trigger vibrations
+static void sensor_trigger_vibration(uint8_t type) {
+  switch (type) {
+    case 1: vibes_short_pulse(); break;
+    case 2: vibes_long_pulse(); break;
+    case 3: vibes_double_pulse(); break;
+    default: break;
+  }
+}
 
 /*********************/
 /* Accelerometer     */
@@ -14,27 +23,25 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
   int16_t curr_y = data[num_samples - 1].y;
   int16_t delta = curr_y - s_prev_y;
 
-  if (abs(delta) > settings.animationSensitivity &&
+  //Check to make sure animations are on, quiet time is not active, and battery is charged enough
+  if (settings.animationSensitivity != 0 &&
       !s_animation &&
-      settings.animationSensitivity != 0 &&
-      (settings.animationsBatt == 0 ||
-        (settings.animationsBatt == 1 && s_batt_history < 1) ||
-        (settings.animationsBatt == 2 && s_batt_history < 2) ||
-        (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)
-      ) &&
-      (!settings.quietTimeBool ||
-        (current_time_integer <= settings.quietTimeStart && current_time_integer >= settings.quietTimeEnd)
-      )
+      abs(delta) > settings.animationSensitivity &&
+      (settings.animationsBatt == 0 || 
+       (settings.animationsBatt == 1 && s_batt_history < 1) ||
+       (settings.animationsBatt == 2 && s_batt_history < 2) ||
+       (settings.animationsBatt == 3 && s_battery_state.charge_percent > settings.animationsCustom)) &&
+      (!settings.quietTimeBool || !timekeeping_is_quiet_time())
      ) {
-      // Detected sudden Y movement and play animation
-      s_animation = true;
-      if(settings.animationDelay){
-        app_timer_register(1000, timer_callback, NULL);
-      }
-      else{
-        animation_beat_team_layer();
-      }
+    // Detected sudden Y movement and play animation
+    s_animation = true;
+    if(settings.animationDelay){
+      app_timer_register(1000, timer_callback, NULL);
     }
+    else{
+      animation_beat_team_layer();
+    }
+  }
   s_prev_y = curr_y;
 }
 
@@ -43,44 +50,36 @@ void sensor_accel_data_handler(AccelData *data, uint32_t num_samples) {
 /******************/
 void sensor_connection_handler(bool connected) {
   s_bt_connected = connected;
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Bluetooth: %d History: %d", s_bt_connected, s_bt_history);
+  #endif
 
-  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), connected);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), connected);
 
   // optional: give feedback when connection state changes
   if (connected && !s_bt_history) {
     // connected
-    switch (settings.ReconnectVibration) {
-      case 0: break;
-      case 1: vibes_short_pulse(); break;
-      case 2: vibes_long_pulse(); break;
-      case 3: vibes_double_pulse(); break;
-    }
+    sensor_trigger_vibration(settings.ReconnectVibration);
 
     s_bt_history = true;
   } else if (!connected && s_bt_history) {
     // disconnected
-    switch (settings.DisconnectVibration) {
-      case 0: break;
-      case 1: vibes_short_pulse(); break;
-      case 2: vibes_long_pulse(); break;
-      case 3: vibes_double_pulse(); break;
-    }
+    sensor_trigger_vibration(settings.DisconnectVibration);
     s_bt_history = false;
   }
 }
 
 void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
   // Create Bluetooth GBitmap from resource
-  s_bt_bitmap = gbitmap_create_with_resource(RESOURCE_ID_BT);
+  s_gbitmap_layers[GBITMAP_LAYER_BT] = gbitmap_create_with_resource(RESOURCE_ID_BT);
 
   #if PBL_DISPLAY_HEIGHT > 180
-    //182
-    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2, 10, 14, s_bt_bitmap, window_layer);
+  //182
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 9), (bounds.size.h * VERT_2) / 1000, 10, 14, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   #else
-    s_bt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - icon_bump, bounds.size.h * vert_2 + 3, 5, 7, s_bt_bitmap, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 5), (bounds.size.h * VERT_2) / 1000 + 3, 5, 7, s_gbitmap_layers[GBITMAP_LAYER_BT], window_layer);
   #endif
-  layer_set_hidden(bitmap_layer_get_layer(s_bt_layer), s_bt_connected);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BT]), s_bt_connected);
 }
 
 /****************/
@@ -88,54 +87,61 @@ void sensor_bluetooth_draw(Layer *window_layer, GRect bounds){
 /****************/
 void sensor_battery_handler(BatteryChargeState state) {
   s_battery_state = state;
+  #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_DEBUG, "Battery: %d History: %d", state.charge_percent, s_batt_history);
+  #endif
+  uint32_t target_res_id = 0;
 
-  // optional: vibrate on low battery threshold or update UI
-  if (!state.is_charging && state.charge_percent <= settings.LowBatteryPercent && state.charge_percent > settings.EmptyBatteryPercent) {
-    // warn briefly
-    if (s_batt_history == 0) {
-      switch (settings.LowBatteryVibration) {
-        case 0: break;
-        case 1: vibes_short_pulse(); break;
-        case 2: vibes_long_pulse(); break;
-        case 3: vibes_double_pulse(); break;
-      }
-      s_batt_history = 1;
-    }
-    bitmap_layer_set_bitmap(s_batt_layer, s_batt_low_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
-  } else if (!state.is_charging && state.charge_percent <= settings.EmptyBatteryPercent) {
-    if (s_batt_history == 1) {
-      switch (settings.EmptyBatteryVibration) {
-        case 0: break;
-        case 1: vibes_short_pulse(); break;
-        case 2: vibes_long_pulse(); break;
-        case 3: vibes_double_pulse(); break;
-      }
-      bitmap_layer_set_bitmap(s_batt_layer, s_batt_empty_bitmap);
-      layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
+  // Charging State
+  if (state.is_charging) {
+    target_res_id = RESOURCE_ID_FULLBATT;
+    s_batt_history = 0;
+  } 
+  // Empty Battery State
+  else if (state.charge_percent <= settings.EmptyBatteryPercent) {
+    target_res_id = RESOURCE_ID_EMPTYBATT;
+
+    // Only vibrate on new state entry (0 -> 2 or 1 -> 2)
+    if (s_batt_history < 2) {
+      sensor_trigger_vibration(settings.EmptyBatteryVibration);
       s_batt_history = 2;
     }
-  } else if (state.is_charging) {
-    bitmap_layer_set_bitmap(s_batt_layer, s_batt_crg_bitmap);
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), false);
+  } 
+  // Low Battery State
+  else if (state.charge_percent <= settings.LowBatteryPercent) {
+    target_res_id = RESOURCE_ID_LOWBATT;
+
+    // Only vibrate on new state entry (0 -> 1)
+    if (s_batt_history < 1) {
+      sensor_trigger_vibration(settings.LowBatteryVibration);
+      s_batt_history = 1;
+    }
+  } 
+  // Normal Battery State
+  else {
     s_batt_history = 0;
+  }
+
+  // Single Pass UI Update
+  if (target_res_id != 0) {
+    if (s_gbitmap_layers[GBITMAP_LAYER_BATT]) {
+      gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BATT]);
+    }
+    s_gbitmap_layers[GBITMAP_LAYER_BATT] = gbitmap_create_with_resource(target_res_id);
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BATT], s_gbitmap_layers[GBITMAP_LAYER_BATT]);
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), false);
   } else {
-    layer_set_hidden(bitmap_layer_get_layer(s_batt_layer), true);
-    s_batt_history = 0;
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_BATT]), true);
   }
 }
 
 void sensor_battery_draw(Layer *window_layer, GRect bounds){
   // Create Battery GBitmap from resource
-  s_batt_low_bitmap = gbitmap_create_with_resource(RESOURCE_ID_LOWBATT);
-  s_batt_empty_bitmap = gbitmap_create_with_resource(RESOURCE_ID_EMPTYBATT);
-  s_batt_crg_bitmap = gbitmap_create_with_resource(RESOURCE_ID_FULLBATT);
-  
+  s_gbitmap_layers[GBITMAP_LAYER_BATT] = NULL;
+
   #if PBL_DISPLAY_HEIGHT > 180
-    //168
-    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 14), bounds.size.h * vert_2, 8, 14, s_batt_low_bitmap, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 4), (bounds.size.h * VERT_2) / 1000, 8, 14, NULL, window_layer);
   #else
-    s_batt_layer = drawing_bitmap_set(bounds.size.w * hor_2 - (icon_bump + 7), bounds.size.h * vert_2 + 3, 4, 7, s_batt_low_bitmap, window_layer);
+  s_bitmap_layers[BITMAP_LAYER_BATT] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP - 2), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
   #endif
 }

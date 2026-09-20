@@ -1,16 +1,59 @@
-// src/pkjs/index.js
-// Import the Clay package
+/**********************/
+/* AppMessage Queue   */
+/**********************/
+
+// Overrides default Pebble.sendAppMessage to process outgoing messages sequentially
+(function() {
+  var originalSendAppMessage = Pebble.sendAppMessage.bind(Pebble);
+  var sendQueue = [];
+  var sending = false;
+
+  // Step through queue sequentially upon previous transmission completion
+  function processQueue() {
+    if (sending || sendQueue.length === 0) return;
+    sending = true;
+    var next = sendQueue.shift();
+    originalSendAppMessage(next.dict,
+      function(e) {
+        sending = false;
+        if (next.onSuccess) next.onSuccess(e);
+        processQueue();
+      },
+      function(e) {
+        sending = false;
+        if (next.onError) next.onError(e);
+        processQueue();
+      }
+    );
+  }
+
+  // Intercept sendAppMessage calls and push to queue
+  Pebble.sendAppMessage = function(dict, onSuccess, onError) {
+    sendQueue.push({ dict: dict, onSuccess: onSuccess, onError: onError });
+    processQueue();
+  };
+})();
+
+/**********************/
+/* Imports & Setup    */
+/**********************/
+
+// Import Clay configuration framework
 var Clay = require('@rebble/clay');
-// Load our Clay configuration file
 var clayConfig = require('./config');
 var customClay = require('./customClay');
-// Load CFBD module
+
+// Import College Football Data API sync module
 var cfbdModule = require('./cfbd');
 
-
-// Initialize Clay
+// Initialize Clay configuration instance
 var clay = new Clay(clayConfig, customClay);
 
+/**********************/
+/* Weather Services   */
+/**********************/
+
+// Basic asynchronous HTTP GET request helper
 var xhrRequest = function (url, type, callback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
@@ -20,23 +63,25 @@ var xhrRequest = function (url, type, callback) {
   xhr.send();
 };
 
+// Map WMO weather code integers from Open-Meteo to app condition enum values
 function weatherCodeToCondition(code) {
-  if (code === 0) return 0; //'Clear';
-  if (code <= 3) return 1; //'Cloudy';
-  if (code <= 48) return 2; //'Fog';
-  if (code <= 55) return 3; //'Drizzle';
-  if (code <= 57) return 4; //'Fz. Drizzle';
-  if (code <= 65) return 5; //'Rain';
-  if (code <= 67) return 6; //'Fz. Rain';
-  if (code <= 75) return 7; //'Snow';
-  if (code <= 77) return 8; //'Snow Grains';
-  if (code <= 82) return 9; //'Showers';
-  if (code <= 86) return 10; //'Snow Shwrs';
-  if (code === 95) return 11; //'T-Storm';
-  if (code <= 99) return 12; //'T-Storm';
-  return 13; //'Unknown';
+  if (code === 0) return 0;  // Clear
+  if (code <= 3) return 1;  // Cloudy
+  if (code <= 48) return 2; // Fog
+  if (code <= 55) return 3; // Drizzle
+  if (code <= 57) return 4; // Freezing Drizzle
+  if (code <= 65) return 5; // Rain
+  if (code <= 67) return 6; // Freezing Rain
+  if (code <= 75) return 7; // Snow
+  if (code <= 77) return 8; // Snow Grains
+  if (code <= 82) return 9; // Showers
+  if (code <= 86) return 10;// Snow Showers
+  if (code === 95) return 11;// Thunderstorm
+  if (code <= 99) return 12;// Thunderstorm
+  return 13;                // Unknown
 }
 
+// Success callback for GPS positioning; fetches current Open-Meteo forecast
 function locationSuccess(pos) {
   var url = 'https://api.open-meteo.com/v1/forecast?' +
       'latitude=' + pos.coords.latitude +
@@ -63,10 +108,12 @@ function locationSuccess(pos) {
   );
 }
 
+// Failure callback for GPS positioning
 function locationError(err) {
   console.log('Error requesting location!');
 }
 
+// Trigger GPS location lookup to update weather
 function getWeather() {
   navigator.geolocation.getCurrentPosition(
     locationSuccess,
@@ -75,9 +122,11 @@ function getWeather() {
   );
 }
 
-// Like xhrRequest, but adds a Bearer auth header. Kept separate from the
-// existing xhrRequest helper (used for the unauthenticated weather API)
-// rather than modifying its shared signature.
+/**********************/
+/* CFBD Data Services */
+/**********************/
+
+// Authenticated HTTP GET request helper for CFBD API
 var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   var xhr = new XMLHttpRequest();
   xhr.onload = function () {
@@ -98,10 +147,7 @@ var xhrRequestWithAuth = function (url, type, apiKey, callback, errorCallback) {
   xhr.send();
 };
 
-// apiKey and teamIndex arrive fresh from the watch on every request (see
-// the REQUEST_SCORE branch below) - neither is cached in localStorage or
-// held in any module-level variable, so nothing persists key material in
-// JS between calls.
+// Fetch latest game score for single team (legacy lookup)
 function getScore(apiKey, teamIndex) {
   var teamName = CFBD_TEAM_NAMES[teamIndex];
   if (!teamName) {
@@ -123,8 +169,6 @@ function getScore(apiKey, teamIndex) {
         return;
       }
 
-      // Prefer the most recently started game (covers "in progress" and
-      // "most recently completed" without needing extra date logic here).
       var game = games[games.length - 1];
       sendScoreToWatch(game);
     },
@@ -134,6 +178,7 @@ function getScore(apiKey, teamIndex) {
   );
 }
 
+// Send score details of a single game object to watch app
 function sendScoreToWatch(game) {
   var dictionary = {
     'ScoreHomeTeam': (game.homeTeam || '').substring(0, 31),
@@ -149,16 +194,23 @@ function sendScoreToWatch(game) {
   );
 }
 
-// Holds the most recent light sync results (games/records/rankings, all
-// already fetched from the CFBD API) so that each REQUEST_CFBD_TEAM_DATA
-// from the watch can be served by filtering this in-memory data - no new
-// API call per team, only the up-to-3 calls syncLightCFBD already made.
-var lightSyncData = null;
+// In-memory caching variables for sync operations
+var gamesData = null;
+var recordsRankingsData = null;
+var espnLiveData = null;
 
+// Must match CFBDTeamDataType in api.c
+var CFBD_TEAM_DATA_TYPE_GAMES = 0;
+var CFBD_TEAM_DATA_TYPE_RECORDS = 1;
+var CFBD_TEAM_DATA_TYPE_LIVE_SCORE = 2;
+
+// Send calendar and API quota info payload to watch
 function sendCalendarToWatch(calendarData) {
   var dictionary = {
     'CFBD_YEAR': calendarData.year,
-    'CFBD_NEXT_SEASON_TS': calendarData.nextSeasonFirstGameTs || 0
+    'CFBD_NEXT_SEASON_TS': calendarData.nextSeasonFirstGameTs || 0,
+    'CFBD_API_CALLS_USED': calendarData.apiCallsUsed || 0,
+    'CFBD_API_CALLS_LIMIT': calendarData.apiCallsLimit || 0
   };
 
   Pebble.sendAppMessage(dictionary,
@@ -167,33 +219,66 @@ function sendCalendarToWatch(calendarData) {
   );
 }
 
-// Finds this team's game (if any) in the cached light-sync games array and
-// returns { opponent, teamScore, vsScore, gametime } from that team's own
-// point of view, regardless of whether it played home or away. Returns
-// nulls/zeros/empty string if the team has no game this week (bye week).
-function findTeamGame(teamName, games) {
-  for (var i = 0; i < games.length; i++) {
-    var g = games[i];
-    if (g.homeTeam === teamName) {
-      return {
-        opponent: g.awayTeam || '',
-        teamScore: g.homePoints || 0,
-        vsScore: g.awayPoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
-      };
-    }
-    if (g.awayTeam === teamName) {
-      return {
-        opponent: g.homeTeam || '',
-        teamScore: g.awayPoints || 0,
-        vsScore: g.homePoints || 0,
-        gametime: g.startDate ? Math.floor(new Date(g.startDate).getTime() / 1000) : 0
-      };
-    }
+// Pick active or upcoming game for a specific team from a pool of games
+// Pick a team's game for the current calendar week from a pool of games.
+// weekStart/weekEnd scope this to "this week's guidelines" rather than
+// whatever the team's most recent game happened to be - if nothing falls
+// in that window, there's no game this week (a bye), not a stale result.
+function pickTeamGameFromPool(teamName, pool, weekStart, weekEnd) {
+  var matches = pool.filter(function(g) {
+    return g.homeTeam === teamName || g.awayTeam === teamName;
+  });
+  if (matches.length === 0) return null;
+
+  if (weekStart && weekEnd) {
+    var start = new Date(weekStart);
+    var end = new Date(weekEnd);
+    matches = matches.filter(function(g) {
+      var gameDate = new Date(g.startDate);
+      return gameDate >= start && gameDate <= end;
+    });
+    if (matches.length === 0) return null;
   }
-  return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0 };
+
+  matches.sort(function(a, b) { return new Date(a.startDate) - new Date(b.startDate); });
+  return matches[0];
 }
 
+// Find target team's game within the current week from regular or
+// postseason datasets
+function findLatestTeamGame(teamName, games) {
+  if (games.inPostseason) {
+    var postGame = pickTeamGameFromPool(teamName, games.postGames, games.weekStart, games.weekEnd);
+    if (postGame) return postGame;
+    console.log(teamName + ' has no postseason game this week - checking regular season pool');
+  }
+  return pickTeamGameFromPool(teamName, games.regularGames, games.weekStart, games.weekEnd);
+}
+
+// Reorient game object data into target team's relative perspective
+function gameToTeamPerspective(teamName, game) {
+  if (!game) {
+    return { opponent: '', teamScore: 0, vsScore: 0, gametime: 0, completed: false };
+  }
+  if (game.homeTeam === teamName) {
+    return {
+      opponent: game.awayTeam || '',
+      teamScore: game.homePoints || 0,
+      vsScore: game.awayPoints || 0,
+      gametime: game.startDate ? Math.floor(new Date(game.startDate).getTime() / 1000) : 0,
+      completed: !!game.completed
+    };
+  }
+  return {
+    opponent: game.homeTeam || '',
+    teamScore: game.awayPoints || 0,
+    vsScore: game.homePoints || 0,
+    gametime: game.startDate ? Math.floor(new Date(game.startDate).getTime() / 1000) : 0,
+    completed: !!game.completed
+  };
+}
+
+// Look up overall and postseason wins/losses for a team in cached records
 function findTeamRecord(teamName, records) {
   for (var i = 0; i < records.length; i++) {
     if (records[i].team === teamName) {
@@ -208,6 +293,7 @@ function findTeamRecord(teamName, records) {
   return { wins: 0, postseasonGames: 0, postseasonWins: 0, postseasonLosses: 0 };
 }
 
+// Look up national rank for a team in cached rankings
 function findTeamRank(teamName, rankings) {
   for (var i = 0; i < rankings.length; i++) {
     if (rankings[i].school === teamName) {
@@ -217,38 +303,85 @@ function findTeamRank(teamName, rankings) {
   return 0;
 }
 
-// Handles one REQUEST_CFBD_TEAM_DATA from the watch: looks up teamName in
-// the already-fetched lightSyncData (no API call) and sends back a single
-// small AppMessage with everything the watch needs for that one team.
-function sendTeamData(teamIndex, teamName) {
-  if (!lightSyncData) {
-    console.log('REQUEST_CFBD_TEAM_DATA received with no light sync data cached - skipping');
+// Send team-specific data payload back to watch during sequential team walk
+function sendTeamData(teamIndex, teamName, dataType) {
+  if (dataType === CFBD_TEAM_DATA_TYPE_GAMES) {
+    if (!gamesData) {
+      console.log('REQUEST_CFBD_TEAM_DATA (games) received with no games data cached - skipping');
+      return;
+    }
+    var game = findLatestTeamGame(teamName, gamesData);
+    var perspective = gameToTeamPerspective(teamName, game);
+    var dictionary = {
+      'CFBD_TEAM_INDEX': teamIndex,
+      'CFBD_TEAM_DATA_TYPE': dataType,
+      'CFBD_TEAM_OPPONENT': perspective.opponent.substring(0, 31),
+      'CFBD_TEAM_SCORE': perspective.teamScore,
+      'CFBD_TEAM_VS_SCORE': perspective.vsScore,
+      'CFBD_TEAM_GAMETIME': perspective.gametime,
+      'CFBD_TEAM_COMPLETED': perspective.completed ? 1 : 0
+    };
+    Pebble.sendAppMessage(dictionary,
+      function(e) { console.log('Team data (games) sent for index ' + teamIndex + ' (' + teamName + ')'); },
+      function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
+    );
     return;
   }
 
-  var game = findTeamGame(teamName, lightSyncData.games);
-  var record = findTeamRecord(teamName, lightSyncData.records);
-  var rank = findTeamRank(teamName, lightSyncData.rankings);
+  if (dataType === CFBD_TEAM_DATA_TYPE_LIVE_SCORE) {
+    // Always respond, even with no live update - the C-side walk is
+    // waiting on a response for this specific team index either way, and
+    // most cached teams won't have a game live at any given moment.
+    var normalizedName = cfbdModule.normalizeTeamName(teamName);
+    var live = espnLiveData ? espnLiveData[normalizedName] : null;
 
+    var liveDictionary = {
+      'CFBD_TEAM_INDEX': teamIndex,
+      'CFBD_TEAM_DATA_TYPE': dataType,
+      'CFBD_HAS_LIVE_UPDATE': live ? 1 : 0
+    };
+    if (live) {
+      liveDictionary['CFBD_TEAM_SCORE'] = live.teamScore;
+      liveDictionary['CFBD_TEAM_VS_SCORE'] = live.oppScore;
+      liveDictionary['CFBD_TEAM_COMPLETED'] = live.completed ? 1 : 0;
+    }
+
+    Pebble.sendAppMessage(liveDictionary,
+      function(e) {
+        console.log('Team data (live score) sent for index ' + teamIndex + ' (' + teamName + ')' +
+          (live ? '' : ' - no live game found'));
+      },
+      function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
+    );
+    return;
+  }
+
+  if (!recordsRankingsData) {
+    console.log('REQUEST_CFBD_TEAM_DATA (records) received with no records/rankings data cached - skipping');
+    return;
+  }
+  var record = findTeamRecord(teamName, recordsRankingsData.records);
+  var rank = findTeamRank(teamName, recordsRankingsData.rankings);
   var dictionary = {
     'CFBD_TEAM_INDEX': teamIndex,
-    'CFBD_TEAM_OPPONENT': game.opponent.substring(0, 31),
-    'CFBD_TEAM_SCORE': game.teamScore,
-    'CFBD_TEAM_VS_SCORE': game.vsScore,
-    'CFBD_TEAM_GAMETIME': game.gametime,
+    'CFBD_TEAM_DATA_TYPE': dataType,
     'CFBD_TEAM_RANK': rank,
     'CFBD_TEAM_WINS': record.wins,
     'CFBD_TEAM_PS_GAMES': record.postseasonGames,
     'CFBD_TEAM_PS_WINS': record.postseasonWins,
     'CFBD_TEAM_PS_LOSSES': record.postseasonLosses
   };
-
   Pebble.sendAppMessage(dictionary,
-    function(e) { console.log('Team data sent for index ' + teamIndex + ' (' + teamName + ')'); },
+    function(e) { console.log('Team data (records) sent for index ' + teamIndex + ' (' + teamName + ')'); },
     function(e) { console.log('Error sending team data for index ' + teamIndex + '!'); }
   );
 }
 
+/**********************/
+/* Event Listeners    */
+/**********************/
+
+// Trigger initial startup tasks when PebbleKit JS is ready
 Pebble.addEventListener('ready',
   function(e) {
     console.log('PebbleKit JS ready!');
@@ -256,40 +389,29 @@ Pebble.addEventListener('ready',
   }
 );
 
+// Route incoming messages from C watchapp to appropriate handlers
 Pebble.addEventListener('appmessage',
   function(e) {
     console.log('AppMessage received!');
     if (e.payload['REQUEST_WEATHER']) {
       getWeather();
     }
-    /*
-    if (e.payload['REQUEST_SCORE']) {
-      var apiKey = e.payload['api_key'];
-      var teamIndex = e.payload['ScoreTeamIndex'];
-      if (!apiKey) {
-        console.log('REQUEST_SCORE received with no api_key - skipping');
-      } else {
-        getScore(apiKey, teamIndex);
-      }
-    }
-    */
-    // ===== CFBD Full Sync: calendar only (year, next season kickoff) =====
+
+    // Full CFBD sync request (calendar boundary + usage quota only)
     if (e.payload['REQUEST_CFBD_FULL_SYNC']) {
       var apiKey = e.payload['api_key'];
       if (!apiKey) {
         console.log('REQUEST_CFBD_FULL_SYNC with no api_key - skipping');
         return;
       }
+      var knownNextSeasonTs = e.payload['CFBD_NEXT_SEASON_TS'] || 0;
 
-      cfbdModule.syncFullCFBD(apiKey, function(calendarData) {
-        sendCalendarToWatch(calendarData);
+      cfbdModule.syncFullCFBD(apiKey, knownNextSeasonTs, function(fullData) {
+        sendCalendarToWatch(fullData);
       });
     }
 
-    // ===== CFBD Light Sync: fetch this week's games/records/rankings ONCE,
-    // cache in memory, then tell the watch it's ready. The watch then
-    // requests one team at a time (REQUEST_CFBD_TEAM_DATA below), each
-    // served from this same cached fetch - no repeat API calls. =====
+    // Light CFBD sync request (scores/games, records/rankings)
     if (e.payload['REQUEST_CFBD_LIGHT_SYNC']) {
       var apiKey = e.payload['api_key'];
 
@@ -297,30 +419,63 @@ Pebble.addEventListener('appmessage',
         console.log('REQUEST_CFBD_LIGHT_SYNC missing api_key');
         return;
       }
+      var syncYear = e.payload['CFBD_SYNC_YEAR'] || 0;
+      var knownNextSeasonTsLight = e.payload['CFBD_NEXT_SEASON_TS'] || 0;
 
-      cfbdModule.syncLightCFBD(apiKey, function(lightData) {
-        lightSyncData = lightData;
-        console.log('Light sync cached: ' + lightData.games.length + ' games, '
-          + lightData.records.length + ' records, ' + lightData.rankings.length + ' rankings');
+      cfbdModule.syncLightCFBD(apiKey, syncYear, knownNextSeasonTsLight, function(result) {
+        gamesData = result;
+        recordsRankingsData = result;
+        console.log('Games cached: ' + result.regularGames.length + ' regular' +
+          (result.inPostseason ? ', ' + result.postGames.length + ' postseason' : ''));
+        console.log('Records/rankings cached: ' + result.records.length + ' records, '
+          + result.rankings.length + ' rankings');
 
-        Pebble.sendAppMessage({ 'CFBD_LIGHT_SYNC_READY': 1 },
+        Pebble.sendAppMessage({
+            'CFBD_LIGHT_SYNC_READY': 1,
+            'CFBD_API_CALLS_USED': result.apiCallsUsed || 0,
+            'CFBD_API_CALLS_LIMIT': result.apiCallsLimit || 0
+          },
           function(e) { console.log('Light sync ready signal sent'); },
           function(e) { console.log('Error sending light sync ready signal!'); }
+        );
+
+        Pebble.sendAppMessage({
+            'CFBD_RECORDS_SYNC_READY': 1,
+            'CFBD_API_CALLS_USED': result.apiCallsUsed || 0,
+            'CFBD_API_CALLS_LIMIT': result.apiCallsLimit || 0
+          },
+          function(e) { console.log('Records/rankings ready signal sent'); },
+          function(e) { console.log('Error sending records/rankings ready signal!'); }
         );
       });
     }
 
-    // ===== Watch requesting one team's data at a time, post-light-sync =====
+    // Dedicated live-score poll (ESPN only, no CFBD quota impact). The watch
+    // only sends this while a cached team's game is known to have started
+    // and CFBD hasn't marked it completed yet - see api.c.
+    if (e.payload['REQUEST_ESPN_LIVE_POLL']) {
+      cfbdModule.fetchLiveScores(function(byTeam) {
+        espnLiveData = byTeam;
+
+        Pebble.sendAppMessage({ 'ESPN_LIVE_READY': 1 },
+          function(e) { console.log('ESPN live-score ready signal sent'); },
+          function(e) { console.log('Error sending ESPN live-score ready signal!'); }
+        );
+      });
+    }
+
+    // Single team data request during sequential team walk
     if (e.payload['REQUEST_CFBD_TEAM_DATA']) {
       var teamIndex = e.payload['CFBD_TEAM_INDEX'];
       var teamName = e.payload['CFBD_TEAM_NAME'];
+      var dataType = e.payload['CFBD_TEAM_DATA_TYPE'];
 
       if (teamName === undefined || teamName === null || teamName === '') {
         console.log('REQUEST_CFBD_TEAM_DATA missing team name for index ' + teamIndex);
         return;
       }
 
-      sendTeamData(teamIndex, teamName);
+      sendTeamData(teamIndex, teamName, dataType);
     }
   }
 );

@@ -1,231 +1,556 @@
-/*
-GET /calendar current year
-if within any dates
-GET /games current week
-else
-GET /calendar last year
-if within dates
-GET /games current week
-else
-GET /games postseason week 1
-
-
-Champ stuff
-GET /records
-if total.wins > 6
-winning season
-if last regular season game contains Championship + week
-Conf Champ
-if postseason.games = 1 && postseason.wins = 1 (need to figure out other playoff teams not getting this)
-Bowl win
-if postseason.games > 1 && postseason.loses != 1 (need to figure out other playoff teams not getting this)
-Champion
-
-Full sync takes 8s
-
-Do I make an API indicator? Like the battery level, but of # of calls in a month? Not sure how I track this
-*/
-// src/c/api_cfbd.c
 #include <pebble.h>
 #include "api.h"
 #include "globals.h"
+#include "drawing.h"
+#include "outbox_queue.h"
+#include "timekeeping.h"
 
-/**
- * CFBD sync protocol (team-by-team)
- * -----------------------------------------------------------------------
- * Full sync fetches calendar data only (year, next season kickoff) - see
- * CFBD_YEAR / CFBD_NEXT_SEASON_TS handling below.
- *
- * Light sync fetches this week's games/records/rankings ONCE on the JS
- * side (three CFBD API calls total, cached in JS memory), then the two
- * sides walk API_DATA[] together one team at a time:
- *   1. JS finishes fetching -> sends CFBD_LIGHT_SYNC_READY.
- *   2. C resets its team cursor to 0 and sends REQUEST_CFBD_TEAM_DATA with
- *      CFBD_TEAM_INDEX + CFBD_TEAM_NAME for API_DATA[0].
- *   3. JS looks team_name up in its already-fetched (not re-fetched) light
- *      sync data and replies with one small AppMessage of that team's
- *      opponent/score/rank/record fields.
- *   4. C applies those fields to API_DATA[team_index], then requests the
- *      next index, repeating until API_DATA_COUNT is reached.
- *
- * This means at most one small AppMessage dictionary (well under the
- * existing 512-byte inbox/outbox) is ever in flight for CFBD data - no
- * static JSON buffer of any size is needed, which is what actually fixes
- * the aplite .bss overflow: the old approach's problem was trying to hold
- * whole (or large chunks of) games/records/rankings payloads in RAM at
- * once, and this protocol never does that at all.
- */
+/**********************/
+/* Constants & State  */
+/**********************/
 
-static int cfbd_current_team_index = -1; // -1 = no light sync in progress
+#define MAX_DISPLAYABLE_SCORE 99
+#define CFBD_API_CALLS_WARNING_PERCENT 90
+#define CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS 60
+// Fallback-only cadence for light sync's schedule/game data. This is NOT
+// about live-score freshness anymore - ESPN's poll handles that entirely,
+// and cfbd_final_score_pending handles getting CFBD's official final
+// score/stats the moment ESPN confirms a game's done. This just catches
+// day-to-day schedule changes (a new day's game appearing, a postponement,
+// etc.) that nothing else would otherwise notice, so once a day is plenty.
+#define CFBD_LIGHT_SYNC_INTERVAL_SECONDS (24 * 60 * 60)
+// A dropped AppMessage anywhere in a sync chain (confirmed happening in
+// testing - "Message dropped!") leaves the matching pending flag or
+// in-progress walk stuck forever with no other recovery path, silently
+// blocking every future sync attempt regardless of display settings. This
+// is generous enough for a normal round trip (even a slow one) but short
+// enough to self-heal quickly.
+#define CFBD_SYNC_STUCK_TIMEOUT_SECONDS (3 * 60)
 
-/**
- * Look up a team by name in the full TEAMS[] roster (used to resolve an
- * opponent name to a logo/color entry for drawing - separate from
- * API_DATA[], which only holds the teams actively tracked on the watch).
- * Returns NULL if the opponent isn't in the curated TEAMS[] roster (this
- * is expected/common - most opponents won't be).
- */
+// Sync state tracking variables
+static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
+static CFBDTeamDataType cfbd_current_sync_type; // only meaningful while cfbd_current_team_index >= 0
+static bool cfbd_pending_games_walk = false;
+static bool cfbd_pending_records_walk = false;
+static bool cfbd_pending_live_walk = false;
+static bool cfbd_light_sync_pending = false;
+static bool cfbd_live_poll_pending = false;
+static bool cfbd_final_score_pending = false;
+static time_t cfbd_walk_started_ts = 0;    // when cfbd_current_team_index last went from -1 to >= 0
+static time_t cfbd_light_sync_sent_ts = 0; // when cfbd_light_sync_pending was last set true
+static time_t cfbd_live_poll_sent_ts = 0;  // when cfbd_live_poll_pending was last set true
+
+// Walk list: the specific TEAMS[] indices being synced this walk (cache-scoped, not the full roster).
+// Sized for the worst case: current FavoriteTeam (if not yet cached) plus every cached slot.
+static uint8_t cfbd_walk_indices[MAX_CACHED_FAVORITE_TEAMS + 1];
+static uint8_t cfbd_walk_count = 0;
+static uint8_t cfbd_walk_pos = 0;
+
+// Forward declaration
+static void cfbd_team_walk_complete(CFBDTeamDataType type);
+
+/**********************/
+/* Private Helpers    */
+/**********************/
+
+// Helper function to look up a team pointer by string name matching
 static const Team *teams_find_by_name(const char *name) {
   if (!name || !name[0]) return NULL;
+  if (strcmp(name, "NA") == 0) return NULL; // never resolve a placeholder opponent
+
   for (size_t i = 0; i < TEAMS_COUNT; i++) {
-    if (TEAMS[i].name && strcmp(TEAMS[i].name, name) == 0) {
-      return &TEAMS[i];
-    }
+    if (!TEAMS[i].name) continue;
+    if (strcmp(TEAMS[i].name, "NA") == 0) continue; // skip placeholder roster slots
+    if (strcmp(TEAMS[i].name, name) == 0) return &TEAMS[i];
   }
   return NULL;
 }
 
+// Extract API call quota and usage numbers from incoming message
+static void apply_api_usage_from_message(DictionaryIterator *iterator) {
+  Tuple *used_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_USED);
+  Tuple *limit_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_API_CALLS_LIMIT);
 
-void debug_dump_api_info(const API_Info *array, size_t count) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== DUMPING %u API_INFO RECORDS ===", (unsigned int)count);
+  if (used_tuple) {
+    settings.cfbd.api_calls_this_month = (uint16_t)used_tuple->value->int32;
+  }
+  if (limit_tuple) {
+    settings.cfbd.api_calls_monthly_limit = (uint16_t)limit_tuple->value->int32;
+  }
 
-  for (size_t i = 0; i < count; i++) {
-    const API_Info *item = &array[i];
+  if (used_tuple || limit_tuple) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD API usage: %d/%d",
+            settings.cfbd.api_calls_this_month, settings.cfbd.api_calls_monthly_limit);
+    #endif
+  }
+}
 
-    // Single line log per item to avoid log buffer overflow
-    APP_LOG(APP_LOG_LEVEL_DEBUG, 
-            "[%03u] %s | ID:%u VS:%d | Score:%u-%u | W:%u | GT:%lu | Rank:%u PS-G:%u PS-W:%u PS-L:%u",
-            (unsigned int)i,
-            item->name ? item->name : "NULL",
-            item->id,
-            item->vs_id,
-            item->score,
-            item->vs_score,
-            item->wins,
-            (unsigned long)item->gametime,
-            item->ranking, 
-            item->postseasonGames, 
-            item->postseasonWins, 
-            item->postseasonLosses);
+// Calculate current monthly API usage percentage
+uint8_t api_calls_percent_used(void) {
+  if (settings.cfbd.api_calls_monthly_limit == 0) return 0;
+  uint32_t percent = ((uint32_t)settings.cfbd.api_calls_this_month * 100)
+    / settings.cfbd.api_calls_monthly_limit;
+  return (uint8_t)(percent > 100 ? 100 : percent);
+}
 
-    // OPTIONAL: Add extra fields if needed
-    /*
-    APP_LOG(APP_LOG_LEVEL_DEBUG, 
-            "      -> Rank:%u PS-G:%u PS-W:%u PS-L:%u",
-            item->ranking, 
-            item->postseasonGames, 
-            item->postseasonWins, 
-            item->postseasonLosses);
-    */
-    
-    // Give the Pebble logging system breathing room every 20 records
-    if (i > 0 && i % 20 == 0) {
-      psleep(10); 
+// Check if monthly API usage has reached warning threshold
+bool api_calls_nearing_limit(void) {
+  return api_calls_percent_used() >= CFBD_API_CALLS_WARNING_PERCENT;
+}
+
+// Construct dictionary request for team data
+static void build_request_team_data(DictionaryIterator *iter) {
+  uint16_t team_index = (uint16_t)cfbd_current_team_index;
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
+  dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
+  dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, TEAMS[team_index].name);
+  dict_write_uint8(iter, MESSAGE_KEY_CFBD_TEAM_DATA_TYPE, (uint8_t)cfbd_current_sync_type);
+}
+
+// Queue request to fetch data for current active team
+static void request_team_data(void) {
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s), type %d",
+          cfbd_walk_pos + 1, cfbd_walk_count, TEAMS[cfbd_current_team_index].name,
+          cfbd_current_sync_type);
+  #endif
+
+  outbox_queue_send(build_request_team_data);
+}
+
+// Build the list of team indices to sync this walk, scoped to the persisted
+// favorite-team cache. Always includes the current FavoriteTeam even if it
+// hasn't been cached yet - that covers the "just switched to a new team"
+// case, and it'll get cached once this walk completes via
+// globals_prv_save_team_data(). Duplicates (FavoriteTeam already present in
+// the cache) are collapsed.
+static uint8_t build_cache_walk_list(uint8_t *out) {
+  uint8_t count = 0;
+
+  if (settings.FavoriteTeam < TEAMS_COUNT) {
+    out[count++] = settings.FavoriteTeam;
+  }
+
+  if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
+    PersistedTeamCache cache;
+    persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+
+    for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS && count < (MAX_CACHED_FAVORITE_TEAMS + 1); i++) {
+      uint8_t idx = cache.slots[i].team_index;
+      if (idx == TEAM_CACHE_EMPTY_SLOT || idx >= TEAMS_COUNT) continue;
+
+      bool dup = false;
+      for (uint8_t j = 0; j < count; j++) {
+        if (out[j] == idx) { dup = true; break; }
+      }
+      if (!dup) out[count++] = idx;
     }
   }
 
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "=== END DUMP ===");
+  return count;
 }
 
-
-/**
- * Sends REQUEST_CFBD_TEAM_DATA for API_DATA[team_index], asking JS for
- * that one team's opponent/score/rank/record. Assumes team_index is valid
- * (checked by the caller).
- */
-static void request_team_data(uint16_t team_index) {
-  APP_LOG(APP_LOG_LEVEL_DEBUG, "Requesting CFBD data for team %d/%d (%s)",
-    team_index + 1, (int)API_DATA_COUNT, API_DATA[team_index].name);
-
-  DictionaryIterator *iter;
-  if (app_message_outbox_begin(&iter) != APP_MSG_OK) {
-    APP_LOG(APP_LOG_LEVEL_ERROR, "Failed to begin outbox for team data request");
+// Begin stepping through cached teams to fetch data sequentially
+static void start_team_walk(CFBDTeamDataType type) {
+  // If a walk is already active, defer this request
+  if (cfbd_current_team_index >= 0) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk (type %d) deferred - type %d walk in progress",
+            type, cfbd_current_sync_type);
+    #endif
+    if (type == CFBD_TEAM_DATA_GAMES) {
+      cfbd_pending_games_walk = true;
+    } else if (type == CFBD_TEAM_DATA_RECORDS) {
+      cfbd_pending_records_walk = true;
+    } else {
+      cfbd_pending_live_walk = true;
+    }
     return;
   }
-  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_TEAM_DATA, 1);
-  dict_write_uint16(iter, MESSAGE_KEY_CFBD_TEAM_INDEX, team_index);
-  dict_write_cstring(iter, MESSAGE_KEY_CFBD_TEAM_NAME, API_DATA[team_index].name);
-  app_message_outbox_send();
+
+  cfbd_walk_count = build_cache_walk_list(cfbd_walk_indices);
+  cfbd_walk_pos = 0;
+
+  if (cfbd_walk_count == 0) {
+    cfbd_team_walk_complete(type);
+    return;
+  }
+
+  cfbd_current_sync_type = type;
+  cfbd_current_team_index = cfbd_walk_indices[0];
+  cfbd_walk_started_ts = time(NULL);
+  request_team_data();
 }
 
-/**
- * Called once all of API_DATA[] has been filled in for this light sync.
- */
-static void cfbd_light_sync_complete(void) {
-  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync complete - all %d teams updated", (int)API_DATA_COUNT);
+// Complete active team walk sequence, persist updated data, and check pending walks
+static void cfbd_team_walk_complete(CFBDTeamDataType type) {
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team walk complete (type %d) - %d cached teams updated",
+          type, cfbd_walk_count);
+  #endif
 
-  //debug_dump_api_info(API_DATA, API_DATA_COUNT);
-  
   cfbd_current_team_index = -1;
-  settings.cfbd.last_full_sync_ts = time(NULL);
-  settings.cfbd.api_data_valid = true;
-  // Light sync makes at most 3 CFBD API calls total (records, rankings,
-  // games) regardless of how many teams are in API_DATA[] - the
-  // team-by-team exchange with the watch reuses that one fetch instead of
-  // calling the API again per team.
-  settings.cfbd.api_calls_this_month += 3;
-  globals_prv_save_settings();
-  globals_prv_update_display();
-}
 
-void api_request_cfbd_full_sync(void) {
-  if (!settings.api || settings.api_key[0] == '\0') {
-    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
-    return;
+  if (type == CFBD_TEAM_DATA_GAMES) {
+    settings.cfbd.last_light_sync_ts = time(NULL);
+    cfbd_light_sync_pending = false;
+  } else if (type == CFBD_TEAM_DATA_LIVE_SCORE) {
+    settings.cfbd.last_espn_poll_ts = time(NULL);
+    cfbd_live_poll_pending = false;
+  }
+  // api_data_valid is set once, by the calendar response handler - it no
+  // longer reflects "did a team walk finish" since records/rankings moved
+  // here from full sync.
+  globals_prv_save_settings();
+
+  if (type != CFBD_TEAM_DATA_LIVE_SCORE) {
+    // Live-score updates are ephemeral and refresh far more often than
+    // games/records (as often as every ~60s during a live game) - skip
+    // persisting them to flash every cycle to avoid excess wear. The real
+    // score gets written for good once CFBD itself reports it via GAMES.
+    globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
+    s_favorite_team_data_missing = false;
   }
 
-  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
+  globals_prv_update_display();
 
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
+  // Trigger any deferred team walks queued during sync
+  if (cfbd_pending_games_walk) {
+    cfbd_pending_games_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_GAMES);
+  } else if (cfbd_pending_records_walk) {
+    cfbd_pending_records_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_RECORDS);
+  } else if (cfbd_pending_live_walk) {
+    cfbd_pending_live_walk = false;
+    start_team_walk(CFBD_TEAM_DATA_LIVE_SCORE);
+  }
+}
+
+// Construct dictionary request for full sync
+static void build_request_full_sync(DictionaryIterator *iter) {
   dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_FULL_SYNC, 1);
   dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  app_message_outbox_send();
+  // Tell JS what we already know about next season's kickoff (0 = unknown).
+  // If this is non-zero and still in the future, JS skips its /games
+  // lookup entirely and just reuses this value.
+  dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
 }
 
-void api_request_cfbd_light_sync(void) {
+// Construct dictionary request for light sync
+static void build_request_light_sync(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
+  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
+  dict_write_uint32(iter, MESSAGE_KEY_CFBD_NEXT_SEASON_TS, settings.cfbd.next_season_first_game_ts);
+
+  // Tell JS exactly which season year to pull games from - no need for it
+  // to re-derive this itself.
+  uint16_t sync_year = settings.cfbd.current_season_year + (settings.cfbd.pull_next_season ? 1 : 0);
+  dict_write_uint16(iter, MESSAGE_KEY_CFBD_SYNC_YEAR, sync_year);
+}
+
+// Construct dictionary request for the ESPN live-score poll - no api_key,
+// ESPN's public scoreboard needs none.
+static void build_request_espn_live_poll(DictionaryIterator *iter) {
+  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_ESPN_LIVE_POLL, 1);
+}
+
+/**********************/
+/* Global Functions   */
+/**********************/
+
+// Update and render status icon layer based on API quota remaining
+uint8_t api_update_status_indicator() {
+  uint8_t status;
+
+  if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_API]);
+  }
+
+  // Check quota levels (0 = depleted, 1 = warning, 2 = normal)
+  if (api_calls_percent_used() >= 99) {
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APIEMPTY);
+    status = 0;
+  }
+  else if (api_calls_nearing_limit()) {
+    s_gbitmap_layers[GBITMAP_LAYER_API] = gbitmap_create_with_resource(RESOURCE_ID_APILOW);
+    status = 1;
+  }
+  else {
+    if (s_gbitmap_layers[GBITMAP_LAYER_API]) {
+      s_gbitmap_layers[GBITMAP_LAYER_API] = NULL;
+    }
+    status = 2;
+  }
+
+  if (status < 2) bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_API], s_gbitmap_layers[GBITMAP_LAYER_API]);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), status == 2);
+
+  return status;
+}
+
+// Request full API calendar/season sync if prerequisites pass
+void api_request_cfbd_full_sync(void) {
   if (!settings.api || settings.api_key[0] == '\0') {
-    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API disabled or no key");
+    #endif
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+    return;
+  }
+  else if (api_update_status_indicator() == 0){
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD full sync skipped: API calls used for the month");
+    #endif
     return;
   }
 
-  // Need calendar data from a prior full sync so JS can determine the
-  // current week itself (it keeps season/week dates in its own cache).
-  //if (!settings.cfbd.api_data_valid) {
-    //APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: no prior data");
-    //return;
-  //}
-
-  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
-
-  DictionaryIterator *iter;
-  app_message_outbox_begin(&iter);
-  dict_write_uint8(iter, MESSAGE_KEY_REQUEST_CFBD_LIGHT_SYNC, 1);
-  dict_write_cstring(iter, MESSAGE_KEY_api_key, settings.api_key);
-  app_message_outbox_send();
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
+  #endif
+  outbox_queue_send(build_request_full_sync);
 }
 
-bool api_should_full_sync(void) {
-  time_t now = time(NULL);
-
-  // Never synced, or more than 24 hours since last full sync
-  if (!settings.cfbd.api_data_valid ||
-      (now - settings.cfbd.last_full_sync_ts > 86400)) {
-    return true;
+// Request light API score sync if prerequisites pass
+void api_request_cfbd_light_sync(void) {
+  if (!settings.api || settings.api_key[0] == '\0') {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API disabled or no key");
+    #endif
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+    return;
+  }
+  if (cfbd_light_sync_pending) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync skipped: already in flight");
+    #endif
+    return;
+  }
+  else if (api_update_status_indicator() == 0){
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD light sync skipped: API calls used for the month");
+    #endif
+    return;
   }
 
-  // Also check: if we've crossed into next season, force a sync
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD light sync");
+  #endif
+  cfbd_light_sync_pending = true;
+  cfbd_light_sync_sent_ts = time(NULL);
+  outbox_queue_send(build_request_light_sync);
+}
+
+// Request a live-score poll from ESPN's public scoreboard. Entirely
+// independent of CFBD - no key needed, no quota impact - so this isn't
+// gated behind api_update_status_indicator() the way CFBD syncs are.
+void api_request_espn_live_poll(void) {
+  if (!settings.api) {
+    return;
+  }
+  if (cfbd_live_poll_pending) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "ESPN live poll skipped: already in flight");
+    #endif
+    return;
+  }
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Requesting ESPN live score poll");
+  #endif
+  cfbd_live_poll_pending = true;
+  cfbd_live_poll_sent_ts = time(NULL);
+  outbox_queue_send(build_request_espn_live_poll);
+}
+
+#define CFBD_TWO_WEEKS_SECONDS (14 * 24 * 60 * 60)
+
+// Pure date-math check against the persisted season boundary - no network
+// involved. Handles two distinct events:
+//  1. Two weeks out from next season's kickoff: flip pull_next_season so
+//     light sync starts asking for next year's games instead of this year's.
+//  2. Actual rollover (kickoff has passed): invalidate api_data_valid so a
+//     genuine full sync runs to learn the new season's calendar, and reset
+//     the boundary fields so it gets re-learned fresh.
+static void api_check_season_rollover(void) {
   time_t next_game_ts = settings.cfbd.next_season_first_game_ts;
-  if (next_game_ts > 0 && now >= next_game_ts && !settings.cfbd.api_data_valid) {
+  if (next_game_ts == 0) {
+    return;
+  }
+
+  time_t now = time(NULL);
+
+  if (now >= next_game_ts) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD season rollover reached - invalidating data for new season");
+    #endif
+    settings.cfbd.api_data_valid = false;
+    settings.cfbd.current_season_year++;
+    settings.cfbd.next_season_first_game_ts = 0;
+    settings.cfbd.pull_next_season = false;
+    return;
+  }
+
+  if (!settings.cfbd.pull_next_season && now >= (next_game_ts - CFBD_TWO_WEEKS_SECONDS)) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD within 2 weeks of next season - light sync will pull next year's games");
+    #endif
+    settings.cfbd.pull_next_season = true;
+  }
+}
+
+// Evaluate conditions to check if full sync is required
+bool api_should_full_sync(void) {
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+
+  api_check_season_rollover();
+
+  // Full sync only needs to run when its own data (calendar/season boundary)
+  // is actually missing - never on a rolling timer, and never just because
+  // the favorite team changed (that's light sync's job).
+  if (settings.api && !settings.cfbd.api_data_valid) {
     return true;
   }
 
   return false;
 }
 
-bool api_should_light_sync(void) {
+// Whether any cached team's game has started (per known gametime) but
+// isn't marked completed yet - true regardless of whether that game's data
+// came from CFBD or ESPN, since both write the same completed field.
+static bool any_cached_team_currently_live(void) {
   time_t now = time(NULL);
+  uint8_t indices[MAX_CACHED_FAVORITE_TEAMS + 1];
+  uint8_t count = build_cache_walk_list(indices);
 
-  // Light sync weekly (every 7 days)
-  if (settings.cfbd.api_data_valid &&
-      (now - settings.cfbd.last_full_sync_ts < 604800)) {
-    return false;
+  for (uint8_t i = 0; i < count; i++) {
+    Team *team = &TEAMS[indices[i]];
+    if (team->gametime > 0 && now >= (time_t)team->gametime && !team->completed) {
+      return true;
+    }
   }
-  return true;
+  return false;
 }
 
+// Self-recovery for a dropped AppMessage anywhere in a sync chain. Every
+// pending flag and the shared walk-in-progress state normally only clear on
+// a successful completion - if any message along the way (the initial
+// ready-signal, or a per-team response mid-walk) gets dropped, nothing else
+// ever resets them, permanently blocking every future sync of every type
+// regardless of display settings. Called from any should_*() check that
+// depends on these flags, so a stuck state heals itself within one timeout
+// window instead of requiring an app restart.
+static void api_check_sync_watchdog(void) {
+  time_t now = time(NULL);
+
+  if (cfbd_current_team_index >= 0 &&
+      (now - cfbd_walk_started_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team walk (type %d) stuck for over %ds - abandoning it",
+            cfbd_current_sync_type, CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_current_team_index = -1;
+    cfbd_pending_games_walk = false;
+    cfbd_pending_records_walk = false;
+    cfbd_pending_live_walk = false;
+    cfbd_light_sync_pending = false;
+    cfbd_live_poll_pending = false;
+  }
+
+  if (cfbd_light_sync_pending && cfbd_current_team_index < 0 &&
+      (now - cfbd_light_sync_sent_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD light sync request stuck for over %ds - clearing it",
+            CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_light_sync_pending = false;
+  }
+
+  if (cfbd_live_poll_pending && cfbd_current_team_index < 0 &&
+      (now - cfbd_live_poll_sent_ts) > CFBD_SYNC_STUCK_TIMEOUT_SECONDS) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_ERROR, "ESPN live poll request stuck for over %ds - clearing it",
+            CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
+    #endif
+    cfbd_live_poll_pending = false;
+  }
+}
+
+// Evaluate conditions to check if light sync is required
+bool api_should_light_sync(void) {
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+  
+  api_check_sync_watchdog();
+
+  if (cfbd_light_sync_pending) {
+    return false;
+  }
+
+  api_check_season_rollover();
+
+  if (settings.api && s_favorite_team_data_missing) {
+    return true;
+  }
+
+  if (settings.api && cfbd_final_score_pending) {
+    // ESPN just told us a cached team's game finished - get CFBD's
+    // official numbers now rather than waiting out the normal timer.
+    cfbd_final_score_pending = false;
+    return true;
+  }
+
+  if (settings.api && !settings.cfbd.api_data_valid) {
+    return true;
+  }
+
+  // While ESPN's live poll is already covering a cached team's
+  // in-progress game, skip the scheduled CFBD refresh - CFBD's free tier
+  // won't have anything new until the game ends anyway, and ESPN is
+  // already keeping the score fresh for free. Normal cadence resumes once
+  // every cached team's game is either not started yet or complete.
+  time_t now = time(NULL);
+  if (settings.api && !any_cached_team_currently_live() &&
+      (now - settings.cfbd.last_light_sync_ts >= CFBD_LIGHT_SYNC_INTERVAL_SECONDS)) {
+    return true;
+  }
+  return false;
+}
+
+// Evaluate whether to poll ESPN for a live score update. Only fires while
+// at least one cached team's game is known to have started (per CFBD's own
+// gametime) and isn't marked completed yet - so this never runs outside an
+// actual live game window, and stops the moment either CFBD or ESPN itself
+// reports the game as final. Entirely independent of CFBD's own sync
+// cadence/quota.
+bool api_should_poll_espn_live(void) {
+  if(settings.api_quiet && !timekeeping_is_quiet_time()){
+    return false;
+  }
+
+  api_check_sync_watchdog();
+
+  if (!settings.api || cfbd_live_poll_pending) {
+    return false;
+  }
+
+  time_t now = time(NULL);
+  if ((uint32_t)now - settings.cfbd.last_espn_poll_ts < CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS) {
+    return false;
+  }
+
+  return any_cached_team_currently_live();
+}
+
+// Main incoming AppMessage dictionary parser for API data
 void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
-  // Full sync response: calendar data only (year, next season kickoff).
+  // Full sync response: calendar data (year, next season kickoff). This is
+  // now the actual completion point of "full sync" - it no longer chains
+  // into a team walk, since records/rankings moved to light sync.
   Tuple *year_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_YEAR);
   if (year_tuple) {
     settings.cfbd.current_season_year = year_tuple->value->uint16;
@@ -235,95 +560,264 @@ void api_cfbd_callback(DictionaryIterator *iterator, void *context) {
       settings.cfbd.next_season_first_game_ts = next_season_tuple->value->uint32;
     }
 
+    #if defined(DEBUG)
     APP_LOG(APP_LOG_LEVEL_INFO, "CFBD calendar received: year %d, next season ts %lu",
-      settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
+            settings.cfbd.current_season_year, (unsigned long)settings.cfbd.next_season_first_game_ts);
+    #endif
 
+    settings.cfbd.api_data_valid = true;
+    settings.cfbd.last_full_sync_ts = time(NULL);
+    apply_api_usage_from_message(iterator);
     globals_prv_save_settings();
     return;
   }
 
-  // Light sync: JS has fetched (once) and cached games/records/rankings
-  // for the current week and is ready to serve per-team lookups. Kick off
-  // the team-by-team walk starting at API_DATA[0].
-  Tuple *ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
-  if (ready_tuple) {
-    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD light sync ready - requesting %d teams", (int)API_DATA_COUNT);
+  // Games dataset ready, start going through team data
+  Tuple *games_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_LIGHT_SYNC_READY);
+  if (games_ready_tuple) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD games ready - starting cache-scoped team walk");
+    #endif
 
-    if (API_DATA_COUNT == 0) {
-      cfbd_light_sync_complete();
-      return;
-    }
+    apply_api_usage_from_message(iterator);
+    globals_prv_save_settings();
 
-    cfbd_current_team_index = 0;
-    request_team_data(0);
+    start_team_walk(CFBD_TEAM_DATA_GAMES);
     return;
   }
 
-  // Per-team response: apply this team's data to API_DATA[team_index],
-  // then move on to the next team (or finish).
+  // Records dataset ready, start going through team standings/rankings
+  Tuple *records_ready_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_RECORDS_SYNC_READY);
+  if (records_ready_tuple) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "CFBD records/rankings ready - starting cache-scoped team walk");
+    #endif
+
+    apply_api_usage_from_message(iterator);
+    globals_prv_save_settings();
+
+    start_team_walk(CFBD_TEAM_DATA_RECORDS);
+    return;
+  }
+
+  // ESPN live-score data ready, walk cached teams for a score-only update
+  Tuple *espn_ready_tuple = dict_find(iterator, MESSAGE_KEY_ESPN_LIVE_READY);
+  if (espn_ready_tuple) {
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "ESPN live scores ready - starting cache-scoped team walk");
+    #endif
+
+    start_team_walk(CFBD_TEAM_DATA_LIVE_SCORE);
+    return;
+  }
+
+  // Incoming data payload for a specific team index
   Tuple *team_index_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_INDEX);
-  Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
-  if (team_index_tuple && team_opponent_tuple) {
+  if (team_index_tuple) {
     uint16_t team_index = team_index_tuple->value->uint16;
 
     if (cfbd_current_team_index < 0 || team_index != (uint16_t)cfbd_current_team_index) {
+      #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_WARNING, "CFBD team data for index %d ignored - expected %d",
-        team_index, cfbd_current_team_index);
+              team_index, cfbd_current_team_index);
+      #endif
       return;
     }
 
-    if (team_index >= API_DATA_COUNT) {
+    if (team_index >= TEAMS_COUNT) {
+      #if defined(DEBUG)
       APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team data index %d out of range", team_index);
-      cfbd_light_sync_complete();
+      #endif
+      cfbd_team_walk_complete(cfbd_current_sync_type);
       return;
     }
 
-    API_Info *info = &API_DATA[team_index];
-    const char *opponent_name = team_opponent_tuple->value->cstring;
+    Team *info = &TEAMS[team_index];
 
-    Tuple *score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
-    Tuple *vs_score_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
-    Tuple *gametime_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
-    Tuple *rank_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
-    Tuple *wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
-    Tuple *ps_games_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
-    Tuple *ps_wins_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
+    Tuple *team_opponent_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_OPPONENT);
+    Tuple *score_tuple         = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_SCORE);
+    Tuple *vs_score_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_VS_SCORE);
+    Tuple *gametime_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_GAMETIME);
+    Tuple *completed_tuple     = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_COMPLETED);
+    #ifndef PBL_PLATFORM_APLITE
+    Tuple *rank_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_RANK);
+    Tuple *wins_tuple      = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_WINS);
+    Tuple *ps_games_tuple  = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_GAMES);
+    Tuple *ps_wins_tuple   = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_WINS);
     Tuple *ps_losses_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_TEAM_PS_LOSSES);
+    #endif
 
-    if (opponent_name && opponent_name[0]) {
-      const Team *opp = teams_find_by_name(opponent_name);
-      // vs_id only means something if the opponent is itself in the
-      // curated TEAMS[] roster (needed to draw their logo/colors) - most
-      // opponents won't be, and that's fine; score/record fields below
-      // still apply regardless. Falls through to the sentinel below if
-      // not found, so a stale opponent from a prior week's data can't
-      // linger. -1 (not 0) is the "no opponent" sentinel, since 0 is a
-      // real, valid TEAMS[] index (Clemson).
-      info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
-    } else {
-      // Bye week - no game this week, so no opponent to show.
-      info->vs_id = -1;
+    if (team_opponent_tuple) {
+      const char *opponent_name = team_opponent_tuple->value->cstring;
+      if (opponent_name && opponent_name[0]) {
+        const Team *opp = teams_find_by_name(opponent_name);
+        info->vs_id = opp ? (int16_t)(opp - TEAMS) : -1;
+      } else {
+        // Bye week - no opponent active
+        info->vs_id = -1;
+      }
     }
 
-    if (score_tuple) info->score = (uint16_t)score_tuple->value->int32;
-    if (vs_score_tuple) info->vs_score = (uint16_t)vs_score_tuple->value->int32;
-    if (gametime_tuple) info->gametime = (uint32_t)gametime_tuple->value->int32;
-    if (rank_tuple) info->ranking = (uint16_t)rank_tuple->value->int32;
-    if (wins_tuple) info->wins = (uint16_t)wins_tuple->value->int32;
-    if (ps_games_tuple) info->postseasonGames = (uint16_t)ps_games_tuple->value->int32;
-    if (ps_wins_tuple) info->postseasonWins = (uint16_t)ps_wins_tuple->value->int32;
+    if (score_tuple)     info->score     = (uint16_t)score_tuple->value->int32;
+    if (vs_score_tuple)  info->vs_score  = (uint16_t)vs_score_tuple->value->int32;
+    if (gametime_tuple)  info->gametime  = (uint32_t)gametime_tuple->value->int32;
+
+    if (cfbd_current_sync_type == CFBD_TEAM_DATA_LIVE_SCORE) {
+      // Require two consecutive ESPN "completed" reports before trusting
+      // it and bothering CFBD - guards against a brief/premature ESPN
+      // final-status blip triggering a CFBD call before it's actually
+      // ready. Doesn't need to persist across restarts; a fresh streak
+      // just costs one extra ~60s poll in the rare case of a restart
+      // mid-transition.
+      if (completed_tuple && completed_tuple->value->int32 != 0) {
+        if (info->espn_completed_streak < 255) info->espn_completed_streak++;
+        if (info->espn_completed_streak >= 2) {
+          info->completed = true;
+          info->espn_completed_streak = 0;
+          cfbd_final_score_pending = true;
+          #if defined(DEBUG)
+          APP_LOG(APP_LOG_LEVEL_INFO, "CFBD team %d (%s) game confirmed complete by ESPN (2x) - requesting prompt light sync",
+                  team_index, info->name);
+          #endif
+        }
+      } else {
+        info->espn_completed_streak = 0;
+      }
+    } else if (completed_tuple) {
+      info->completed = (completed_tuple->value->int32 != 0);
+    }
+    #ifndef PBL_PLATFORM_APLITE
+    if (rank_tuple)      info->ranking          = (uint16_t)rank_tuple->value->int32;
+    if (wins_tuple)      info->wins             = (uint16_t)wins_tuple->value->int32;
+    if (ps_games_tuple)  info->postseasonGames  = (uint16_t)ps_games_tuple->value->int32;
+    if (ps_wins_tuple)   info->postseasonWins   = (uint16_t)ps_wins_tuple->value->int32;
     if (ps_losses_tuple) info->postseasonLosses = (uint16_t)ps_losses_tuple->value->int32;
+    #endif
 
-    APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) updated: opp=%s score=%d-%d rank=%d wins=%d",
-      team_index, info->name, opponent_name ? opponent_name : "", info->score, info->vs_score,
-      info->ranking, info->wins);
-
-    uint16_t next_index = team_index + 1;
-    if (next_index < API_DATA_COUNT) {
-      cfbd_current_team_index = next_index;
-      request_team_data(next_index);
+    #if defined(DEBUG)
+    if (cfbd_current_sync_type == CFBD_TEAM_DATA_LIVE_SCORE) {
+      Tuple *has_live_tuple = dict_find(iterator, MESSAGE_KEY_CFBD_HAS_LIVE_UPDATE);
+      bool has_live = has_live_tuple && has_live_tuple->value->int32 != 0;
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) live poll: %s score=%d-%d",
+              team_index, info->name, has_live ? "updated" : "no live game", info->score, info->vs_score);
     } else {
-      cfbd_light_sync_complete();
+      APP_LOG(APP_LOG_LEVEL_DEBUG, "CFBD team %d (%s) type %d updated: vsd=%d score=%d-%d rank=%d wins=%d",
+              team_index, info->name, cfbd_current_sync_type, info->vs_id, info->score, info->vs_score,
+              info->ranking, info->wins);
+    }
+    #endif
+
+    // Advance to next team in the walk list, or finish walk sequence
+    cfbd_walk_pos++;
+    if (cfbd_walk_pos < cfbd_walk_count) {
+      cfbd_current_team_index = cfbd_walk_indices[cfbd_walk_pos];
+      request_team_data();
+    } else {
+      cfbd_team_walk_complete(cfbd_current_sync_type);
     }
   }
+}
+
+// Fast formatting helper to format integers < 100 as 2-character ASCII strings
+void api_format_2digits(char *buf, int val) {
+  buf[0] = '0' + ((val / 10) % 10);
+  buf[1] = '0' + (val % 10);
+}
+
+// Format team shortnames and score strings for UI text buffers
+void api_score_display() {
+  if (TEAMS[settings.FavoriteTeam].vs_id == -1) {
+    snprintf(s_day_text, sizeof(s_home_text), "BYE");
+    snprintf(s_hour_text, sizeof(s_away_text), "WEEK");
+    memcpy(s_score_text, "00|00", 6);
+  } else {
+    strncpy(s_home_text, TEAMS[settings.FavoriteTeam].shortname, sizeof(s_home_text) - 1);
+    strncpy(s_away_text, TEAMS[TEAMS[settings.FavoriteTeam].vs_id].shortname, sizeof(s_away_text) - 1);
+
+    // Clamp score display values to 2 digits max
+    int score1 = TEAMS[settings.FavoriteTeam].score;
+    int score2 = TEAMS[settings.FavoriteTeam].vs_score;
+    if (score1 > MAX_DISPLAYABLE_SCORE) score1 = MAX_DISPLAYABLE_SCORE;
+    if (score2 > MAX_DISPLAYABLE_SCORE) score2 = MAX_DISPLAYABLE_SCORE;
+
+    // Fast string construction for "XX|YY"
+    api_format_2digits(&s_score_text[0], score1);
+    s_score_text[2] = ' ';
+    api_format_2digits(&s_score_text[3], score2);
+    s_score_text[5] = '\0';
+  }
+}
+
+// Initialize and setup UI resources for status icons, rankings, and trophies
+void api_icon_draw(Layer *window_layer, GRect bounds){
+  s_gbitmap_layers[GBITMAP_LAYER_API] = NULL;
+
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 19), (bounds.size.h * VERT_2) / 1000 + 3, 8, 14, NULL, window_layer);
+  #else
+  s_bitmap_layers[BITMAP_LAYER_API] = drawing_bitmap_set((bounds.size.w * HOR_2) / 1000 - (ICON_BUMP + 10), (bounds.size.h * VERT_2) / 1000 + 3, 4, 7, NULL, window_layer);
+  #endif
+
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_API]), true);
+
+  // Create ranking display layers for non-Aplite targets
+  #ifndef PBL_PLATFORM_APLITE
+  BitmapLayer* super_location; 
+  
+  if(settings.DisplayTeam > 1){
+    super_location = s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM];
+  }
+  else{
+    super_location = s_bitmap_layers[BITMAP_LAYER_LOGO];
+  }
+  
+  GRect logo_bounds = layer_get_bounds(bitmap_layer_get_layer(super_location));
+  
+  #if PBL_DISPLAY_HEIGHT > 180
+  #ifdef PBL_ROUND
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 45, 25), sizeof(RoundRectData));
+  #else
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(0, 0, 45, 25), sizeof(RoundRectData));
+  #endif
+  #else
+  #ifdef PBL_ROUND
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect((logo_bounds.size.w / 2) - 20, 0, 35, 20), sizeof(RoundRectData));
+  #else
+  s_layers[LAYER_RANK_RECT] = layer_create_with_data(GRect(10, 0, 35, 20), sizeof(RoundRectData));
+  #endif
+  #endif
+  RoundRectData *rect_beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_RANK_RECT]);
+  rect_beat_data->fill_color = GColorWhite;
+  layer_set_update_proc(s_layers[LAYER_RANK_RECT], drawing_round_rect_update_proc);
+  layer_add_child(bitmap_layer_get_layer(super_location), s_layers[LAYER_RANK_RECT]);
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 45, 25, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_24_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  #else
+  s_text_layers[TEXT_LAYER_RANK] = drawing_text_set(0, -4, 35, 20, GColorBlack, "#00", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, s_layers[LAYER_RANK_RECT]);
+  #endif
+
+  layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
+
+  // Setup win and postseason trophy graphics
+  s_gbitmap_layers[GBITMAP_LAYER_WIN] = gbitmap_create_with_resource(RESOURCE_ID_WIN);
+  s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = NULL;
+
+  #if PBL_DISPLAY_HEIGHT > 180
+  uint8_t winW = 22, winH = 28, trophWH = 24;
+  #else
+  uint8_t winW = 11, winH = 14, trophWH = 12;
+  #endif
+  
+  #ifdef PBL_ROUND
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2) - (winW + 5), logo_bounds.size.h - (trophWH + 5), winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(super_location));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5) + (winH - trophWH), trophWH, trophWH, NULL, bitmap_layer_get_layer(super_location));
+  #else
+  s_bitmap_layers[BITMAP_LAYER_WIN] = drawing_bitmap_set(logo_bounds.size.w - (winW * 2), 0, winW, winH, s_gbitmap_layers[GBITMAP_LAYER_WIN], bitmap_layer_get_layer(super_location));
+  s_bitmap_layers[BITMAP_LAYER_TROPHY] = drawing_bitmap_set(logo_bounds.size.w - (trophWH * 2), logo_bounds.size.h - (trophWH + 5), trophWH, trophWH, NULL, bitmap_layer_get_layer(super_location));
+  #endif
+  
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
+  layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
+  #endif
 }

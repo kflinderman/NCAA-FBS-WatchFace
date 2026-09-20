@@ -1,7 +1,8 @@
+#ifndef PBL_PLATFORM_APLITE
+
 #pragma once
 #include <pebble.h>
 
-// Struct to represent a team
 typedef struct {
   uint32_t black;
   uint32_t white;
@@ -12,3 +13,5 @@ void weather_conditions_update(void);
 void weather_update(void);
 void weather_callback(DictionaryIterator *iterator, void *context);
 void weather_draw(Layer *window_layer, GRect bounds);
+void weather_build_request(DictionaryIterator *iter);
+#endif

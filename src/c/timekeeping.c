@@ -4,7 +4,13 @@
 #include "drawing.h"
 #include "animation.h"
 #include "api.h"
+#include "outbox_queue.h"
+#include "weather.h"
 
+//Returns true if it is quiet time
+bool timekeeping_is_quiet_time() {
+  return current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd;
+}
 
 // Updates the time TextLayer
 void update_time() {
@@ -12,110 +18,363 @@ void update_time() {
   time_t temp = time(NULL);
   struct tm *tick_time = localtime(&temp);
 
-  // Time handler
-  static char s_buffer[8];
-  strftime(s_buffer, sizeof(s_buffer), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
-  text_layer_set_text(s_time_layer, s_buffer);
+  //Determine where time will be
+  bool countdown_active = settings.countdownBool &&
+    (!settings.scoreDisplayBool || !after_time) && settings.countdownDisplay != 1;
+  // Matches the same "did countdown grab the main slot" fix applied in
+  // globals_prv_update_display()/animation.c - without the !countdown_active
+  // fallback here, this can disagree with those two about who owns the main
+  // slot (specifically: countdown using a non-main location, game not
+  // started yet, score wanting the main slot), and the disagreement shows
+  // up as the score getting silently reverted to the plain clock on the
+  // very next minute tick.
+  bool score_active = settings.scoreDisplayBool &&
+    (!settings.countdownBool || after_time || !countdown_active) && settings.scoreLocation != 1;
+
+  if (!countdown_active && !score_active) {
+    //Update time to layer
+    strftime(s_time_text, sizeof(s_time_text), clock_is_24h_style() ? "%H:%M" : "%I:%M", tick_time);
+    globals_what2show("", "", s_time_text, true, true);
+  }
 
   // Month/day handler
   static char s_date_buffer[10];
   #ifdef PBL_ROUND
-    strftime(s_date_buffer, sizeof(s_date_buffer), "%b %e", tick_time);
+  strftime(s_date_buffer, sizeof(s_date_buffer), "%b %e", tick_time);
   #else
-    strftime(s_date_buffer, sizeof(s_date_buffer), "%b\n%e", tick_time);
+  strftime(s_date_buffer, sizeof(s_date_buffer), "%b\n%e", tick_time);
   #endif
-  text_layer_set_text(s_date_layer, s_date_buffer);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_DATE], s_date_buffer);
 
   // Convert current time to HHMM format
   // tick_time->tm_hour is 0-23
   current_time_integer = (tick_time->tm_hour * 100) + tick_time->tm_min;
-
-  #if defined(PBL_HEALTH)
-    health_handler();
-  #endif
 }
 
 // Handles time ticks (every minute)
 void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  update_time();
+  //Determine if we should update anything based on setting
+  if(tick_time->tm_min % settings.watchUpdate == 0){
+    //Update time
+    update_time();
 
-  if (settings.weatherBool && (!settings.weatherQuiet || (current_time_integer >= settings.quietTimeStart && current_time_integer <= settings.quietTimeEnd))){
-    // Get weather update every 30 minutes
-    if (tick_time->tm_min % 30 == 0) {
-      APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
-      DictionaryIterator *iter;
-      app_message_outbox_begin(&iter);
-      dict_write_uint8(iter, MESSAGE_KEY_REQUEST_WEATHER, 1);
-      app_message_outbox_send();
+    #if defined(PBL_HEALTH)
+    //Update Health
+    health_handler();
+    #endif
+
+
+    #ifndef PBL_PLATFORM_APLITE
+    //Update Weather
+    if (settings.weatherBool && (!settings.weatherQuiet || !timekeeping_is_quiet_time())){
+      // Get weather update every 30 minutes
+      if (tick_time->tm_min % 30 == 0) {
+        #if defined(DEBUG)
+        APP_LOG(APP_LOG_LEVEL_INFO, "Weather Send");
+        #endif
+        outbox_queue_send(weather_build_request);
+      }
     }
-  }
-  
-  
-  if (dummy % 2 == 0 && dummy > 0){
-    APP_LOG(APP_LOG_LEVEL_INFO, "3. Full Sync Try");
-    api_request_cfbd_full_sync();
-    dummy++;
-  }
-  else{
-    if (dummy > 0){
-      APP_LOG(APP_LOG_LEVEL_INFO, "2. Light Sync Try");
-      api_request_cfbd_light_sync();
-      dummy++;
-    }
-    else{
-      strncpy(settings.api_key, "B5t4zQKeB5kqsq7QHg/htU+PUdD72h/fRin8RLeJOhdWP88BalCKoRmcot2yUOTs", sizeof(settings.api_key) - 1);
-      settings.api_key[sizeof(settings.api_key) - 1] = '\0'; // Ensure null-termination
-      APP_LOG(APP_LOG_LEVEL_INFO, "1. Full Sync Try");
+    #endif
+    
+    // Check if we should sync CFBD data (e.g., once daily at 2 AM)
+    if (api_should_full_sync() || !settings.cfbd.api_data_valid) {
       api_request_cfbd_full_sync();
-      dummy++;
     }
-  }
 
- 
-  
-  // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-  if (tick_time->tm_hour == 2 && tick_time->tm_min == 0) {
-    if (api_should_full_sync()) {
-      api_request_cfbd_full_sync();
-    } else if (api_should_light_sync()) {
-      api_request_cfbd_light_sync();
+    //Update countdown
+    if (settings.countdownBool){
+      after_time = timekeeping_countdown();
+      if (((!after_time && settings.scoreDisplayBool) || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+        globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
+      }
     }
-  }
 
-  
+    // I might need to look into if both countdown and scores are chosen + they're on different screens
+    // Currently it just displays one or the other which is fine. 
+    if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time))){
+      time_t now = time(NULL);
+      time_t target_time = (time_t)TEAMS[settings.FavoriteTeam].gametime;
+      int32_t seconds_diff = (int32_t)(target_time - now);
+      int32_t minutes_diff = seconds_diff / 60;
+      if (minutes_diff <= 0) gametime = true;
+      else gametime = false;
+      //I need to find out if the game is completed. Can I pull this in from somewhere else?
+
+      if (api_should_light_sync() && gametime && !TEAMS[settings.FavoriteTeam].completed) {
+        api_request_cfbd_light_sync();
+      }
+
+      api_score_display();
+      if (settings.scoreLocation != 1){
+        globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
+      }
+    }
+
+    #ifdef TESTING
+    //Play animations every minute on testing
+    animation_beat_team_layer();
+    #endif
+  }
 }
 
+// Used to delay animations by 1s if set
 void timer_callback(void *data) {
   animation_beat_team_layer();
 }
 
-void timeDate_draw(Layer *window_layer, GRect bounds){
-  #if PBL_DISPLAY_HEIGHT > 180
-    s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
-    s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
-  #else
-    s_time_layer = drawing_text_set(bounds.size.w / 2 - time_w, bounds.size.h * time_h, time_x, time_y, GColorBlack, "00:00", fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS), GTextAlignmentCenter, window_layer);
+// Pure C converter from UTC components to epoch seconds (bypasses missing timegm)
+static time_t utc_to_epoch(int year, int mon, int mday, int hour, int min) {
+  if (mon <= 2) {
+    year -= 1;
+    mon += 12;
+  }
+  long era = (year >= 0 ? year : year - 399) / 400;
+  unsigned yoe = (unsigned)(year - era * 400);
+  unsigned doy = (153 * (mon - 3) + 2) / 5 + mday - 1;
+  unsigned doe = yoe * 365 + yoe / 4 - yoe / 100 + doy;
+  long days = era * 146097 + (long)doe - 719468;
+  return (time_t)(days * 86400 + hour * 3600 + min * 60);
+}
+
+// Returns upcoming Saturday 12:00 PM Eastern Time in UTC epoch
+static time_t get_saturday_noon_eastern_utc(struct tm *now_tm) {
+  // Calculate Saturday's date relative to current local time
+  struct tm sat = *now_tm;
+  sat.tm_mday += (6 - now_tm->tm_wday);
+  mktime(&sat); // Normalizes month/year rollovers
+
+  int year  = sat.tm_year + 1900;
+  int month = sat.tm_mon + 1; // 1-12
+  int day   = sat.tm_mday;
+
+  // US Daylight Saving Time check (EDT vs EST)
+  bool is_edt = false;
+  if (month > 3 && month < 11) {
+    is_edt = true; 
+  } 
+  else if (month == 3) {
+    // March: EDT begins on 2nd Sunday
+    struct tm m = { .tm_year = sat.tm_year, .tm_mon = 2, .tm_mday = 1 };
+    mktime(&m);
+    int second_sunday = 1 + ((7 - m.tm_wday) % 7) + 7;
+    if (day >= second_sunday) is_edt = true;
+  } 
+  else if (month == 11) {
+    // November: EDT ends on 1st Sunday
+    struct tm m = { .tm_year = sat.tm_year, .tm_mon = 10, .tm_mday = 1 };
+    mktime(&m);
+    int first_sunday = 1 + ((7 - m.tm_wday) % 7);
+    if (day < first_sunday) is_edt = true;
+  }
+
+  // 12:00 PM Eastern = 16:00 UTC (EDT) or 17:00 UTC (EST)
+  int utc_hour = is_edt ? 16 : 17;
+
+  return utc_to_epoch(year, month, day, utc_hour, 0);
+}
+
+// Primary Countdown Function
+bool timekeeping_countdown() {
+
+  time_t now = time(NULL);
+  struct tm *now_tm = localtime(&now);
+
+  time_t target_time = 0;
+  bool afterwards = false;
+
+  // Custom Time
+  if (settings.countdownTime == 1) {
+    //if (!settings.countdownCustomDate || strlen(settings.countdownCustomDate) < 8) return 0;
+
+    int year = atoi(settings.countdownCustomDate);
+
+    //if there's no custom date despite choosing the option, use Sat Noon EST
+    if (year < 2020) { 
+      target_time = get_saturday_noon_eastern_utc(now_tm);
+    }
+    //Otherwise create a tm from that setting - cache the parsed result since
+    //these strings only change when the user updates Clay config, but this
+    //function can run many times a minute during an active sync cascade.
+    else {
+      static char s_cached_date[sizeof(settings.countdownCustomDate)] = "";
+      static char s_cached_time[sizeof(settings.countdownCustomTime)] = "";
+      static time_t s_cached_target = 0;
+      static bool s_cache_valid = false;
+
+      if (!s_cache_valid ||
+          strcmp(s_cached_date, settings.countdownCustomDate) != 0 ||
+          strcmp(s_cached_time, settings.countdownCustomTime) != 0) {
+
+        struct tm target = {0};
+        target.tm_year = year - 1900;
+        target.tm_mday = 1; // sane default if the day component is missing/malformed
+
+        const char *dash1 = strchr(settings.countdownCustomDate, '-');
+        if (dash1) {
+          target.tm_mon = atoi(dash1 + 1) - 1;
+
+          const char *dash2 = strchr(dash1 + 1, '-');
+          if (dash2) {
+            target.tm_mday = atoi(dash2 + 1);
+          }
+        }
+
+        target.tm_hour = atoi(settings.countdownCustomTime);
+        const char *colon = strchr(settings.countdownCustomTime, ':');
+        if (colon) {
+          target.tm_min = atoi(colon + 1);
+        }
+
+        target.tm_sec  = 0;
+        target.tm_isdst = -1;
+        s_cached_target = mktime(&target);
+
+        strncpy(s_cached_date, settings.countdownCustomDate, sizeof(s_cached_date) - 1);
+        s_cached_date[sizeof(s_cached_date) - 1] = '\0';
+        strncpy(s_cached_time, settings.countdownCustomTime, sizeof(s_cached_time) - 1);
+        s_cached_time[sizeof(s_cached_time) - 1] = '\0';
+        s_cache_valid = true;
+      }
+
+      target_time = s_cached_target;
+    }
+  }
+  // API Time
+  else if (settings.countdownTime == 2) {
+    target_time = (time_t)TEAMS[settings.FavoriteTeam].gametime;
+  }
+  // Saturday Noon Eastern Time (Default)
+  else {
+    target_time = get_saturday_noon_eastern_utc(now_tm);
+  }
+
+  // Difference calculation in seconds
+  #ifdef DEBUG
+  char time_buf[32];
+  struct tm *t_info = localtime(&target_time);
+
+  if (t_info) {
+    strftime(time_buf, sizeof(time_buf), "%Y-%m-%d %H:%M:%S", t_info);
+    APP_LOG(APP_LOG_LEVEL_DEBUG, "Target time: %s", time_buf);
+  }
+  else {
+    APP_LOG(APP_LOG_LEVEL_ERROR, "Invalid target_time: %ld", (long)target_time);
+  }
   #endif
+
+  int32_t seconds_diff = (int32_t)(target_time - now);
+  int32_t minutes_diff = seconds_diff / 60;
+
+  //Create variables for the position since we don't know if we'll be using days or hours
+  uint16_t firstplace = 0;
+  uint16_t secondplace = 0;
+
+  if (minutes_diff <= 0) {
+    // If the difference is negative, that means we're after the time determined
+    snprintf(s_day_text, sizeof(s_day_text), "Hour");
+    snprintf(s_hour_text, sizeof(s_hour_text), "Mins");
+    firstplace = 0;
+    secondplace = 0;
+    afterwards = true;
+  } 
+  else {
+    uint32_t total_mins = (uint32_t)minutes_diff;
+    uint16_t days = total_mins / 1440;          
+    uint16_t mins_after_days = total_mins % 1440; 
+    uint8_t hours = mins_after_days / 60;
+    uint8_t minutes = mins_after_days % 60;
+
+    //Determine if we'll use days, if the date is too far ahead, default it to 99
+    if (days > 0) {
+      if (days > 99){ 
+        days = 99;
+        hours = 99;
+      }
+      // Point directly to string constants
+      snprintf(s_day_text, sizeof(s_day_text), "Days");
+      snprintf(s_hour_text, sizeof(s_hour_text), "Hour");
+      firstplace = days;
+      secondplace = hours;
+    } else {
+      // Point directly to string constants
+      snprintf(s_day_text, sizeof(s_day_text), "Hour");
+      snprintf(s_hour_text, sizeof(s_hour_text), "Mins");
+      firstplace = hours;
+      secondplace = minutes;
+    }
+  }
+
+  // Assemble the "XX:YY" string manually
+  api_format_2digits(&s_countdown_text[0], firstplace);
+  s_countdown_text[2] = ':';
+  api_format_2digits(&s_countdown_text[3], secondplace);
+  s_countdown_text[5] = '\0';
+
+  return afterwards;
+}
+
+// Prepare Time layers
+void timeDate_draw(Layer *window_layer, GRect bounds){
+  //Load up tertiary items
+  #if PBL_DISPLAY_HEIGHT > 180
+  //Pull in custom fonts for the bigger screens
+  s_font = fonts_load_custom_font(resource_get_handle(RESOURCE_ID_LECO_CUSTOM_54));
+  //s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * TIME_H) / 1000 - 2, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * RECT_H) / 1000 - 2, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  
+  #ifdef PBL_ROUND
+  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 + 2, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 + 2, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W - 17), ((bounds.size.h * TIME_H) / 1000) + 8, 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 25, ((bounds.size.h * TIME_H) / 1000) + 8, 40, 18, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #else
+  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 13, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 13, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W - 25), bounds.size.h - 16, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 3, bounds.size.h - 16, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #endif
+  
+  
+  #else
+  s_font = fonts_get_system_font(FONT_KEY_LECO_42_NUMBERS);
+  //s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * TIME_H) / 1000 - 5, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_TIME] = drawing_text_set(bounds.size.w / 2 - TIME_W, (bounds.size.h * RECT_H) / 1000 - 5, TIME_X, TIME_Y, GColorBlack, "00:00", s_font, GTextAlignmentCenter, window_layer);
+  
+  #ifdef PBL_ROUND
+  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 1, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 1, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
+  //it was time_y - 20 trying to move it down
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W-1), ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 10), 40, 18, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2 + 20, ((bounds.size.h * TIME_H) / 1000) - (TIME_Y - 10), 40, 18, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentLeft, window_layer);
+  #else
+  s_layers[LAYER_SCORE_I] = drawing_line_draw(bounds, bounds.size.w / 2 - 13, ((bounds.size.h * VERT_3) / 1000), bounds.size.w / 2 - 13, ((bounds.size.h * VERT_4) / 1000), 6, GColorBlack, window_layer);
+  s_text_layers[TEXT_LAYER_HOME] = drawing_text_set(bounds.size.w / 2 - (TIME_W - 10), bounds.size.h - 14, 40, 16, GColorBlack, "HOME", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  s_text_layers[TEXT_LAYER_AWAY] = drawing_text_set(bounds.size.w / 2, bounds.size.h - 14, 40, 16, GColorBlack, "AWAY", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #endif
+  #endif
+
+  //Hide tertiary layers immediately
+  layer_set_hidden(s_layers[LAYER_SCORE_I], true);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), true);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), true);
 
   #ifdef PBL_RECT
-    // Create the TextLayer for the time and date
-    #if PBL_DISPLAY_HEIGHT > 180
-      s_date_layer = drawing_text_set(155, bounds.size.h * date_h, 35, 38, GColorBlack, "Dec 31", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
-    #else
-      s_date_layer = drawing_text_set(bounds.size.w * date_w, bounds.size.h * date_h, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
-    #endif
-  
-    vertical_line = drawing_line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_1, bounds.size.w * hor_1, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
+  // Create the TextLayer for the time and date
+  #if PBL_DISPLAY_HEIGHT > 180
+  s_text_layers[TEXT_LAYER_DATE] = drawing_text_set(155, (bounds.size.h * DATE_H) / 1000, 35, 38, GColorBlack, "Dec 31", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentRight, window_layer);
   #else
-    #if PBL_DISPLAY_HEIGHT > 180
-      // Create the TextLayer for the time and date
-      s_date_layer = drawing_text_set(bounds.size.w / 2 - 22, bounds.size.h * date_h, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
-    #else
-      // Create the TextLayer for the time and date
-      s_date_layer = drawing_text_set(bounds.size.w / 2 - 20, bounds.size.h * date_h, 42, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
-    #endif
+  s_text_layers[TEXT_LAYER_DATE] = drawing_text_set((bounds.size.w * DATE_W) / 1000, (bounds.size.h * DATE_H) / 1000, 26, 32, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentRight, window_layer);
   #endif
-  
-  horizontal_line = drawing_line_draw(bounds, bounds.size.w * hor_1, bounds.size.h * vert_2, bounds.size.w * hor_2, bounds.size.h * vert_2, 1, GColorBlack, window_layer);
 
+  s_layers[LAYER_VERT] = drawing_line_draw(bounds, (bounds.size.w * HOR_1) / 1000, (bounds.size.h * VERT_1) / 1000, (bounds.size.w * HOR_1) / 1000, (bounds.size.h * VERT_2) / 1000, 1, GColorBlack, window_layer);
+  
+  #else
+  #if PBL_DISPLAY_HEIGHT > 180
+  // Create the TextLayer for the time and date
+  s_text_layers[TEXT_LAYER_DATE] = drawing_text_set(bounds.size.w / 2 - 22, (bounds.size.h * DATE_H) / 1000, 46, 21, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_18_BOLD), GTextAlignmentCenter, window_layer);
+  #else
+  // Create the TextLayer for the time and date
+  s_text_layers[TEXT_LAYER_DATE] = drawing_text_set(bounds.size.w / 2 - 20, (bounds.size.h * DATE_H) / 1000, 42, 17, GColorBlack, "", fonts_get_system_font(FONT_KEY_GOTHIC_14_BOLD), GTextAlignmentCenter, window_layer);
+  #endif
+  #endif
+
+  s_layers[LAYER_HOR] = drawing_line_draw(bounds, (bounds.size.w * HOR_1) / 1000, (bounds.size.h * VERT_2) / 1000, (bounds.size.w * HOR_2) / 1000, (bounds.size.h * VERT_2) / 1000, 1, GColorBlack, window_layer);
 }

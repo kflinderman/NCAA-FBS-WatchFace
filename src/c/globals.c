@@ -3,124 +3,48 @@
 #include "drawing.h"
 #include "weather.h"
 #include "display.h"
+#include "timekeeping.h"
+#include "animation.h"
+#include "api.h"
 
 
-/*******************************************
- * Definitions for all extern globals
- *******************************************/
+
+/**********************/
+/* Global Variables   */
+/**********************/
+
 ClaySettings settings;
 
 Window *s_main_window;
-TextLayer *s_time_layer, *s_date_layer, *s_beat_layer, *s_weather_layer, *s_conditions_layer;
-int dummy = 0;
+TextLayer* s_text_layers[NUM_TEXT_LAYERS];
 
 #if defined(PBL_HEALTH)
-TextLayer *s_hr_layer, *s_step_layer, *s_td_layer;
-GBitmap *s_football_bitmap;
-BitmapLayer *s_football_layer;
 Layer *hr_icon, *step_ladder;
 bool noHR = true;
 #endif
 
-GBitmap *s_logo_bitmap, *s_beat_team_bitmap, *s_bt_bitmap, *s_batt_crg_bitmap, *s_batt_empty_bitmap, *s_batt_low_bitmap, *s_bag_bitmap;
-BitmapLayer *s_logo_layer, *s_beat_team_layer, *s_bt_layer, *s_batt_layer, *s_bag_layerf, *s_bag_layerb;
-Layer *rect_layer, *horizontal_line, *beat_team_layer, *rect_beat_layer;
-#ifdef PBL_RECT
-  Layer *vertical_line;
-#endif
+GBitmap* s_gbitmap_layers[NUM_GBITMAP_LAYERS];
+BitmapLayer* s_bitmap_layers[NUM_BITMAP_LAYERS];
+Layer* s_layers[NUM_GENERIC_LAYERS];
 
 GFont s_font, s_wIcon;
 
+char s_time_text[6], s_countdown_text[6], s_score_text[6], s_home_text[5], s_away_text[5], s_day_text[5], s_hour_text[5];
 int16_t s_prev_y = 0;
 bool s_bt_connected = false;
 bool s_animation = false;
+bool s_favorite_team_data_missing = false;
+bool after_time = true;
+bool gametime = false;
 BatteryChargeState s_battery_state;
 bool s_bt_history = true;
 int16_t s_batt_history = 0;
 int32_t current_time_integer;
 int16_t temperatureValue = 0;
 int16_t conditionValue = 0;
+uint8_t beat_spot, beat_primary;
 
-char scoreHomeTeam[32] = "";
-char scoreAwayTeam[32] = "";
-int16_t scoreHomePoints = 0;
-int16_t scoreAwayPoints = 0;
-bool scoreCompleted = false;
-bool scoreValid = false;
-
-uint16_t beat_spot;
-uint16_t beat_primary;
-
-#ifdef PBL_ROUND
-  float rect_h = 0.66;
-  float date_h = 0.84;
-  float vert_2 = 0.93;
-  float hor_1 = 0.45;
-  float hor_2 = 0.55;
-  float time_h = 0.62;
-  #if PBL_DISPLAY_HEIGHT > 180
-    uint16_t time_w = 75;
-    uint16_t time_x = 150;
-    uint16_t time_y = 70;
-    uint16_t icon_bump = 10;
-    uint16_t hr_thick = 2;
-    bool hr_w = 0;
-    uint16_t stepx1 = 16;
-    uint16_t stepx2 = 95;
-    uint16_t stepy = 50;
-  #else
-    uint16_t time_w = 60;
-    uint16_t time_x = 120;
-    uint16_t time_y = 50;
-    uint16_t icon_bump = 8;
-    uint16_t hr_thick = 1;
-    bool hr_w = 1;
-    uint16_t stepx1 = 12;
-    uint16_t stepx2 = 67;
-    uint16_t stepy = 37;
-  #endif
-#else
-  float rect_h = 0.72;
-  float date_w = 0.81;
-  uint16_t icon_bump = 5;
-  float time_h = 0.70;
-  #if PBL_DISPLAY_HEIGHT > 180
-    float date_h = 0.72;
-    uint16_t time_w = 92;
-    uint16_t time_x = 160;
-    uint16_t time_y = 70;
-    float vert_1 = 0.82;
-    float vert_2 = 0.90;
-    float hor_1 = 0.83;
-    float hor_2 = 0.92;
-    uint16_t hr_thick = 2;
-    bool hr_w = 0;
-    uint16_t stepx1 = 16;
-    uint16_t stepx2 = 95;
-    uint16_t stepy = 50;
-  #else
-    float date_h = 0.74;
-    uint16_t time_w = 72;
-    uint16_t time_x = 120;
-    uint16_t time_y = 50;
-    float vert_1 = 0.85;
-    float vert_2 = 0.93;
-    float hor_1 = 0.86;
-    float hor_2 = 0.97;
-    uint16_t hr_thick = 1;
-    bool hr_w = 1;
-    uint16_t stepx1 = 12;
-    uint16_t stepx2 = 67;
-    uint16_t stepy = 37;
-  #endif
-#endif
-
-#if PBL_DISPLAY_HEIGHT > 180
-  uint16_t bitmap_size = 160;
-#else
-  uint16_t bitmap_size = 115;
-#endif
-
+//Persistent settings default
 void globals_prv_default_settings() {
   settings.DisconnectVibration = 3;
   settings.ReconnectVibration = 1;
@@ -128,154 +52,538 @@ void globals_prv_default_settings() {
   settings.LowBatteryVibration = 1;
   settings.EmptyBatteryPercent = 10;
   settings.EmptyBatteryVibration = 2;
-  settings.DisplayTeam = 23;
-  settings.FavoriteTeam = 108;
+  settings.DisplayTeam = 0;
+  #ifdef TESTING
+  settings.FavoriteTeam = 1;
   settings.BeatTeam = 0;
+  #else
+  settings.FavoriteTeam = 108;
+  settings.BeatTeam = 26;
+  #endif
   settings.animationSensitivity = 1200;
   settings.quietTimeBool = false;
   settings.quietTimeStart = 2330;
   settings.quietTimeEnd = 630;
   settings.animationsBatt = 0;
   settings.animationsCustom = 30;
+  #if defined(PBL_HEALTH)
+  settings.healthQuiet = false;
   settings.stepsBool = false;
   settings.hrBool = false;
   settings.stepsGoalBool = false;
   settings.stepsGoal = 10000;
-  settings.hardcodeRival = false;
-  settings.donate = false;
-  settings.bagBool = false;
+  #endif
+  settings.hardcodeRival = 0;
   settings.animationDelay = false;
   settings.countdownBool = false;
   settings.countdownTime = 0;
-  settings.countdownCustom = 1200;
   settings.countdownDisplay = 1;
-  settings.api = true; //false;
+  settings.api = false;
   settings.api_quiet = false;
   settings.scoreDisplayBool = false;
-  settings.scoreUpdate = 5;
+  // settings.scoreUpdate = 5; // no longer used - see CFBD_LIGHT_SYNC_INTERVAL_SECONDS in api.c
   settings.scoreLocation = 1;
   settings.opponentBool = false;
   settings.opponentSelect = 0;
   settings.customOpponent = 0;
+  #ifndef PBL_PLATFORM_APLITE
   settings.weatherBool = false;
   settings.weatherQuiet = false;
   settings.weatherUnits = 0;
+  settings.bagBool = false;
   settings.rankingBool = false;
   settings.winBool = false;
   settings.confBool = false;
   settings.bowlBool = false;
   settings.champBool = false;
+  #endif
   settings.cfbd.next_season_first_game_ts = 0;
   settings.cfbd.current_season_year = 0;
   settings.cfbd.last_full_sync_ts = 0;
+  settings.cfbd.last_light_sync_ts = 0;
   settings.cfbd.api_calls_this_month = 0;
+  settings.cfbd.api_calls_monthly_limit = 0; // unknown until first full sync reports it
   settings.cfbd.api_data_valid = false;
+  settings.watchUpdate = 1;
 }
 
+/**********************/
+/* Global Functions   */
+/**********************/
+
+//Function to determine what of the tertiary timebox items to show
+void globals_what2show(const char *leftText, const char *rightText, const char *mainText, bool extras, bool Ishow){
+  text_layer_set_text(s_text_layers[TEXT_LAYER_HOME], leftText);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_AWAY], rightText);
+  text_layer_set_text(s_text_layers[TEXT_LAYER_TIME], mainText);
+  
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_HOME]), extras);
+  layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_AWAY]), extras);
+  layer_set_hidden(s_layers[LAYER_SCORE_I], Ishow);
+}
+
+//Save to persistent memory
 void globals_prv_save_settings() {
   persist_write_data(SETTINGS_KEY, &settings, sizeof(settings));
 }
 
+//Load from persistent memory
 void globals_prv_load_settings() {
   globals_prv_default_settings();
-  // Only load if the saved struct matches current size
-  // (protects against corrupt data or struct layout changes)
   if (persist_exists(SETTINGS_KEY) && persist_get_size(SETTINGS_KEY) == sizeof(ClaySettings)) {
     persist_read_data(SETTINGS_KEY, &settings, sizeof(settings));
   }
   // Bounds-check team indices before they're used to index TEAMS[]
-  if (settings.FavoriteTeam >= NUM_TEAMS) settings.FavoriteTeam = 108;
-  if (settings.BeatTeam >= NUM_TEAMS) settings.BeatTeam = 23;
+  #ifdef TESTING
+  if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 1;
+  if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 0;
+  #else
+  if (settings.FavoriteTeam >= TEAMS_COUNT) settings.FavoriteTeam = 108;
+  if (settings.BeatTeam >= TEAMS_COUNT) settings.BeatTeam = 26;
+  #endif
+
+  globals_prv_load_team_data();
 }
 
+//Load persisted cached teams and put them in order
+static void globals_prv_team_cache_touch(PersistedTeamCache *cache, PersistedTeamData entry) {
+  uint8_t found = MAX_CACHED_FAVORITE_TEAMS;
+  for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+    if (cache->slots[i].team_index == entry.team_index) {
+      found = i;
+      break;
+    }
+  }
+
+  uint8_t shift_end = (found < MAX_CACHED_FAVORITE_TEAMS) ? found : (MAX_CACHED_FAVORITE_TEAMS - 1);
+  for (uint8_t i = shift_end; i > 0; i--) {
+    cache->slots[i] = cache->slots[i - 1];
+  }
+  cache->slots[0] = entry;
+}
+
+//Build a PersistedTeamData snapshot from a team's current live data
+static PersistedTeamData globals_prv_team_cache_entry_from(uint8_t team_index) {
+  Team *team = &TEAMS[team_index];
+  PersistedTeamData entry = {
+    .team_index = team_index,
+    .vs_id = team->vs_id,
+    .score = team->score,
+    .vs_score = team->vs_score,
+    #ifndef PBL_PLATFORM_APLITE
+    .ranking = team->ranking,
+    .wins = team->wins,
+    .postseasonGames = team->postseasonGames,
+    .postseasonWins = team->postseasonWins,
+    .postseasonLosses = team->postseasonLosses,
+    #endif
+    .completed = team->completed,
+    .gametime = team->gametime,
+  };
+  return entry;
+}
+
+//Save persisted cached teams and their API info for every team in a
+//cache-scoped sync walk. FavoriteTeam is promoted to most-recently-used;
+//any other cached teams just get their data refreshed in place so a sync
+//doesn't reshuffle the LRU order out from under the active favorite.
+void globals_prv_save_team_data(const uint8_t *team_indices, uint8_t count) {
+  PersistedTeamCache cache;
+  if (persist_exists(TEAM_DATA_KEY) && persist_get_size(TEAM_DATA_KEY) == sizeof(PersistedTeamCache)) {
+    persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+  } else {
+    for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+      cache.slots[i].team_index = TEAM_CACHE_EMPTY_SLOT;
+    }
+  }
+
+  for (uint8_t n = 0; n < count; n++) {
+    uint8_t team_index = team_indices[n];
+    if (team_index >= TEAMS_COUNT) continue;
+
+    PersistedTeamData entry = globals_prv_team_cache_entry_from(team_index);
+
+    if (team_index == settings.FavoriteTeam) {
+      // Active favorite always gets promoted to slot 0.
+      globals_prv_team_cache_touch(&cache, entry);
+    } else {
+      // Refresh in place if it's already a cache slot; only the
+      // favorite creates brand-new slots, so skip it if not found.
+      for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+        if (cache.slots[i].team_index == team_index) {
+          cache.slots[i] = entry;
+          break;
+        }
+      }
+    }
+  }
+
+  persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+}
+
+//Load persisted cached teams API info
+void globals_prv_load_team_data(void) {
+  if (settings.FavoriteTeam >= TEAMS_COUNT) return;
+  if (!persist_exists(TEAM_DATA_KEY) || persist_get_size(TEAM_DATA_KEY) != sizeof(PersistedTeamCache)) {
+    s_favorite_team_data_missing = true;
+    return;
+  }
+
+  PersistedTeamCache cache;
+  persist_read_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+
+  for (uint8_t i = 0; i < MAX_CACHED_FAVORITE_TEAMS; i++) {
+    if (cache.slots[i].team_index != settings.FavoriteTeam) continue;
+
+    PersistedTeamData data = cache.slots[i];
+
+    Team *fav = &TEAMS[settings.FavoriteTeam];
+    fav->vs_id = data.vs_id;
+    fav->score = data.score;
+    fav->vs_score = data.vs_score;
+    #ifndef PBL_PLATFORM_APLITE
+    fav->ranking = data.ranking;
+    fav->wins = data.wins;
+    fav->postseasonGames = data.postseasonGames;
+    fav->postseasonWins = data.postseasonWins;
+    fav->postseasonLosses = data.postseasonLosses;
+    #endif
+    fav->completed = data.completed;
+    fav->gametime = data.gametime;
+
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "Restored cached team data for FavoriteTeam %d (was cache slot %d): vsd=%d score=%d-%d completed=%d",
+            settings.FavoriteTeam, i, fav->vs_id, fav->score, fav->vs_score, fav->completed);
+    #endif
+
+    // Re-promote to most-recently-used and persist the reordered cache.
+    globals_prv_team_cache_touch(&cache, data);
+    persist_write_data(TEAM_DATA_KEY, &cache, sizeof(cache));
+    return;
+  }
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "FavoriteTeam %d not in the recently-used cache - forcing resync", settings.FavoriteTeam);
+  #endif
+  s_favorite_team_data_missing = true;
+}
+
+//Global function to update the display if any settings change
 void globals_prv_update_display() {
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "-------- UPDATE DISPLAY --------");
+  #endif
+
   // Only update if window exists
   if (!s_main_window) return;
-  
+
+  // API Check if empty
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "API Sync");
+  #endif
+  if (api_should_full_sync()) {
+    api_request_cfbd_full_sync();
+  }
+
+  // Dedicated ESPN live-score poll - independent of full/light sync and
+  // CFBD's quota entirely. Only actually sends anything while a cached
+  // team's game is known to be underway (see api_should_poll_espn_live()).
+  if (api_should_poll_espn_live()) {
+    api_request_espn_live_poll();
+  }
+
+  // Light sync is a data concern, not a display concern - it must not be
+  // gated behind countdownBool/scoreDisplayBool/after_time, or it silently
+  // never fires for anyone with those display options off, and every team's
+  // gametime/completed (which the ESPN poll above depends on) never gets
+  // populated either.
+  if (api_should_light_sync()) {
+    api_request_cfbd_light_sync();
+  }
+
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 
-  // Update beat team layer position
-  if (rect_beat_layer) {
-    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
-    layer_set_frame(rect_beat_layer, new_frame);
-    layer_mark_dirty(rect_beat_layer);
-  }
-
   // Update favorite team logo
-  if (s_logo_bitmap) {
-    gbitmap_destroy(s_logo_bitmap);
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Favorite Team");
+  #endif
+  if (s_gbitmap_layers[GBITMAP_LAYER_LOGO]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
   }
-  if (s_beat_team_bitmap) {
-    gbitmap_destroy(s_beat_team_bitmap);
+  #ifndef PBL_PLATFORM_APLITE
+  if (s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]) {
+    gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
   }
-  
-  if (settings.hardcodeRival){
+  #endif
+
+  //Determine opponent to use
+  if (settings.hardcodeRival == 1){
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - Rival");
+    #endif
     settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
   }
-
-  if (settings.DisplayTeam > 1) {
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.BeatTeam].color});
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-
-    #if defined(PBL_HEALTH)
-    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    
-    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    #endif
-    
-    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.BeatTeam].icon_color});
-    
-    if (beat_team_layer) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
-      if (beat_data) {
-        beat_data->fill_color = (GColor){.argb = TEAMS[settings.FavoriteTeam].color};
-        layer_mark_dirty(beat_team_layer);
+  //If it's not the rival we need to determine who
+  else if (settings.hardcodeRival == 2){
+    //-1 signifies that it's either a bye or the team doesn't exist in the database
+    if (TEAMS[settings.FavoriteTeam].vs_id == -1){
+      //Use rival based on settings
+      if (settings.opponentSelect == 1){
+        #if defined(DEBUG)
+        APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Rival)");
+        #endif
+        settings.BeatTeam = TEAMS[settings.FavoriteTeam].rival;
+      }
+      //Or a custom team
+      else if (settings.opponentSelect == 2){
+        #if defined(DEBUG)
+        APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (Custom)");
+        #endif
+        settings.BeatTeam = settings.customOpponent;
+      }
+      //Otherwise default to the NCAA
+      else{
+        #if defined(DEBUG)
+        APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - BYE (NCAA)");
+        #endif
+        #ifdef TESTING
+        settings.BeatTeam = 1;
+        #else
+        settings.BeatTeam = 77;
+        #endif
       }
     }
-  } 
-  else {
-    window_set_background_color(s_main_window, (GColor){.argb = TEAMS[settings.FavoriteTeam].color});
-    s_logo_bitmap = gbitmap_create_with_resource(TEAMS[settings.FavoriteTeam].logo_res_id);
-    s_beat_team_bitmap = gbitmap_create_with_resource(TEAMS[settings.BeatTeam].logo_res_id);
-    
-    #if defined(PBL_HEALTH)
-    text_layer_set_text_color(s_hr_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_step_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    drawing_multiline_set_all_colors(hr_icon, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    drawing_multiline_set_all_colors(step_ladder, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    #endif
-    
-    text_layer_set_text_color(s_weather_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    text_layer_set_text_color(s_conditions_layer, (GColor){.argb = TEAMS[settings.FavoriteTeam].icon_color});
-    
-    if (beat_team_layer) {
-      RoundRectData *beat_data = (RoundRectData *)layer_get_data(beat_team_layer);
-      if (beat_data) {
-        beat_data->fill_color = (GColor){.argb = TEAMS[settings.BeatTeam].color};
-        layer_mark_dirty(beat_team_layer);
-      }
+    //Otherwise we're using the API for our team
+    else{
+      #if defined(DEBUG)
+      APP_LOG(APP_LOG_LEVEL_INFO, "Update Beat Team - API");
+      #endif
+      settings.BeatTeam = TEAMS[settings.FavoriteTeam].vs_id;
     }
   }
 
-  if (s_logo_layer) {
-    bitmap_layer_set_bitmap(s_logo_layer, s_logo_bitmap);
-  }
-  if (s_beat_team_layer) {
-    bitmap_layer_set_bitmap(s_beat_team_layer, s_beat_team_bitmap);
-  }
-  
-  
-  display_setupBag();
-  
-  #if defined(PBL_HEALTH)
-    health_handler();
+  // Resolve primary (displayed) and secondary team indices
+  uint8_t primary_idx   = (settings.DisplayTeam > 1) ? settings.BeatTeam : settings.FavoriteTeam;
+  #ifndef PBL_PLATFORM_APLITE
+  uint8_t secondary_idx = (settings.DisplayTeam > 1) ? settings.FavoriteTeam : settings.BeatTeam;
+  #endif
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Display - %s", (settings.DisplayTeam > 1) ? "BEAT" : "Favorite");
+  #endif
+
+  // Main Window Background
+  window_set_background_color(s_main_window, (GColor){.argb = TEAMS[primary_idx].color});
+
+  s_gbitmap_layers[GBITMAP_LAYER_LOGO]      = gbitmap_create_with_resource(TEAMS[primary_idx].logo_res_id);
+  #ifndef PBL_PLATFORM_APLITE
+  s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM] = gbitmap_create_with_resource(TEAMS[secondary_idx].logo_res_id);
+
+  // Setup Accent / Icon Colors
+  GColor primary_icon_color = teams_get_icon_color(primary_idx);
   #endif
   
+  // Update beat team layer position
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "BEAT Location");
+  #endif
+  if (s_layers[LAYER_BEAT_RECT]) {
+    GRect new_frame = GRect(beat_spot, -40 + beat_primary, 44, 40);
+    layer_set_frame(s_layers[LAYER_BEAT_RECT], new_frame);
+    layer_mark_dirty(s_layers[LAYER_BEAT_RECT]);
+  }
+  
+  #ifndef PBL_PLATFORM_APLITE
+  //Setup bag if chosen
+  display_setupBag(primary_icon_color);
+  #endif
+
+  #if defined(PBL_HEALTH)
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Health Colors");
+  #endif
+  //Turn on health if needed
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_HR], primary_icon_color);
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_STEP], primary_icon_color);
+
+  drawing_multiline_set_all_colors(hr_icon, primary_icon_color);
+  drawing_multiline_set_all_colors(step_ladder, primary_icon_color);
+  #endif
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather Colors");
+  #endif
+  #ifndef PBL_PLATFORM_APLITE
+  //Turn on weather if needed
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_WEATHER], primary_icon_color);
+  text_layer_set_text_color(s_text_layers[TEXT_LAYER_CONDITIONS], primary_icon_color);
+  #endif
+
+  //Update beat layer fill
+  #ifndef PBL_PLATFORM_APLITE
+  if (s_layers[LAYER_BEAT_TEAM]) {
+    RoundRectData *beat_data = (RoundRectData *)layer_get_data(s_layers[LAYER_BEAT_TEAM]);
+    if (beat_data) {
+      beat_data->fill_color = (GColor){.argb = TEAMS[secondary_idx].color};
+      layer_mark_dirty(s_layers[LAYER_BEAT_TEAM]);
+    }
+  }
+  #endif
+
+  if (s_bitmap_layers[BITMAP_LAYER_LOGO]) {
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_LOGO], s_gbitmap_layers[GBITMAP_LAYER_LOGO]);
+  }
+  #ifndef PBL_PLATFORM_APLITE
+  if (s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]) {
+    bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM], s_gbitmap_layers[GBITMAP_LAYER_BEAT_TEAM]);
+  }
+  #endif
+
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Weather");
+  #endif
+  #ifndef PBL_PLATFORM_APLITE
   weather_update();
+  #endif
+  
+  bool timeTrue = true, mainTaken = false;
+  if (settings.countdownBool){
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "Update Countdown");
+    #endif
+    after_time = timekeeping_countdown();
+    if ((!after_time  || !settings.scoreDisplayBool) && settings.countdownDisplay != 1){
+      globals_what2show(s_day_text, s_hour_text, s_countdown_text, false, true);
+      timeTrue = false;
+      mainTaken = true;
+    }
+  }
+
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_DEBUG, "After Time: %d", after_time);
+  #endif
+  if (settings.scoreDisplayBool && (!settings.countdownBool || (settings.countdownBool && after_time) || (!mainTaken && settings.scoreLocation != 1) )){
+    #if defined(DEBUG)
+    APP_LOG(APP_LOG_LEVEL_INFO, "Update Score");
+    #endif
+    api_score_display();
+    if (settings.scoreLocation != 1){
+      globals_what2show(s_home_text, s_away_text, s_score_text, false, false);
+      timeTrue = false;
+    }
+  }
+
+  //If countdown or score aren't active, make sure the time at least shows
+  if (timeTrue){
+    globals_what2show("", "", s_time_text, true, true);
+  }
+
+  #ifndef PBL_PLATFORM_APLITE
+  // Rank/win/trophy overlays all move together based on DisplayTeam. Only
+  // re-parent them when that target actually changes - layer_add_child()
+  // unconditionally unlinks+relinks the child (bumping it to the end of the
+  // new parent's paint order) even when the parent is already correct, and
+  // this function runs on every display update, not just when DisplayTeam
+  // changes.
+  static BitmapLayer *s_superlative_parent = NULL;
+  BitmapLayer *superlative_target = (settings.DisplayTeam > 1)
+      ? s_bitmap_layers[BITMAP_LAYER_BEAT_TEAM]
+      : s_bitmap_layers[BITMAP_LAYER_LOGO];
+  bool superlative_target_changed = (superlative_target != s_superlative_parent);
+  s_superlative_parent = superlative_target;
+
+  //Here's where API superlatives go
+  if (settings.rankingBool){
+    //Grab rankings and put them in their appropriate layers
+    if (TEAMS[settings.FavoriteTeam].ranking <= 25 && TEAMS[settings.FavoriteTeam].ranking > 0){
+
+      
+      static char s_rank_buffer[4];
+      snprintf(s_rank_buffer, sizeof(s_rank_buffer), "#%d", TEAMS[settings.FavoriteTeam].ranking);
+      text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_rank_buffer);
+
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
+    }
+    else{
+      layer_set_hidden(s_layers[LAYER_RANK_RECT], true);
+      layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), true);
+    }
+    
+    #ifdef TESTING
+    static char s_ranked_buffer[4];
+    snprintf(s_ranked_buffer, sizeof(s_ranked_buffer), "#%d", 25);
+    text_layer_set_text(s_text_layers[TEXT_LAYER_RANK], s_ranked_buffer);
+
+    layer_set_hidden(s_layers[LAYER_RANK_RECT], false);
+    layer_set_hidden(text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]), false);
+    #endif
+
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), s_layers[LAYER_RANK_RECT]);
+      layer_add_child(bitmap_layer_get_layer(superlative_target), text_layer_get_layer(s_text_layers[TEXT_LAYER_RANK]));
+    }
+  }
+
+  //Display a blue ribbon if it's a winning season
+  if (settings.winBool){
+    if(TEAMS[settings.FavoriteTeam].wins > 6){
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
+    }
+    else{
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), true);
+    }
+    #ifdef TESTING
+    layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]), false);
+    #endif
+
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_WIN]));
+    }
+  }
+
+
+  //Check post season results
+  if (settings.bowlBool){
+    uint32_t target_res_id = 0;
+    //If they have exactly one post season game and it's a win, it's safe to say they won just a bowl.
+    if(TEAMS[settings.FavoriteTeam].postseasonGames >= 1 && TEAMS[settings.FavoriteTeam].postseasonWins == 1){
+      target_res_id = RESOURCE_ID_BOWL;
+    }
+    //I need a better way to figure out a champion, but for now, I'm just going to hope no one wins from without a bye. I'll look into this later
+    else if (TEAMS[settings.FavoriteTeam].postseasonLosses < 1 && TEAMS[settings.FavoriteTeam].postseasonWins >= 3){
+      target_res_id = RESOURCE_ID_CHAMP;
+    }
+    
+    #ifdef TESTING
+    target_res_id = RESOURCE_ID_CHAMP;
+    #endif
+
+    // Single Pass UI Update
+    if (target_res_id != 0) {
+      if (s_gbitmap_layers[GBITMAP_LAYER_TROPHY]) {
+        gbitmap_destroy(s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
+      }
+      s_gbitmap_layers[GBITMAP_LAYER_TROPHY] = gbitmap_create_with_resource(target_res_id);
+      bitmap_layer_set_bitmap(s_bitmap_layers[BITMAP_LAYER_TROPHY], s_gbitmap_layers[GBITMAP_LAYER_TROPHY]);
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), false);
+    } else {
+      layer_set_hidden(bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]), true);
+    }
+
+    if (superlative_target_changed) {
+      layer_add_child(bitmap_layer_get_layer(superlative_target), bitmap_layer_get_layer(s_bitmap_layers[BITMAP_LAYER_TROPHY]));
+    }
+  }
+  #endif
+
+  #if defined(PBL_HEALTH)
+  #if defined(DEBUG)
+  APP_LOG(APP_LOG_LEVEL_INFO, "Update Health");
+  #endif
+  //Update health info
+  health_handler();
+  #endif
 }
