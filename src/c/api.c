@@ -26,6 +26,15 @@
 // is generous enough for a normal round trip (even a slow one) but short
 // enough to self-heal quickly.
 #define CFBD_SYNC_STUCK_TIMEOUT_SECONDS (3 * 60)
+// Upper bound on how long a team is trusted as "still live" once its game
+// has started, independent of whether completion was ever confirmed. Without
+// this, a game ESPN never reliably reports as finished (a completion streak
+// that never reaches 2, or a gap in its scoreboard response) would leave
+// `completed` false forever - and since that's exactly what keeps a team
+// counted as "currently live", it would permanently block BOTH further ESPN
+// polling AND the daily CFBD sync that could otherwise resolve it with the
+// real final score. Generous enough to cover a long game plus overtime.
+#define CFBD_MAX_GAME_DURATION_SECONDS (6 * 60 * 60)
 
 // Sync state tracking variables
 static int cfbd_current_team_index = -1; // -1 = no team in progress; else an index into TEAMS[]
@@ -418,9 +427,10 @@ bool api_should_full_sync(void) {
   return false;
 }
 
-// Whether any cached team's game has started (per known gametime) but
-// isn't marked completed yet - true regardless of whether that game's data
-// came from CFBD or ESPN, since both write the same completed field.
+// Whether any cached team's game has started (per known gametime) but isn't
+// marked completed yet, and hasn't been "live" for longer than any real
+// game plausibly runs - true regardless of whether that game's data came
+// from CFBD or ESPN, since both write the same completed field.
 static bool any_cached_team_currently_live(void) {
   time_t now = time(NULL);
   uint8_t indices[MAX_CACHED_FAVORITE_TEAMS + 1];
@@ -428,7 +438,9 @@ static bool any_cached_team_currently_live(void) {
 
   for (uint8_t i = 0; i < count; i++) {
     Team *team = &TEAMS[indices[i]];
-    if (team->gametime > 0 && now >= (time_t)team->gametime && !team->completed) {
+    if (team->gametime > 0 && !team->completed &&
+        now >= (time_t)team->gametime &&
+        now < (time_t)team->gametime + CFBD_MAX_GAME_DURATION_SECONDS) {
       return true;
     }
   }
