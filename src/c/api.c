@@ -11,7 +11,14 @@
 
 #define MAX_DISPLAYABLE_SCORE 99
 #define CFBD_API_CALLS_WARNING_PERCENT 90
-#define CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS 60
+// Minimum gap between two ESPN polls. The real cadence comes from the
+// watchUpdate gate in tick_handler(); this just stops event-driven checks
+// (a walk finishing and calling update_display(), a config push) from
+// firing a second poll right behind one that just completed. Kept under 60:
+// last_espn_poll_ts is stamped when a poll's walk *finishes*, a few seconds
+// after the tick that started it, so a 60s cooldown would be a few seconds
+// short at the next tick when watchUpdate is 1 minute and skip it.
+#define CFBD_ESPN_LIVE_POLL_INTERVAL_SECONDS 45
 // Fallback-only cadence for light sync's schedule/game data. This is NOT
 // about live-score freshness anymore - ESPN's poll handles that entirely,
 // and cfbd_final_score_pending handles getting CFBD's official final
@@ -26,6 +33,12 @@
 // is generous enough for a normal round trip (even a slow one) but short
 // enough to self-heal quickly.
 #define CFBD_SYNC_STUCK_TIMEOUT_SECONDS (3 * 60)
+// Minimum spacing between CFBD retries after a failed/abandoned attempt.
+// api_check_syncs() runs on every watchUpdate tick, and every CFBD request
+// spends real quota - without this, a persistent failure (bad key, offseason
+// with no schedule, a JS error before it replies) would re-fire on every
+// tick (full sync) or every watchdog window (light sync) indefinitely.
+#define CFBD_RETRY_BACKOFF_SECONDS (10 * 60)
 // Upper bound on how long a team is trusted as "still live" once its game
 // has started, independent of whether completion was ever confirmed. Without
 // this, a game ESPN never reliably reports as finished (a completion streak
@@ -48,6 +61,8 @@ static bool cfbd_final_score_pending = false;
 static time_t cfbd_walk_started_ts = 0;    // when cfbd_current_team_index last went from -1 to >= 0
 static time_t cfbd_light_sync_sent_ts = 0; // when cfbd_light_sync_pending was last set true
 static time_t cfbd_live_poll_sent_ts = 0;  // when cfbd_live_poll_pending was last set true
+static time_t cfbd_full_sync_sent_ts = 0;  // when a full sync was last requested (it has no pending flag)
+static time_t cfbd_light_retry_after_ts = 0; // set by the watchdog after abandoning a CFBD light sync
 
 // Walk list: the specific TEAMS[] indices being synced this walk (cache-scoped, not the full roster).
 // Sized for the worst case: current FavoriteTeam (if not yet cached) plus every cached slot.
@@ -211,13 +226,14 @@ static void cfbd_team_walk_complete(CFBDTeamDataType type) {
   // api_data_valid is set once, by the calendar response handler - it no
   // longer reflects "did a team walk finish" since records/rankings moved
   // here from full sync.
-  globals_prv_save_settings();
-
   if (type != CFBD_TEAM_DATA_LIVE_SCORE) {
     // Live-score updates are ephemeral and refresh far more often than
-    // games/records (as often as every ~60s during a live game) - skip
-    // persisting them to flash every cycle to avoid excess wear. The real
-    // score gets written for good once CFBD itself reports it via GAMES.
+    // games/records (as often as once a minute during a live game) - skip
+    // persisting anything to flash every cycle to avoid excess wear. That
+    // includes settings: last_espn_poll_ts only needs to live in RAM, and
+    // the real score gets written for good once CFBD itself reports it
+    // via GAMES.
+    globals_prv_save_settings();
     globals_prv_save_team_data(cfbd_walk_indices, cfbd_walk_count);
     s_favorite_team_data_missing = false;
   }
@@ -318,6 +334,7 @@ void api_request_cfbd_full_sync(void) {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "Requesting CFBD full sync (calendar)");
   #endif
+  cfbd_full_sync_sent_ts = time(NULL);
   outbox_queue_send(build_request_full_sync);
 }
 
@@ -419,8 +436,11 @@ bool api_should_full_sync(void) {
 
   // Full sync only needs to run when its own data (calendar/season boundary)
   // is actually missing - never on a rolling timer, and never just because
-  // the favorite team changed (that's light sync's job).
-  if (settings.api && !settings.cfbd.api_data_valid) {
+  // the favorite team changed (that's light sync's job). If an attempt was
+  // just made and didn't produce valid data, back off rather than retrying
+  // on every tick.
+  if (settings.api && !settings.cfbd.api_data_valid &&
+      (time(NULL) - cfbd_full_sync_sent_ts) >= CFBD_RETRY_BACKOFF_SECONDS) {
     return true;
   }
 
@@ -464,6 +484,11 @@ static void api_check_sync_watchdog(void) {
     APP_LOG(APP_LOG_LEVEL_ERROR, "CFBD team walk (type %d) stuck for over %ds - abandoning it",
             cfbd_current_sync_type, CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
     #endif
+    // Only CFBD-backed attempts cost quota; a stuck ESPN walk is free to
+    // retry right away.
+    if (cfbd_light_sync_pending || cfbd_current_sync_type != CFBD_TEAM_DATA_LIVE_SCORE) {
+      cfbd_light_retry_after_ts = now + CFBD_RETRY_BACKOFF_SECONDS;
+    }
     cfbd_current_team_index = -1;
     cfbd_pending_games_walk = false;
     cfbd_pending_records_walk = false;
@@ -479,6 +504,7 @@ static void api_check_sync_watchdog(void) {
             CFBD_SYNC_STUCK_TIMEOUT_SECONDS);
     #endif
     cfbd_light_sync_pending = false;
+    cfbd_light_retry_after_ts = now + CFBD_RETRY_BACKOFF_SECONDS;
   }
 
   if (cfbd_live_poll_pending && cfbd_current_team_index < 0 &&
@@ -500,6 +526,14 @@ bool api_should_light_sync(void) {
   api_check_sync_watchdog();
 
   if (cfbd_light_sync_pending) {
+    return false;
+  }
+
+  // Recently abandoned a stuck CFBD attempt - wait out the backoff instead
+  // of immediately spending more quota on what may be a persistent failure.
+  // Pending triggers (like cfbd_final_score_pending) stay set and fire once
+  // it passes.
+  if (time(NULL) < cfbd_light_retry_after_ts) {
     return false;
   }
 
@@ -556,6 +590,29 @@ bool api_should_poll_espn_live(void) {
   }
 
   return any_cached_team_currently_live();
+}
+
+// Single entry point for every sync decision (full, ESPN live poll, light).
+// Called from tick_handler() on the watchUpdate cadence (the recurring
+// driver) and from globals_prv_update_display() (so a team change or config
+// push reacts immediately). Each should_*() check has its own guards, but
+// nothing re-evaluates them unless something calls this - update_display()
+// alone only runs at boot, after a walk completes, or after a config push,
+// so a poll that finishes and then hits its cooldown would never be
+// re-checked, and the daily light sync would never fire on a watchface that
+// just stays loaded.
+void api_check_syncs(void) {
+  if (api_should_full_sync()) {
+    api_request_cfbd_full_sync();
+  }
+
+  if (api_should_poll_espn_live()) {
+    api_request_espn_live_poll();
+  }
+
+  if (api_should_light_sync()) {
+    api_request_cfbd_light_sync();
+  }
 }
 
 // Main incoming AppMessage dictionary parser for API data

@@ -204,7 +204,7 @@ Team TEAMS[] = {
   {},
   {},
   { .logo_res_id = RESOURCE_ID_CINCI, .color = GColorBlackARGB8, .rival = 65, .name="Cincinnati", .shortname="CIN ", .score = 0, .vs_score = 0, .vs_id = 65, .gametime = 0, .completed = true }, // Miami (OH)
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .rival = 108, .name="Clemson", .shortname="CLEM", .score = 0, .vs_score = 0, .vs_id = 108, .gametime = 0, .completed = true }, // South Carolina
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorBlackARGB8, .rival = 108, .name="Clemson", .shortname="CLEM", .score = 0, .vs_score = 0, .vs_id = 108, .gametime = 0, .completed = true }, // South Carolina
   { .logo_res_id = RESOURCE_ID_COASTAL, .color = GColorWhiteARGB8, .rival = 5, .name="Coastal Carolina", .shortname="CCU ", .score = 0, .vs_score = 0, .vs_id = 5, .gametime = 0, .completed = true }, // App State
   { .logo_res_id = RESOURCE_ID_COLORADO, .color = GColorBlackARGB8, .rival = 29, .name="Colorado", .shortname="CU  ", .score = 0, .vs_score = 0, .vs_id = 29, .gametime = 0, .completed = true }, // Colorado State
   { .logo_res_id = RESOURCE_ID_COLORADOST, .color = GColorBlackARGB8, .rival = 28, .name="Colorado State", .shortname="CSU ", .score = 0, .vs_score = 0, .vs_id = 28, .gametime = 0, .completed = true }, // Colorado
@@ -360,7 +360,7 @@ Team TEAMS[] = {
   { .logo_res_id = RESOURCE_ID_CFB, .color = GColorWhiteARGB8, .rival = 77, .name="PLACEHOLDER", .shortname="PLCH" },
   { .logo_res_id = RESOURCE_ID_CHAOS, .color = GColorBlackARGB8, .rival = 77, .name="PLACEHOLDER", .shortname="PLCH" },
   { .logo_res_id = RESOURCE_ID_CINCI, .color = GColorBlackARGB8, .rival = 65, .vs_id = -1, .name="Cincinnati", .shortname="CIN ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // Miami (OH)
-  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorWhiteARGB8, .rival = 108, .vs_id = -1, .name="Clemson", .shortname="CLEM", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // South Carolina
+  { .logo_res_id = RESOURCE_ID_CLEMSON, .color = GColorBlackARGB8, .rival = 108, .vs_id = -1, .name="Clemson", .shortname="CLEM", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // South Carolina
   { .logo_res_id = RESOURCE_ID_COASTAL, .color = GColorWhiteARGB8, .rival = 5, .vs_id = -1, .name="Coastal Carolina", .shortname="CCU ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // App State
   { .logo_res_id = RESOURCE_ID_COLORADO, .color = GColorBlackARGB8, .rival = 29, .vs_id = -1, .name="Colorado", .shortname="CU  ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // Colorado State
   { .logo_res_id = RESOURCE_ID_COLORADOST, .color = GColorBlackARGB8, .rival = 28, .vs_id = -1, .name="Colorado State", .shortname="CSU ", .score = 0, .vs_score = 0, .gametime = 0, .ranking = 0, .wins = 0, .postseasonGames = 0, .postseasonWins = 0, .postseasonLosses = 0, .completed = true }, // Colorado

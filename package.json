@@ -13,6 +13,7 @@
         ],
         "displayName": "NCAA FBS Watchface",
         "enableMultiJS": true,
+        "manifestVersion": 2,
         "messageKeys": [
             "TEMPERATURE",
             "CONDITIONS",
@@ -1604,10 +1605,16 @@
             "gabbro",
             "flint"
         ],
+        "usesPermissions": [
+            "Internet",
+            "Location",
+            "Timeline",
+            "Health"
+        ],
         "uuid": "0290cf07-cc80-4d74-9467-1dde369f7350",
         "watchapp": {
             "watchface": true
         }
     },
-    "version": "5.0.1"
+    "version": "5.0.4"
 }

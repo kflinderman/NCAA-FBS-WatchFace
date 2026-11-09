@@ -281,6 +281,7 @@ void globals_prv_update_display() {
   #if defined(DEBUG)
   APP_LOG(APP_LOG_LEVEL_INFO, "API Sync");
   #endif
+  /*
   if (api_should_full_sync()) {
     api_request_cfbd_full_sync();
   }
@@ -300,7 +301,9 @@ void globals_prv_update_display() {
   if (api_should_light_sync()) {
     api_request_cfbd_light_sync();
   }
-
+  */
+  api_check_syncs();
+  
   // Update beat_primary if DisplayTeam changed
   beat_primary = settings.DisplayTeam;
 

@@ -78,9 +78,10 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
     #endif
     
     // Check if we should sync CFBD data (e.g., once daily at 2 AM)
-    if (api_should_full_sync() || !settings.cfbd.api_data_valid) {
-      api_request_cfbd_full_sync();
-    }
+    //if (api_should_full_sync() || !settings.cfbd.api_data_valid) {
+      //api_request_cfbd_full_sync();
+    //}
+    api_check_syncs();
 
     //Update countdown
     if (settings.countdownBool){
@@ -101,9 +102,9 @@ void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
       else gametime = false;
       //I need to find out if the game is completed. Can I pull this in from somewhere else?
 
-      if (api_should_light_sync() && gametime && !TEAMS[settings.FavoriteTeam].completed) {
-        api_request_cfbd_light_sync();
-      }
+      //if (api_should_light_sync() && gametime && !TEAMS[settings.FavoriteTeam].completed) {
+        //api_request_cfbd_light_sync();
+      //}
 
       api_score_display();
       if (settings.scoreLocation != 1){
